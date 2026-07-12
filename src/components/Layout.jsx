@@ -29,6 +29,9 @@ export function Layout() {
             <Outlet />
           </div>
         </div>
+        <footer className='mx-auto w-full max-w-5xl px-4 pb-4 pt-2 text-center sm:px-6 md:px-8'>
+          <p className='text-xs text-slate-400'>{t('common.credit')}</p>
+        </footer>
       </main>
       <MobileNav role={auth.role} />
     </div>

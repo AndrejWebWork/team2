@@ -63,6 +63,7 @@ const dict = {
     },
     common: {
       cancel: 'Откажи', close: 'Затвори', closeUp: 'Затвори ↑', back: 'Назад', points: 'поени', ok: 'Во ред',
+      credit: 'Изработено од тимот победник на SkopYEAH иновацискиот камп',
       records: 'записи', anonymous: 'Анонимен', anonymousCitizen: 'Анонимен граѓанин',
       submitReport: 'Испрати пријава', markResolved: 'Означи решено', inProgress: 'Во тек',
     },
@@ -334,6 +335,7 @@ const dict = {
     },
     common: {
       cancel: 'Cancel', close: 'Close', closeUp: 'Close ↑', back: 'Back', points: 'points', ok: 'OK',
+      credit: 'Built by the winning team of the SkopYEAH innovation camp',
       records: 'records', anonymous: 'Anonymous', anonymousCitizen: 'Anonymous citizen',
       submitReport: 'Submit report', markResolved: 'Mark resolved', inProgress: 'In progress',
     },
@@ -605,6 +607,7 @@ const dict = {
     },
     common: {
       cancel: 'Anulo', close: 'Mbyll', closeUp: 'Mbyll ↑', back: 'Prapa', points: 'pikë', ok: 'Në rregull',
+      credit: 'Zhvilluar nga ekipi fitues i kampit të inovacionit SkopYEAH',
       records: 'regjistrime', anonymous: 'Anonim', anonymousCitizen: 'Qytetar anonim',
       submitReport: 'Dërgo raportin', markResolved: 'Shëno si të zgjidhur', inProgress: 'Në proces',
     },

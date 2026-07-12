@@ -1,5 +1,7 @@
 // Клиент за EkoSkopje backend API-то (заедничко за веб + мобилни клиенти).
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '')
+// Ако VITE_API_URL не е зададено: во dev → локален backend; во продукциски
+// build (Vercel) → ист домен (релативни /api патеки).
+const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:4000' : '')).replace(/\/$/, '')
 // Админ токен за заштитените операции (менување статус). Празно = не се праќа.
 const ADMIN_TOKEN = (import.meta.env.VITE_ADMIN_TOKEN || '').trim()
 

@@ -173,6 +173,7 @@ export function SettingsPage() {
           <div className='rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
             <p className='text-sm font-medium text-slate-700'>{t('settings.appVersion')}</p>
             <p className='text-xs text-slate-500 mt-0.5'>EkoSkopje v1.0.0</p>
+            <p className='text-xs text-slate-400 mt-1'>{t('common.credit')}</p>
           </div>
           <Button
             variant='outline'
