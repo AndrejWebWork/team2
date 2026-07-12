@@ -4,7 +4,9 @@ import path from 'node:path'
 export const config = {
   port: Number(process.env.PORT) || 4000,
   databaseUrl: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ekoskopje',
-  uploadDir: path.resolve(process.env.UPLOAD_DIR || './uploads'),
+  // На Vercel фајл системот е read-only освен /tmp. Сликите на новите пријави
+  // се чуваат во базата (BYTEA), па оваа папка е само за стари/локални фајлови.
+  uploadDir: path.resolve(process.env.UPLOAD_DIR || (process.env.VERCEL ? '/tmp/uploads' : './uploads')),
   publicBaseUrl: (process.env.PUBLIC_BASE_URL || 'http://localhost:4000').replace(/\/$/, ''),
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES) || 3 * 1024 * 1024,
   // Дозволени origin-и. Веб дев + Capacitor мобилни WebView origin-и.

@@ -5,8 +5,11 @@ import { Router } from 'express'
 import multer from 'multer'
 import { config } from '../config.js'
 
-// Осигурај дека папката за слики постои
-fs.mkdirSync(config.uploadDir, { recursive: true })
+// Осигурај дека папката за слики постои (на read-only фајл систем — прескокни;
+// новите пријави ги чуваат сликите во базата, не на диск).
+try {
+  fs.mkdirSync(config.uploadDir, { recursive: true })
+} catch { /* read-only околина (Vercel) — uploads рутата не се користи таму */ }
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' }
