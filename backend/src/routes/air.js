@@ -1,0 +1,68 @@
+import crypto from 'node:crypto'
+import { Router } from 'express'
+import { query } from '../db.js'
+import { fetchPulseSensors } from '../lib/pulse.js'
+
+export const airRouter = Router()
+
+// ============================================================================
+// Pulse.eco (нереферентни/граѓански сензори) — позадинско освежување.
+// Наместо клиентот да чека на Pulse.eco при секое барање, серверот држи СНИМКА
+// во меморија и ја освежува сам на интервал. Одговорот е тогаш речиси инстант
+// (се сервира од меморија, без надворешен повик во патеката на барањето).
+// ============================================================================
+
+const REFRESH_MS = 30_000   // позадинско освежување на секои 30s
+let snapshot = null          // { body, etag, at }
+let refreshing = null        // спречува преклопени освежувања
+
+async function refresh() {
+  if (refreshing) return refreshing
+  refreshing = (async () => {
+    try {
+      const data = await fetchPulseSensors()
+      const body = JSON.stringify(data)
+      const etag = 'W/"' + crypto.createHash('sha1').update(body).digest('base64') + '"'
+      snapshot = { body, etag, at: Date.now() }
+    } catch {
+      /* задржи ја последната успешна снимка при привремен пад на Pulse.eco */
+    } finally {
+      refreshing = null
+    }
+  })()
+  return refreshing
+}
+
+// Тивко освежување во позадина + прво полнење при старт на серверот.
+refresh()
+const timer = setInterval(refresh, REFRESH_MS)
+if (typeof timer.unref === 'function') timer.unref()
+
+// GET /api/air/pulse → нереферентни (граѓански) сензори во живо (од снимка).
+airRouter.get('/pulse', async (req, res, next) => {
+  try {
+    if (!snapshot) await refresh()           // прв повик пред снимката да е готова
+    if (!snapshot) return res.json([])       // Pulse.eco сè уште недостапен
+    res.setHeader('ETag', snapshot.etag)
+    res.setHeader('Cache-Control', 'public, max-age=15')
+    if (req.headers['if-none-match'] === snapshot.etag) return res.status(304).end()
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    return res.status(200).send(snapshot.body)
+  } catch (err) { next(err) }
+})
+
+// GET /api/air/city → сензори на Град Скопје (category = 'city') од базата.
+// Градот имал по 1 сензор во секоја општина (10 вкупно), но мрежата не е
+// активна од пред 2-3 години. Табелата `sensors` е подготвена: кога Градот ќе
+// ги реактивира или ќе даде пристап, мерењата се внесуваат тука и веднаш се
+// прикажуваат во апликацијата — без промени во кодот.
+airRouter.get('/city', async (_req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, name, area, source, lat, lng, aqi, pm25, pm10, status, measured_at
+       FROM sensors WHERE category = 'city' ORDER BY name`,
+    )
+    res.setHeader('Cache-Control', 'public, max-age=30')
+    res.json(rows)
+  } catch (err) { next(err) }
+})

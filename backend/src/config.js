@@ -1,0 +1,26 @@
+import 'dotenv/config'
+import path from 'node:path'
+
+export const config = {
+  port: Number(process.env.PORT) || 4000,
+  databaseUrl: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ekoskopje',
+  uploadDir: path.resolve(process.env.UPLOAD_DIR || './uploads'),
+  publicBaseUrl: (process.env.PUBLIC_BASE_URL || 'http://localhost:4000').replace(/\/$/, ''),
+  maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES) || 3 * 1024 * 1024,
+  // Дозволени origin-и. Веб дев + Capacitor мобилни WebView origin-и.
+  // CORS_ORIGIN може да биде листа разделена со запирки.
+  corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:5173')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .concat(['https://localhost', 'capacitor://localhost', 'http://localhost']),
+  // Макс. фотографии по пријава (усогласено со frontend и колоните photo_1..photo_6)
+  maxPhotos: 6,
+  // Таен токен за админ операции (менување статус на пријава). Ако е празно,
+  // заштитата е исклучена (згодно за локален развој). Постави го во продукција.
+  adminToken: (process.env.ADMIN_TOKEN || '').trim(),
+  // Сервисен клуч (JSON) за FCM HTTP v1 push. Може да е самиот JSON или патека
+  // до .json фајлот. Ако е празно, push е исклучен (работат само локалните).
+  // Го добиваш од Firebase Console → Project settings → Service accounts.
+  fcmServiceAccount: (process.env.FCM_SERVICE_ACCOUNT || '').trim(),
+}

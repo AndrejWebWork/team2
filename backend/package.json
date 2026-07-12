@@ -1,0 +1,25 @@
+{
+  "name": "ekoskopje-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "EkoSkopje shared REST API (web + Android + iOS) with PostgreSQL",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:create": "node scripts/createDb.js",
+    "db:init": "node scripts/initDb.js",
+    "admin:password": "node scripts/setAdminPassword.js",
+    "fcm:verify": "node scripts/verifyFcm.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
+    "pg": "^8.22.0"
+  }
+}

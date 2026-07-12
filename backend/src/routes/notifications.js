@@ -1,0 +1,75 @@
+import { Router } from 'express'
+import { query } from '../db.js'
+import { resolveUserId } from '../services/users.js'
+
+export const notificationsRouter = Router()
+
+function rowToNotification(r) {
+  const created = r.created_at ? new Date(r.created_at) : new Date()
+  const today = new Date()
+  const isToday = created.toDateString() === today.toDateString()
+  return {
+    id: r.id,
+    title: r.title,
+    body: r.body,
+    read: r.is_read,
+    group: isToday ? 'Денес' : 'Порано',
+    createdAt: r.created_at,
+  }
+}
+
+// GET /api/notifications?email=  → broadcast (за сите) + личните на корисникот
+notificationsRouter.get('/', async (req, res, next) => {
+  try {
+    const email = req.query.email || null
+    const { rows } = await query(
+      `SELECT n.* FROM notifications n
+       LEFT JOIN users u ON u.id = n.user_id
+       WHERE n.user_id IS NULL OR u.email = $1
+       ORDER BY n.created_at DESC
+       LIMIT 100`,
+      [email],
+    )
+    res.json(rows.map(rowToNotification))
+  } catch (err) { next(err) }
+})
+
+// POST /api/notifications  { title, body, email? }  (email отсутен = broadcast)
+notificationsRouter.post('/', async (req, res, next) => {
+  try {
+    const { title, body = null, email = null } = req.body
+    if (!title) return res.status(400).json({ error: 'Недостасува наслов.' })
+    const userId = await resolveUserId(email)
+    const { rows } = await query(
+      `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3) RETURNING *`,
+      [userId, title, body],
+    )
+    res.status(201).json(rowToNotification(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// PATCH /api/notifications/:id/read  → означи една како прочитана
+notificationsRouter.patch('/:id/read', async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `UPDATE notifications SET is_read = TRUE WHERE id = $1 RETURNING *`,
+      [req.params.id],
+    )
+    if (rows.length === 0) return res.status(404).json({ error: 'Известувањето не постои.' })
+    res.json(rowToNotification(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// PATCH /api/notifications/read-all  { email }  → означи ги сите за корисникот
+notificationsRouter.patch('/read-all', async (req, res, next) => {
+  try {
+    const email = req.body.email || null
+    await query(
+      `UPDATE notifications n SET is_read = TRUE
+       FROM users u
+       WHERE (n.user_id IS NULL) OR (n.user_id = u.id AND u.email = $1)`,
+      [email],
+    )
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})

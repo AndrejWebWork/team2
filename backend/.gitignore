@@ -1,0 +1,11 @@
+node_modules
+.env
+.env.*
+!.env.example
+
+# Таен FCM сервисен клуч — НЕ смее да се комитира
+secrets/
+
+# Кориснички слики (складирани како фајлови; патеките се во базата)
+uploads/*
+!uploads/.gitkeep

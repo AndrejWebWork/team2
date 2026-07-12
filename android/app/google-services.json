@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "482806473644",
+    "project_id": "ekoskopje-ef2d7",
+    "storage_bucket": "ekoskopje-ef2d7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:482806473644:android:35aeeacb2c5151c4f25009",
+        "android_client_info": {
+          "package_name": "mk.gov.skopje.ekoskopje"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5fxtJXK_dyK9wB6ecqCGyVydRTKMpbuM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
