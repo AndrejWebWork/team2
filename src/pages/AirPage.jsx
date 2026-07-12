@@ -205,26 +205,30 @@ export function AirPage() {
     const controller = new AbortController()
 
     async function load() {
-      try {
-        const waqi = await fetchSkopjeSensors(controller.signal)
-        if (cancelled) return
-        const valid = (s) => s.lat != null && s.lng != null && s.aqi != null
-        const referent = waqi.filter((s) => s.category === 'referent' && valid(s))
-        const civic = waqi.filter((s) => s.category !== 'referent' && valid(s))
-        setSensors(referent)
-        // Pulse.eco преку backend (ако е достапен). Само реални мерења во живо.
-        const pulseLive = await fetchPulseSensors(controller.signal)
-        if (cancelled) return
-        const civicAll = [...civic, ...pulseLive]
-        setPulse(civicAll)
-        // Сензори на Град Скопје од базата (празно додека мрежата не е активна).
-        const city = await fetchCitySensors(controller.signal)
-        if (cancelled) return
-        setCitySensors(city)
-        setAirStatus('live')
-      } catch {
-        if (!cancelled) setAirStatus((prev) => (prev === 'live' ? 'live' : 'offline'))
+      // Трите извори се НЕЗАВИСНИ: пад на еден (пр. WAQI) не смее да ги блокира
+      // другите (Pulse.eco, Град Скопје). Секој се вчитува паралелно.
+      const [waqiRes, pulseRes, cityRes] = await Promise.allSettled([
+        fetchSkopjeSensors(controller.signal),
+        fetchPulseSensors(controller.signal),
+        fetchCitySensors(controller.signal),
+      ])
+      if (cancelled) return
+      const valid = (s) => s.lat != null && s.lng != null && s.aqi != null
+      const waqi = waqiRes.status === 'fulfilled' ? waqiRes.value : []
+      const pulseLive = pulseRes.status === 'fulfilled' ? pulseRes.value : []
+      const city = cityRes.status === 'fulfilled' ? cityRes.value : []
+
+      const referent = waqi.filter((s) => s.category === 'referent' && valid(s))
+      const civic = waqi.filter((s) => s.category !== 'referent' && valid(s))
+      // Не бриши претходно прикажани сензори при привремен пад на изворот.
+      if (waqiRes.status === 'fulfilled') setSensors(referent)
+      if (waqiRes.status === 'fulfilled' || pulseRes.status === 'fulfilled') {
+        setPulse([...civic, ...pulseLive])
       }
+      if (cityRes.status === 'fulfilled') setCitySensors(city)
+
+      const anyLive = waqiRes.status === 'fulfilled' || pulseRes.status === 'fulfilled'
+      setAirStatus((prev) => (anyLive ? 'live' : prev === 'live' ? 'live' : 'offline'))
     }
 
     const schedule = () => { timer = setTimeout(tick, AIR_REFRESH_MS) }
