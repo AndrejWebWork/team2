@@ -8,6 +8,10 @@ export function Layout() {
   const { auth, unreadCount, setAuth, currentUserPoints, t } = useApp()
   const location = useLocation()
 
+  // Админ панелот користи целосна ширина (табела + статистики), без
+  // центрирање — насловот и содржината почнуваат од горе-лево.
+  const fullWidth = location.pathname === '/admin-panel'
+
   return (
     <div className='min-h-screen bg-[#f4f6f8]'>
       <Sidebar role={auth.role} />
@@ -24,8 +28,8 @@ export function Layout() {
         />
         {/* flex-1 го зазема остатокот од висината; `my-auto` вертикално ги центрира
             кратките страници, а долгите нормално се движат (без сечење горе). */}
-        <div className='mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 pb-6 pt-5 sm:px-6 md:px-8'>
-          <div key={location.pathname} className='page-enter my-auto w-full'>
+        <div className={`mx-auto flex w-full flex-1 flex-col px-4 pb-6 pt-5 sm:px-6 md:px-8 ${fullWidth ? 'max-w-none' : 'max-w-5xl'}`}>
+          <div key={location.pathname} className={`page-enter w-full ${fullWidth ? 'mb-auto' : 'my-auto'}`}>
             <Outlet />
           </div>
         </div>
