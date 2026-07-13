@@ -72,16 +72,20 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
 
           {/* Right side actions */}
           <div className='flex items-center gap-2'>
-            {/* Rewards — desktop only */}
+            {/* Rewards — desktop only. Без коцка: само икона + текст + „жетон"
+                со поени; иконата се движи на hover за поживо чувство. */}
             <button
               onClick={() => navigate('/leaderboard')}
               aria-label={t('topbar.rewards')}
-              className='hidden items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 lg:flex'
+              className='group hidden items-center gap-1.5 rounded-full px-1.5 py-1.5 text-xs font-semibold text-amber-600 transition-colors hover:text-amber-700 lg:flex'
             >
-              <Gift className='h-3.5 w-3.5' />
+              <Gift className='h-4 w-4 transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110' />
               {t('topbar.rewards')}
-              <span className='rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold'>{currentUserPoints}</span>
+              <span className='rounded-full bg-gradient-to-br from-amber-400 to-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm shadow-amber-500/30'>{currentUserPoints}</span>
             </button>
+
+            {/* Вертикален разделник — визуелно ги одвојува наградите од ѕвончето */}
+            <span className='hidden h-5 w-px bg-slate-200 lg:block' />
 
             {/* Notifications — само ѕвонче (без рамка/коцка), покрупно на телефон */}
             <button
