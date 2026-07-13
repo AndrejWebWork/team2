@@ -50,8 +50,14 @@ authRouter.post('/login', async (req, res, next) => {
     const { email, password } = req.body
     if (!email || !password) return res.status(400).json({ error: 'Недостасува е-пошта или лозинка.' })
 
+    // Поените се МЕСЕЧНИ (се ресетираат на 1-ви секој месец) — се сумираат
+    // од points_events за тековниот месец, исто како leaderboard_monthly.
     const { rows } = await query(
-      'SELECT id, email, role, display_name, language, points, password_hash FROM users WHERE email = $1',
+      `SELECT id, email, role, display_name, language, password_hash,
+              COALESCE((SELECT SUM(pe.points) FROM points_events pe
+                        WHERE pe.user_id = users.id
+                          AND pe.created_at >= date_trunc('month', now())), 0) AS points
+       FROM users WHERE email = $1`,
       [email],
     )
     const user = rows[0]

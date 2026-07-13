@@ -25,8 +25,14 @@ usersRouter.get('/', async (req, res, next) => {
   try {
     const email = req.query.email
     if (!email) return res.status(400).json({ error: 'Недостасува email.' })
+    // Поените се МЕСЕЧНИ (како leaderboard_monthly): збир од points_events за
+    // тековниот месец → на 1-ви секој месец сите почнуваат од 0 автоматски.
     const { rows } = await query(
-      'SELECT id, email, display_name, role, language, points FROM users WHERE email = $1',
+      `SELECT id, email, display_name, role, language,
+              COALESCE((SELECT SUM(pe.points) FROM points_events pe
+                        WHERE pe.user_id = users.id
+                          AND pe.created_at >= date_trunc('month', now())), 0)::int AS points
+       FROM users WHERE email = $1`,
       [email],
     )
     if (rows.length === 0) return res.status(404).json({ error: 'Корисникот не постои.' })
