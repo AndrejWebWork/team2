@@ -12,9 +12,9 @@ export function Layout() {
   // ширина без центрирање — насловот и содржината почнуваат од горе-лево.
   const fullWidth = ['/admin-panel', '/admin-desk', '/admin-community'].includes(location.pathname)
 
-  // Страници со листи (пр. известувања) почнуваат од горе, не се центрираат
-  // вертикално — центрирањето изгледа чудно кога листата расте/се празни.
-  const topAligned = fullWidth || location.pathname === '/notifications'
+  // Страници со листи (известувања, пријави за депонии) почнуваат од горе, не се
+  // центрираат вертикално — центрирањето изгледа чудно кога листата расте/се празни.
+  const topAligned = fullWidth || ['/notifications', '/waste'].includes(location.pathname)
 
   return (
     <div className='min-h-screen bg-[#f4f6f8]'>
