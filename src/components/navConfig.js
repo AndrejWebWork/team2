@@ -1,4 +1,4 @@
-﻿import { AlertCircle, Biohazard, ClipboardList, LayoutDashboard, Recycle, Settings, Wind } from 'lucide-react'
+﻿import { AlertCircle, Biohazard, ClipboardList, LayoutDashboard, Recycle, Settings, UsersRound, Wind } from 'lucide-react'
 
 // `labelKey` е i18n клуч (nav.*). Преводот се прави во Sidebar/MobileNav преку t().
 export const navItems = [
@@ -9,5 +9,6 @@ export const navItems = [
   { to: '/community', labelKey: 'nav.community', icon: LayoutDashboard, hideForAdmin: true },
   { to: '/admin-panel', labelKey: 'nav.panel', icon: ClipboardList, adminOnly: true },
   { to: '/admin-desk', labelKey: 'nav.stats', icon: AlertCircle, adminOnly: true },
+  { to: '/admin-community', labelKey: 'nav.communityUsers', icon: UsersRound, adminOnly: true },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings, hideFromMobile: true },
 ]

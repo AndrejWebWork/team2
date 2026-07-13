@@ -44,7 +44,12 @@ const dict = {
       home: 'Дома', air: 'Воздух', waste: 'Диви Депонии', wasteShort: 'Депонии',
       containers: 'Контејнери', containersShort: 'Контејн.', community: 'Заедница',
       communityShort: 'Заедн.', panel: 'Панел', stats: 'Статистика', settings: 'Поставки',
+      communityUsers: 'Community корисници',
       ariaMain: 'Главна навигација',
+    },
+    adminComm: {
+      title: 'Community корисници',
+      subtitle: 'Додавај и управувај со influencer/community профили кои можат да објавуваат акции.',
     },
     role: { user: 'Корисник', organization: 'Организација', admin: 'Администратор', adminShort: 'Админ' },
     topbar: {
@@ -321,7 +326,12 @@ const dict = {
       home: 'Home', air: 'Air', waste: 'Illegal Dumps', wasteShort: 'Dumps',
       containers: 'Containers', containersShort: 'Contain.', community: 'Community',
       communityShort: 'Commun.', panel: 'Panel', stats: 'Statistics', settings: 'Settings',
+      communityUsers: 'Community users',
       ariaMain: 'Main navigation',
+    },
+    adminComm: {
+      title: 'Community users',
+      subtitle: 'Add and manage influencer/community profiles that can publish actions.',
     },
     role: { user: 'Citizen', organization: 'Organization', admin: 'Administrator', adminShort: 'Admin' },
     topbar: {
@@ -598,7 +608,12 @@ const dict = {
       home: 'Ballina', air: 'Ajri', waste: 'Deponi ilegale', wasteShort: 'Deponi',
       containers: 'Kontejnerë', containersShort: 'Kontej.', community: 'Komuniteti',
       communityShort: 'Komun.', panel: 'Paneli', stats: 'Statistika', settings: 'Cilësimet',
+      communityUsers: 'Përdorues të komunitetit',
       ariaMain: 'Navigimi kryesor',
+    },
+    adminComm: {
+      title: 'Përdorues të komunitetit',
+      subtitle: 'Shto dhe menaxho profile influencer/komuniteti që mund të publikojnë aksione.',
     },
     role: { user: 'Qytetar', organization: 'Organizatë', admin: 'Administrator', adminShort: 'Admin' },
     topbar: {

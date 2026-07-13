@@ -1,7 +1,6 @@
 import { AlertTriangle, ArrowUpDown, Biohazard, Camera, ChevronRight, Flame, MapPin, Recycle, Siren, Trash2, Wind, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { CommunityUsersManager } from '../components/CommunityUsersManager'
 import { Button } from '../components/ui/button'
 import { useApp } from '../context/AppContext'
 import { updateReportStatus } from '../lib/api'
@@ -314,9 +313,6 @@ export function AdminPanelPage() {
         <h1 className='font-display text-2xl font-bold text-slate-900'>{t('admin.panelTitle')}</h1>
         <p className='text-sm text-slate-500'>{t('admin.summary', { total: counts.all, pending: counts.pending })}</p>
       </div>
-
-      {/* Инфлуенсери/community корисници (можат да објавуваат акции) */}
-      <CommunityUsersManager />
 
       {/* Statistics row */}
       <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>

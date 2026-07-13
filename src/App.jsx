@@ -2,6 +2,7 @@
 import { CookieConsent } from './components/CookieConsent'
 import { Layout } from './components/Layout'
 import { useApp } from './context/AppContext'
+import { AdminCommunityPage } from './pages/AdminCommunityPage'
 import { AdminDeskPage } from './pages/AdminDeskPage'
 import { AdminPanelPage } from './pages/AdminPanelPage'
 import { AirPage } from './pages/AirPage'
@@ -40,6 +41,7 @@ export default function App() {
           <Route path='/notifications' element={<NotificationsPage />} />
           <Route path='/leaderboard' element={<LeaderboardPage />} />
           <Route path='/admin-desk' element={<AdminDeskPage />} />
+          <Route path='/admin-community' element={<AdminCommunityPage />} />
           <Route path='/settings' element={<SettingsPage />} />
         </Route>
         <Route path='*' element={<Navigate to='/home' replace />} />
