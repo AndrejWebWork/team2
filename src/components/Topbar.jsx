@@ -58,7 +58,7 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
             onClick={() => setOpenMenu(true)}
             className='rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 lg:hidden'
           >
-            <UserCircle2 className='h-6 w-6' />
+            <UserCircle2 className='h-8 w-8' />
           </button>
 
           {/* Desktop: user info */}
@@ -83,20 +83,21 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
               <span className='rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold'>{currentUserPoints}</span>
             </button>
 
-            {/* Notifications */}
+            {/* Notifications — само ѕвонче (без рамка/коцка), покрупно на телефон */}
             <button
               onClick={handleBellClick}
-              className='relative rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+              aria-label={t('topbar.notifications')}
+              className='relative rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800'
             >
-              <Bell className={`h-4 w-4 ${pinging ? 'badge-pop' : ''}`} />
+              <Bell className={`h-7 w-7 lg:h-5 lg:w-5 ${pinging ? 'badge-pop' : ''}`} />
               {unreadCount > 0 && (
-                <span className='absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center'>
+                <span className='absolute -right-0.5 -top-0.5 flex h-[18px] w-[18px] items-center justify-center'>
                   {pinging && (
                     <span className='badge-ping absolute inline-flex h-full w-full rounded-full bg-rose-400' />
                   )}
                   <span
                     key={unreadCount}
-                    className='badge-pop relative flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold leading-none text-white tabular-nums'
+                    className='badge-pop relative flex h-[18px] w-[18px] items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold leading-none text-white tabular-nums'
                   >
                     {unreadCount}
                   </span>
