@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowUpDown, Biohazard, Camera, ChevronRight, Flame, MapPin, Recycle, Siren, Trash2, Wind, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Navigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { useApp } from '../context/AppContext'
@@ -55,10 +56,13 @@ function ReportDrawer({ report, onClose, onUpdateStatus }) {
     { key: 'resolved',    label: t('status.resolved') },
   ]
 
-  return (
-    <div className='fixed inset-0 z-50 flex'>
-      <div className='absolute inset-0 bg-slate-900/40' onClick={onClose} />
-      <aside className='relative ml-auto flex h-full w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-2xl'>
+  // Portal во <body>: родителските анимации на страниците користат transform,
+  // што „заробува" fixed елементи во рамки на контејнерот. Со portal фиоката
+  // го покрива целиот екран и се лизга од десно кон лево (како sidebar менито).
+  return createPortal(
+    <div className='fixed inset-0 z-[1200] flex'>
+      <div className='animate-drawer-overlay-in absolute inset-0 bg-slate-900/40' onClick={onClose} />
+      <aside className='animate-drawer-in-right relative ml-auto flex h-full w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-2xl'>
         {/* Header */}
         <div className='flex items-center justify-between border-b border-slate-200 px-5 py-4'>
           <div className='flex items-center gap-2'>
@@ -223,7 +227,8 @@ function ReportDrawer({ report, onClose, onUpdateStatus }) {
           </div>
         )}
       </aside>
-    </div>
+    </div>,
+    document.body
   )
 }
 

@@ -155,6 +155,22 @@ select:focus {
   animation: consent-card-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Странична фиока (детали на пријава) — влегување од десно кон лево. */
+@keyframes drawer-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes drawer-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-drawer-in-right {
+  animation: drawer-in-right 0.28s cubic-bezier(0.32, 0.72, 0.24, 1) both;
+}
+.animate-drawer-overlay-in {
+  animation: drawer-overlay-in 0.25s ease-out both;
+}
+
 /* Успех при поднесување пријава — благ „pop" со мек потскок. */
 @keyframes success-pop {
   0% { opacity: 0; transform: scale(0.92); }
