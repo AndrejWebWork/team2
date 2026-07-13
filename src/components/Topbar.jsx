@@ -144,7 +144,7 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
             </button>
           </div>
 
-          <div className='flex-1 p-4'>
+          <div className='p-4'>
             <button
               onClick={() => { navigate('/leaderboard'); setOpenMenu(false) }}
               className='flex w-full items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-100'
@@ -152,32 +152,32 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
               <span className='flex items-center gap-2'><Gift className='h-4 w-4' />{t('topbar.rewards')}</span>
               <span className='rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold'>{currentUserPoints}</span>
             </button>
-          </div>
 
-          {/* Долен дел — како на десктоп страничното мени: чисти редови без рамки */}
-          <div className='space-y-0.5 border-t border-slate-100 p-4'>
-            <button
-              onClick={() => { navigate('/settings'); setOpenMenu(false) }}
-              className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900'
-            >
-              <Settings className='h-5 w-5 shrink-0' />{t('topbar.settings')}
-            </button>
+            {/* Чисти редови без рамки — како на десктоп страничното мени */}
+            <div className='mt-4 space-y-0.5 border-t border-slate-100 pt-4'>
+              <button
+                onClick={() => { navigate('/settings'); setOpenMenu(false) }}
+                className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900'
+              >
+                <Settings className='h-5 w-5 shrink-0' />{t('topbar.settings')}
+              </button>
 
-            {isAnonymous ? (
-              <button
-                onClick={() => { navigate('/login', { state: { allowLogin: true } }); setOpenMenu(false) }}
-                className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50'
-              >
-                <LogIn className='h-5 w-5 shrink-0' />{t('topbar.login')}
-              </button>
-            ) : (
-              <button
-                onClick={logout}
-                className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-rose-600 transition-colors hover:bg-rose-50'
-              >
-                <LogOut className='h-5 w-5 shrink-0' />{t('topbar.logout')}
-              </button>
-            )}
+              {isAnonymous ? (
+                <button
+                  onClick={() => { navigate('/login', { state: { allowLogin: true } }); setOpenMenu(false) }}
+                  className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50'
+                >
+                  <LogIn className='h-5 w-5 shrink-0' />{t('topbar.login')}
+                </button>
+              ) : (
+                <button
+                  onClick={logout}
+                  className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-rose-600 transition-colors hover:bg-rose-50'
+                >
+                  <LogOut className='h-5 w-5 shrink-0' />{t('topbar.logout')}
+                </button>
+              )}
+            </div>
           </div>
         </aside>
       </div>
