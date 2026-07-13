@@ -8,9 +8,9 @@ export function Layout() {
   const { auth, unreadCount, setAuth, currentUserPoints, t } = useApp()
   const location = useLocation()
 
-  // Админ панелот користи целосна ширина (табела + статистики), без
-  // центрирање — насловот и содржината почнуваат од горе-лево.
-  const fullWidth = location.pathname === '/admin-panel'
+  // Админ страниците (панел, статистика, community корисници) користат целосна
+  // ширина без центрирање — насловот и содржината почнуваат од горе-лево.
+  const fullWidth = ['/admin-panel', '/admin-desk', '/admin-community'].includes(location.pathname)
 
   // Страници со листи (пр. известувања) почнуваат од горе, не се центрираат
   // вертикално — центрирањето изгледа чудно кога листата расте/се празни.
