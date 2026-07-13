@@ -335,6 +335,17 @@ export async function loginApi({ email, password }, signal) {
   return data
 }
 
+// Трајно бришење на сметка (со потврда на лозинка). Барање на Play/App Store.
+export async function deleteAccountApi({ email, password }, signal) {
+  const res = await fetch(`${API_URL}/api/auth/account`, {
+    method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }), signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Бришењето не успеа.')
+  return data
+}
+
 // ---- Корисник / јазик ----
 
 // Го зема профилот на корисникот (вкл. избран јазик) по email.

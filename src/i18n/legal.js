@@ -4,7 +4,7 @@
 // со ЗЗЛП (RS Македонија) и начелата на GDPR — финалната верзија треба да ја
 // потврди правно лице од Град Скопје.
 
-export const LEGAL_UPDATED = '2026-07-10'
+export const LEGAL_UPDATED = '2026-07-13'
 export const LEGAL_OPERATOR = 'Град Скопје'
 export const LEGAL_CONTACT = 'kontakt@skopje.gov.mk'
 
@@ -23,6 +23,7 @@ export const legalContent = {
           'Податоци од регистрација (по избор): е-пошта, име и презиме и лозинка (која се чува исклучиво во криптиран/хеширан облик и никогаш во читлив текст).',
           'Податоци од пријави: локација (GPS координати), општина, опис, категорија и фотографии што доброволно ги прикачувате.',
           'Технички податоци: идентификатор на уред за анонимни корисници, избран јазик, статус на сесијата и основни поставки, зачувани локално на вашиот уред.',
+          'Известувања: ако дозволите push известувања, се чува токен за испраќање пораки до вашиот уред (преку Google Firebase Cloud Messaging). Дозволата може да ја повлечете во секое време во поставките на уредот.',
           'Не собираме повеќе податоци отколку што е неопходно за функционирање на услугата (начело на минимизација).',
         ] },
         { h: 'Зошто ги обработуваме', p: [
@@ -38,11 +39,16 @@ export const legalContent = {
         ] },
         { h: 'Чување и рок', p: [
           'Податоците се чуваат само додека е потребно за целите наведени погоре или додека постои вашата сметка.',
+          'Сметката може да ја избришете во секое време директно во апликацијата (Поставки → Сметка → Избриши сметка). Со тоа трајно се бришат вашите лични податоци, а поднесените пријави остануваат во анонимизирана форма (без поврзаност со вас).',
           'Податоците на анонимни корисници се чуваат локално на уредот (кеш) и може да ги избришете во секое време преку поставките на уредот или бришење на податоците на апликацијата.',
         ] },
-        { h: 'Споделување со трети страни', p: [
+        { h: 'Споделување со трети страни и обработувачи', p: [
           'Податоците од пријавите може да се проследат до надлежни комунални и инспекциски служби заради постапување.',
+          'За техничко функционирање користиме обработувачи: Vercel Inc. (хостинг на апликацијата), Neon Inc. (база на податоци, сервери во ЕУ — Франкфурт) и Google LLC (Firebase Cloud Messaging, само за испорака на известувања). Овие даватели обработуваат податоци исклучиво по наши инструкции.',
           'Не продаваме и не изнајмуваме лични податоци за маркетинг цели на трети страни.',
+        ] },
+        { h: 'Деца', p: [
+          'Апликацијата не е наменета за деца под 16 години и свесно не собираме нивни лични податоци. Ако сте родител/старател и сметате дека дете ни доставило лични податоци, контактирајте нè за да ги избришеме.',
         ] },
         { h: 'Вашите права', p: [
           'Имате право на пристап, исправка, бришење и ограничување на обработката, право на приговор и повлекување согласност во секое време.',
@@ -118,6 +124,7 @@ export const legalContent = {
           'Registration data (optional): email, full name and password (stored only in encrypted/hashed form, never in plain text).',
           'Report data: location (GPS coordinates), municipality, description, category and photos you voluntarily upload.',
           'Technical data: device identifier for anonymous users, chosen language, session status and basic settings, stored locally on your device.',
+          'Notifications: if you allow push notifications, a token is stored for delivering messages to your device (via Google Firebase Cloud Messaging). You can withdraw this permission at any time in your device settings.',
           'We do not collect more data than is necessary for the service to function (data minimisation).',
         ] },
         { h: 'Why we process it', p: [
@@ -133,11 +140,16 @@ export const legalContent = {
         ] },
         { h: 'Retention', p: [
           'Data is kept only as long as necessary for the purposes above or while your account exists.',
+          'You can delete your account at any time directly in the app (Settings → Account → Delete account). This permanently deletes your personal data; submitted reports remain in anonymised form (no longer linked to you).',
           'Anonymous users’ data is stored locally on the device (cache) and can be deleted at any time via device settings or by clearing app data.',
         ] },
-        { h: 'Sharing with third parties', p: [
+        { h: 'Sharing with third parties and processors', p: [
           'Report data may be forwarded to responsible municipal and inspection services for action.',
+          'For technical operation we use processors: Vercel Inc. (app hosting), Neon Inc. (database, EU servers — Frankfurt) and Google LLC (Firebase Cloud Messaging, solely for notification delivery). These providers process data only on our instructions.',
           'We do not sell or rent personal data to third parties for marketing.',
+        ] },
+        { h: 'Children', p: [
+          'The app is not intended for children under 16 and we do not knowingly collect their personal data. If you are a parent/guardian and believe a child has provided us personal data, contact us so we can delete it.',
         ] },
         { h: 'Your rights', p: [
           'You have the right to access, rectify, erase and restrict processing, to object, and to withdraw consent at any time.',
@@ -213,6 +225,7 @@ export const legalContent = {
           'Të dhëna regjistrimi (opsionale): email, emri e mbiemri dhe fjalëkalimi (i ruajtur vetëm në formë të enkriptuar/hash-uar, kurrë si tekst i qartë).',
           'Të dhëna raportimi: vendndodhja (koordinatat GPS), komuna, përshkrimi, kategoria dhe fotografitë që ngarkoni vullnetarisht.',
           'Të dhëna teknike: identifikuesi i pajisjes për përdoruesit anonimë, gjuha e zgjedhur, statusi i sesionit dhe cilësimet bazë, të ruajtura lokalisht në pajisjen tuaj.',
+          'Njoftimet: nëse lejoni njoftimet push, ruhet një token për dërgimin e mesazheve në pajisjen tuaj (përmes Google Firebase Cloud Messaging). Lejen mund ta tërhiqni në çdo kohë në cilësimet e pajisjes.',
           'Nuk mbledhim më shumë të dhëna sesa është e nevojshme për funksionimin e shërbimit (minimizimi i të dhënave).',
         ] },
         { h: 'Pse i përpunojmë', p: [
@@ -228,11 +241,16 @@ export const legalContent = {
         ] },
         { h: 'Ruajtja dhe afati', p: [
           'Të dhënat ruhen vetëm sa është e nevojshme për qëllimet e mësipërme ose derisa ekziston llogaria juaj.',
+          'Llogarinë mund ta fshini në çdo kohë direkt në aplikacion (Cilësimet → Llogaria → Fshi llogarinë). Me këtë fshihen përgjithmonë të dhënat tuaja personale; raportet e paraqitura mbeten në formë të anonimizuar (pa lidhje me ju).',
           'Të dhënat e përdoruesve anonimë ruhen lokalisht në pajisje (cache) dhe mund t’i fshini në çdo kohë përmes cilësimeve të pajisjes ose duke pastruar të dhënat e aplikacionit.',
         ] },
-        { h: 'Ndarja me palë të treta', p: [
+        { h: 'Ndarja me palë të treta dhe përpunuesit', p: [
           'Të dhënat e raporteve mund t’u përcillen shërbimeve komunale dhe inspektuese përgjegjëse për veprim.',
+          'Për funksionim teknik përdorim përpunues: Vercel Inc. (hostim i aplikacionit), Neon Inc. (bazë të dhënash, serverë në BE — Frankfurt) dhe Google LLC (Firebase Cloud Messaging, vetëm për dërgimin e njoftimeve). Këta ofrues i përpunojnë të dhënat vetëm sipas udhëzimeve tona.',
           'Nuk shesim dhe nuk japim me qira të dhëna personale për marketing te palët e treta.',
+        ] },
+        { h: 'Fëmijët', p: [
+          'Aplikacioni nuk është i dedikuar për fëmijë nën 16 vjeç dhe nuk mbledhim me vetëdije të dhënat e tyre personale. Nëse jeni prind/kujdestar dhe besoni se një fëmijë na ka dhënë të dhëna personale, na kontaktoni që t’i fshijmë.',
         ] },
         { h: 'Të drejtat tuaja', p: [
           'Keni të drejtë qasjeje, korrigjimi, fshirjeje dhe kufizimi të përpunimit, të drejtë kundërshtimi dhe tërheqjeje të pëlqimit në çdo kohë.',

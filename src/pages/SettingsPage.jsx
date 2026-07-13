@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, Database, FileText, LogOut, Languages, Scale, Shield, ShieldCheck, User } from 'lucide-react'
+import { Bell, ChevronRight, Database, FileText, LogOut, Languages, Scale, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
 import { LANGUAGES } from '../i18n/translations'
+import { deleteAccountApi } from '../lib/api'
 
 const ROLE_COLORS = {
   user: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -24,6 +25,10 @@ export function SettingsPage() {
   const [notifWaste, setNotifWaste] = useState(true)
   const [notifEvents, setNotifEvents] = useState(false)
   const [toast, setToast] = useState('')
+  // Бришење сметка: бара потврда со лозинка (Play/App Store барање).
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleting, setDeleting] = useState(false)
 
   function saveProfile(e) {
     e.preventDefault()
@@ -34,6 +39,20 @@ export function SettingsPage() {
   function logout() {
     setAuth({ isAuthenticated: false, role: 'user', email: '', isAnonymous: true })
     navigate('/auth-loading', { replace: true })
+  }
+
+  async function deleteAccount(e) {
+    e.preventDefault()
+    if (!deletePassword) return setToast(t('settings.deletePasswordRequired'))
+    setDeleting(true)
+    try {
+      await deleteAccountApi({ email: auth.email, password: deletePassword })
+      setToast(t('settings.accountDeleted'))
+      setTimeout(logout, 800)
+    } catch (err) {
+      setToast(err.message || t('settings.deleteFailed'))
+      setDeleting(false)
+    }
   }
 
   return (
@@ -183,6 +202,41 @@ export function SettingsPage() {
             <LogOut className='h-4 w-4' />
             {t('settings.logout')}
           </Button>
+
+          {/* Бришење сметка — само за регистрирани корисници (Play/App Store барање) */}
+          {!auth.isAnonymous && auth.email && auth.role !== 'admin' && (
+            !deleteOpen ? (
+              <button
+                type='button'
+                onClick={() => setDeleteOpen(true)}
+                className='flex w-full items-center gap-2 rounded-xl border border-rose-100 bg-rose-50/50 px-4 py-3 text-sm font-medium text-rose-500 transition-colors hover:bg-rose-50'
+              >
+                <Trash2 className='h-4 w-4' />
+                {t('settings.deleteAccount')}
+              </button>
+            ) : (
+              <form onSubmit={deleteAccount} className='space-y-2.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3'>
+                <p className='text-sm font-semibold text-rose-700'>{t('settings.deleteAccount')}</p>
+                <p className='text-xs leading-relaxed text-rose-600'>{t('settings.deleteWarning')}</p>
+                <Input
+                  type='password'
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder={t('settings.deletePasswordPh')}
+                  className='h-10 border-rose-200 bg-white'
+                  autoComplete='current-password'
+                />
+                <div className='flex gap-2'>
+                  <Button type='submit' size='sm' disabled={deleting} className='flex-1 bg-rose-600 hover:bg-rose-700'>
+                    {deleting ? t('settings.deleting') : t('settings.deleteConfirm')}
+                  </Button>
+                  <Button type='button' size='sm' variant='outline' onClick={() => { setDeleteOpen(false); setDeletePassword('') }}>
+                    {t('common.cancel')}
+                  </Button>
+                </div>
+              </form>
+            )
+          )}
         </CardContent>
       </Card>
 

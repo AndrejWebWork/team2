@@ -69,3 +69,31 @@ authRouter.post('/login', async (req, res, next) => {
     res.json(publicUser(user))
   } catch (err) { next(err) }
 })
+
+// DELETE /api/auth/account  { email, password }
+// Трајно бришење на сметка (барање на Google Play/App Store). Лозинката се
+// проверува за да не може некој друг да ја избрише сметката. Пријавите
+// остануваат анонимизирани (reports.reporter_id → NULL преку ON DELETE SET NULL),
+// а поените, токените за нотификации и потписите на настани се бришат каскадно.
+authRouter.delete('/account', async (req, res, next) => {
+  try {
+    const { email, password } = req.body
+    if (!email || !password) return res.status(400).json({ error: 'Недостасува е-пошта или лозинка.' })
+
+    const { rows } = await query(
+      'SELECT id, role, password_hash FROM users WHERE email = $1',
+      [email],
+    )
+    const user = rows[0]
+    if (!user || !user.password_hash) return res.status(401).json({ error: 'Погрешна е-пошта или лозинка.' })
+
+    const ok = await bcrypt.compare(String(password), user.password_hash)
+    if (!ok) return res.status(401).json({ error: 'Погрешна е-пошта или лозинка.' })
+
+    // Админ сметката не смее да се избрише самата себеси од апликацијата.
+    if (user.role === 'admin') return res.status(403).json({ error: 'Админ сметката не може да се избрише од апликацијата.' })
+
+    await query('DELETE FROM users WHERE id = $1', [user.id])
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})

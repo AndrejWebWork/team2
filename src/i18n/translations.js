@@ -60,6 +60,10 @@ const dict = {
       notifEvents: 'Потсетници за еко настани', notifEventsSub: 'Пред настани на кои си запишан',
       language: 'Јазик', languageLabel: 'Јазик на апликацијата', langSaved: 'Јазикот е променет.',
       account: 'Сметка', appVersion: 'Верзија на апликација', logout: 'Одјави се',
+      deleteAccount: 'Избриши ја сметката', deleteConfirm: 'Избриши трајно', deleting: 'Се брише…',
+      deleteWarning: 'Сметката и личните податоци ќе бидат трајно избришани. Поднесените пријави остануваат анонимни. Ова дејство е неповратно.',
+      deletePasswordPh: 'Внеси лозинка за потврда', deletePasswordRequired: 'Внеси ја лозинката за потврда.',
+      accountDeleted: 'Сметката е избришана.', deleteFailed: 'Бришењето не успеа.',
     },
     common: {
       cancel: 'Откажи', close: 'Затвори', closeUp: 'Затвори ↑', back: 'Назад', points: 'поени', ok: 'Во ред',
@@ -333,6 +337,10 @@ const dict = {
       notifEvents: 'Eco event reminders', notifEventsSub: 'Before events you signed up for',
       language: 'Language', languageLabel: 'App language', langSaved: 'Language updated.',
       account: 'Account', appVersion: 'App version', logout: 'Log out',
+      deleteAccount: 'Delete account', deleteConfirm: 'Delete permanently', deleting: 'Deleting…',
+      deleteWarning: 'Your account and personal data will be permanently deleted. Submitted reports remain anonymised. This action cannot be undone.',
+      deletePasswordPh: 'Enter password to confirm', deletePasswordRequired: 'Enter your password to confirm.',
+      accountDeleted: 'Account deleted.', deleteFailed: 'Deletion failed.',
     },
     common: {
       cancel: 'Cancel', close: 'Close', closeUp: 'Close ↑', back: 'Back', points: 'points', ok: 'OK',
@@ -606,6 +614,10 @@ const dict = {
       notifEvents: 'Kujtesa për ngjarje ekologjike', notifEventsSub: 'Para ngjarjeve ku jeni regjistruar',
       language: 'Gjuha', languageLabel: 'Gjuha e aplikacionit', langSaved: 'Gjuha u ndryshua.',
       account: 'Llogaria', appVersion: 'Versioni i aplikacionit', logout: 'Dilni',
+      deleteAccount: 'Fshi llogarinë', deleteConfirm: 'Fshi përgjithmonë', deleting: 'Duke u fshirë…',
+      deleteWarning: 'Llogaria dhe të dhënat tuaja personale do të fshihen përgjithmonë. Raportet e paraqitura mbeten anonime. Ky veprim është i pakthyeshëm.',
+      deletePasswordPh: 'Fut fjalëkalimin për konfirmim', deletePasswordRequired: 'Fut fjalëkalimin për konfirmim.',
+      accountDeleted: 'Llogaria u fshi.', deleteFailed: 'Fshirja dështoi.',
     },
     common: {
       cancel: 'Anulo', close: 'Mbyll', closeUp: 'Mbyll ↑', back: 'Prapa', points: 'pikë', ok: 'Në rregull',
