@@ -12,6 +12,10 @@ export function Layout() {
   // центрирање — насловот и содржината почнуваат од горе-лево.
   const fullWidth = location.pathname === '/admin-panel'
 
+  // Страници со листи (пр. известувања) почнуваат од горе, не се центрираат
+  // вертикално — центрирањето изгледа чудно кога листата расте/се празни.
+  const topAligned = fullWidth || location.pathname === '/notifications'
+
   return (
     <div className='min-h-screen bg-[#f4f6f8]'>
       <Sidebar role={auth.role} />
@@ -29,7 +33,7 @@ export function Layout() {
         {/* flex-1 го зазема остатокот од висината; `my-auto` вертикално ги центрира
             кратките страници, а долгите нормално се движат (без сечење горе). */}
         <div className={`mx-auto flex w-full flex-1 flex-col px-4 pb-6 pt-5 sm:px-6 md:px-8 ${fullWidth ? 'max-w-none' : 'max-w-5xl'}`}>
-          <div key={location.pathname} className={`page-enter w-full ${fullWidth ? 'mb-auto' : 'my-auto'}`}>
+          <div key={location.pathname} className={`page-enter w-full ${topAligned ? 'mb-auto' : 'my-auto'}`}>
             <Outlet />
           </div>
         </div>
