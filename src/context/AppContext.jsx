@@ -25,6 +25,7 @@ import {
   updateReportStatus,
 } from '../lib/api'
 import { getDeviceId } from '../lib/device'
+import { resolveMunicipality } from '../lib/geo'
 import { registerPushNotifications, scheduleLocalNotification } from '../lib/notifications'
 import { DEFAULT_LANGUAGE, isSupportedLanguage, translate } from '../i18n/translations'
 
@@ -370,6 +371,12 @@ export function AppProvider({ children }) {
   // Пријава (миризба/депонија/контејнер) → backend (слики како BYTEA во база).
   // Успех → веднаш освежи од сервер; офлајн → оптимистички локален запис + кеш.
   async function submitReport(payload) {
+    // Општина: ако формата не ја дала, одреди ја од координатите (Nominatim).
+    // Не блокира долго (timeout 6s) и при неуспех пријавата оди без општина.
+    let municipality = payload.municipality || ''
+    if (!municipality && payload.lat != null && payload.lng != null) {
+      municipality = await resolveMunicipality(payload.lat, payload.lng)
+    }
     const backendPayload = {
       type: payload.type,
       reporterId: auth.isAnonymous ? null : undefined,
@@ -379,7 +386,7 @@ export function AppProvider({ children }) {
       reporterEmail: auth.email || null,
       reporterName: auth.email || null,
       location: payload.location || '',
-      municipality: payload.municipality || '',
+      municipality,
       lat: payload.lat,
       lng: payload.lng,
       description: payload.description || '',

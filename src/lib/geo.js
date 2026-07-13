@@ -15,6 +15,33 @@ export function haversineMeters(lat1, lng1, lat2, lng2) {
 // Ги обединува сите познати OSM точки (контејнери за рециклажа + јавни корпи).
 const ALL_POINTS = [...skopjeRecyclingContainers, ...skopjeWasteBaskets]
 
+// Ја одредува општината за дадени координати преку Nominatim (OpenStreetMap).
+// Скопските општини Nominatim ги враќа како city_district (пр. „Центар",
+// „Карпош"), а околните како municipality/town. Враќа '' ако не успее —
+// пријавата сепак се испраќа, само без општина.
+export async function resolveMunicipality(lat, lng) {
+  try {
+    const numLat = Number(lat)
+    const numLng = Number(lng)
+    if (!Number.isFinite(numLat) || !Number.isFinite(numLng)) return ''
+    const url = new URL('https://nominatim.openstreetmap.org/reverse')
+    url.searchParams.set('lat', numLat.toFixed(6))
+    url.searchParams.set('lon', numLng.toFixed(6))
+    url.searchParams.set('format', 'json')
+    url.searchParams.set('zoom', '12')
+    url.searchParams.set('accept-language', 'mk')
+    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(6000) })
+    if (!res.ok) return ''
+    const data = await res.json()
+    const a = data.address || {}
+    const raw = a.municipality || a.city_district || a.suburb || a.town || a.city || a.village || ''
+    // „Општина Гази Баба" → „Гази Баба" (почисто за приказ во табелите).
+    return raw.replace(/^Општина\s+/i, '').trim()
+  } catch {
+    return ''
+  }
+}
+
 // Наоѓа најблиска позната точка до дадени координати.
 // `maxMeters` — ако најблиската е подалеку, враќа null (пријавата е на непознат
 // контејнер, па не врзуваме погрешно).
