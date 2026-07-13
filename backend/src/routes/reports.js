@@ -90,7 +90,9 @@ function rowToReport(r) {
   const photos = []
   for (let n = 1; n <= config.maxPhotos; n++) {
     const has = r[`has_photo_${n}`] != null ? r[`has_photo_${n}`] : r[`photo_${n}`] != null
-    if (has) photos.push(`${config.publicBaseUrl}/api/reports/${r.id}/photos/${n}`)
+    // Релативна патека — работи на кој било домен (localhost, Vercel, LAN IP).
+    // Frontend-от ја претвора во апсолутна со својот API_URL.
+    if (has) photos.push(`/api/reports/${r.id}/photos/${n}`)
   }
   const rest = { ...r }
   for (let n = 1; n <= config.maxPhotos; n++) {

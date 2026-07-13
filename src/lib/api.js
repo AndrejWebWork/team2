@@ -369,6 +369,17 @@ export async function saveUserLanguage(email, language, signal) {
 
 // ---- Трансформации: серверски ред (type + photo_1..6) → облици во frontend ----
 
+// Backend-от враќа релативни патеки за слики (/api/reports/…/photos/n).
+// Тука се претвораат во апсолутни со API_URL — потребно за локален развој
+// (Vite на 5173, API на 4000) и за мобилните апликации (Capacitor).
+// Старите апсолутни URL-и (http…) поминуваат непроменети.
+function photoUrl(p) {
+  return p && p.startsWith('/') ? `${API_URL}${p}` : p
+}
+function photoUrls(r) {
+  return (r.photos || []).map(photoUrl)
+}
+
 export function serverToWaste(r) {
   return {
     id: r.id,
@@ -385,8 +396,8 @@ export function serverToWaste(r) {
     reportedByDevice: r.reporter_device_id || null,
     createdAt: r.created_at,
     resolvedAt: r.resolved_at,
-    photos: r.photos || [],
-    photo: (r.photos || [])[0] || '',
+    photos: photoUrls(r),
+    photo: photoUrls(r)[0] || '',
   }
 }
 
@@ -411,8 +422,8 @@ export function serverToContainer(r) {
     nearestPointType: r.nearest_point_type || null,
     nearestDistanceM: r.nearest_point_distance_m ?? null,
     createdAt: r.created_at,
-    photos: r.photos || [],
-    photo: (r.photos || [])[0] || '',
+    photos: photoUrls(r),
+    photo: photoUrls(r)[0] || '',
   }
 }
 
