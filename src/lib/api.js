@@ -2,8 +2,25 @@
 // Ако VITE_API_URL не е зададено: во dev → локален backend; во продукциски
 // build (Vercel) → ист домен (релативни /api патеки).
 const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:4000' : '')).replace(/\/$/, '')
-// Админ токен за заштитените операции (менување статус). Празно = не се праќа.
-const ADMIN_TOKEN = (import.meta.env.VITE_ADMIN_TOKEN || '').trim()
+// Админ токен за заштитените операции (менување статус, community корисници).
+// Backend-от го враќа при успешна админ најава; се памети локално по сесија.
+// VITE_ADMIN_TOKEN останува како fallback за локален развој.
+const ADMIN_TOKEN_KEY = 'ekoskopje.adminToken'
+
+export function setStoredAdminToken(token) {
+  try {
+    if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token)
+    else localStorage.removeItem(ADMIN_TOKEN_KEY)
+  } catch { /* localStorage недостапен — тивко игнорирај */ }
+}
+
+function getAdminToken() {
+  try {
+    const stored = (localStorage.getItem(ADMIN_TOKEN_KEY) || '').trim()
+    if (stored) return stored
+  } catch { /* ignore */ }
+  return (import.meta.env.VITE_ADMIN_TOKEN || '').trim()
+}
 
 export const apiBase = API_URL
 
@@ -82,7 +99,8 @@ export async function fetchReports(signal) {
 
 export async function updateReportStatus(id, status, extra = {}, signal) {
   const headers = { 'Content-Type': 'application/json' }
-  if (ADMIN_TOKEN) headers['X-Admin-Token'] = ADMIN_TOKEN
+  const adminToken = getAdminToken()
+  if (adminToken) headers['X-Admin-Token'] = adminToken
   const res = await fetch(`${API_URL}/api/reports/${id}/status`, {
     method: 'PATCH',
     headers,
@@ -154,7 +172,7 @@ export async function deleteEventApi(id, email, signal) {
   const qs = email ? `?email=${encodeURIComponent(email)}` : ''
   const res = await fetch(`${API_URL}/api/events/${id}${qs}`, {
     method: 'DELETE',
-    headers: ADMIN_TOKEN ? { 'X-Admin-Token': ADMIN_TOKEN } : {},
+    headers: getAdminToken() ? { 'X-Admin-Token': getAdminToken() } : {},
     signal,
   })
   if (!res.ok) throw new Error('Откажувањето на настанот не успеа.')
@@ -281,7 +299,7 @@ export async function registerDeviceTokenApi({ token, email, deviceId, platform 
 // Админ: листа на influencer/community корисници.
 export async function fetchCommunityUsersApi(signal) {
   const res = await fetch(`${API_URL}/api/users/community`, {
-    headers: ADMIN_TOKEN ? { 'X-Admin-Token': ADMIN_TOKEN } : {},
+    headers: getAdminToken() ? { 'X-Admin-Token': getAdminToken() } : {},
     signal,
   })
   const data = await res.json().catch(() => ({}))
@@ -292,7 +310,8 @@ export async function fetchCommunityUsersApi(signal) {
 // Админ: додади/унапреди influencer/community корисник (улога 'organization').
 export async function addCommunityUserApi({ email, displayName, organizationName, password, language }, signal) {
   const headers = { 'Content-Type': 'application/json' }
-  if (ADMIN_TOKEN) headers['X-Admin-Token'] = ADMIN_TOKEN
+  const adminToken = getAdminToken()
+  if (adminToken) headers['X-Admin-Token'] = adminToken
   const res = await fetch(`${API_URL}/api/users/community`, {
     method: 'POST', headers,
     body: JSON.stringify({ email, displayName, organizationName, password, language }), signal,
@@ -306,7 +325,7 @@ export async function addCommunityUserApi({ email, displayName, organizationName
 export async function removeCommunityUserApi(email, signal) {
   const res = await fetch(`${API_URL}/api/users/community/${encodeURIComponent(email)}`, {
     method: 'DELETE',
-    headers: ADMIN_TOKEN ? { 'X-Admin-Token': ADMIN_TOKEN } : {},
+    headers: getAdminToken() ? { 'X-Admin-Token': getAdminToken() } : {},
     signal,
   })
   const data = await res.json().catch(() => ({}))

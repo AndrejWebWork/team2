@@ -269,13 +269,22 @@ export function AdminPanelPage() {
     else { setSortBy(col); setSortDir('desc') }
   }
 
-  function updateStatus(report, newStatus) {
+  async function updateStatus(report, newStatus) {
     const statusLabel = STATUS_META[newStatus] ? t(STATUS_META[newStatus].key) : newStatus
     const location = report.location || report.area || t('admin.unknownLocation')
 
-    // Ако пријавата доаѓа од базата (UUID id), ажурирај и на backend.
+    // Ако пријавата доаѓа од базата (UUID id), прво ажурирај на backend.
+    // При неуспех (пр. невалиден админ токен) НЕ прикажувај лажен успех.
     if (typeof report.id === 'string' && report.id.includes('-')) {
-      updateReportStatus(report.id, newStatus).catch(() => {})
+      try {
+        await updateReportStatus(report.id, newStatus)
+      } catch {
+        pushNotification({
+          title: t('admin.statusUpdateFailedTitle'),
+          body: t('admin.statusUpdateFailedBody', { loc: location }),
+        })
+        return
+      }
     }
 
     if (report.type === 'waste') {

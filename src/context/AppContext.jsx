@@ -18,6 +18,7 @@ import {
   registerApi,
   registerDeviceTokenApi,
   saveUserLanguage,
+  setStoredAdminToken,
   serverToContainer,
   serverToSmell,
   serverToWaste,
@@ -264,6 +265,8 @@ export function AppProvider({ children }) {
         localStorage.removeItem(AUTH_STORAGE_KEY)
       }
     } catch { /* localStorage недостапен — тивко игнорирај */ }
+    // Одјава/не-админ сесија → админ токенот не смее да остане на уредот.
+    if (auth.role !== 'admin') setStoredAdminToken('')
   }, [auth.email, auth.role, auth.displayName, auth.isAnonymous])
 
   // Го применуваме избраниот јазик на <html lang> (пристапност + SEO).
@@ -328,13 +331,15 @@ export function AppProvider({ children }) {
   function markNotificationRead(id) {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
     if (email && typeof id === 'string' && !id.startsWith('local-')) {
-      markNotificationReadApi(id).catch(() => {})
+      // По потврда од серверот освежи — поллот во тек може да врати стара
+      // листа и да го „врати" непрочитаното; вака состојбата конвергира.
+      markNotificationReadApi(id).then(() => refreshData()).catch(() => {})
     }
   }
 
   function markAllNotifications() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-    if (email) markAllNotificationsReadApi(email).catch(() => {})
+    if (email) markAllNotificationsReadApi(email).then(() => refreshData()).catch(() => {})
   }
 
   // ---- Записи кон backend (единствен извор на вистина) ----
@@ -425,6 +430,8 @@ export function AppProvider({ children }) {
 
   async function login({ email: e, password }) {
     const user = await loginApi({ email: e, password })
+    // Админ токен за заштитените операции — backend го враќа само за админ.
+    setStoredAdminToken(user.adminToken || '')
     setAuth({ isAuthenticated: true, role: user.role || 'user', email: user.email || e, displayName: user.displayName || '', isAnonymous: false })
     if (user.language && isSupportedLanguage(user.language)) setLanguage(user.language)
     return user

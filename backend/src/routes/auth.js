@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { Router } from 'express'
+import { config } from '../config.js'
 import { query } from '../db.js'
 
 export const authRouter = Router()
@@ -66,7 +67,12 @@ authRouter.post('/login', async (req, res, next) => {
     const ok = await bcrypt.compare(String(password), user.password_hash)
     if (!ok) return res.status(401).json({ error: 'Погрешна е-пошта или лозинка.' })
 
-    res.json(publicUser(user))
+    // Админот по успешна најава со лозинка го добива админ токенот, потребен
+    // за заштитените операции (менување статус, community корисници). Така
+    // токенот не се вградува во јавниот frontend build.
+    const payload = publicUser(user)
+    if (user.role === 'admin' && config.adminToken) payload.adminToken = config.adminToken
+    res.json(payload)
   } catch (err) { next(err) }
 })
 
