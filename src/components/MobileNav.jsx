@@ -22,6 +22,8 @@ export function MobileNav({ role }) {
             to={item.to}
             className={({ isActive }) => cx(
               'relative flex flex-col items-center gap-1 px-0.5 py-2 text-[11px] font-semibold leading-tight text-center transition-colors duration-150',
+              // Оптичка корекција: „Воздух" малку влево за визуелно порамнет ред.
+              item.to === '/air' && '-translate-x-[3px]',
               isActive ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400',
             )}
           >
