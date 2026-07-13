@@ -148,7 +148,7 @@ function ContainerRow({ container, onReset }) {
 }
 
 export function AdminDeskPage() {
-  const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, awardPoints, t } = useApp()
+  const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, pushNotification, refreshData, t } = useApp()
   const [tab, setTab] = useState('waste')
 
   if (auth.role !== 'admin') return <Navigate to='/air' replace />
@@ -156,9 +156,17 @@ export function AdminDeskPage() {
   const unresolvedWaste = wasteReports.filter((r) => r.status !== 'resolved')
   const openContainers = containers.filter((c) => c.issueOpen)
 
-  function updateWasteStatus(id, status) {
+  // Промената прво се потврдува на backend; при одбивање (пр. невалиден админ
+  // токен) не се прикажува лажен успех. Поените ги доделува ИСКЛУЧИВО backend.
+  async function updateWasteStatus(id, status) {
     if (typeof id === 'string' && id.includes('-')) {
-      updateReportStatus(id, status).catch(() => {})
+      try {
+        await updateReportStatus(id, status)
+      } catch {
+        const loc = wasteReports.find((r) => r.id === id)?.location || t('admin.unknownLocation')
+        pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
+        return
+      }
     }
     setWasteReports((prev) =>
       prev.map((r) =>
@@ -167,19 +175,21 @@ export function AdminDeskPage() {
           : r,
       ),
     )
+    refreshData()
   }
 
-  function resetContainer(id) {
+  async function resetContainer(id) {
     if (typeof id === 'string' && id.includes('-')) {
-      updateReportStatus(id, 'resolved').catch(() => {})
+      try {
+        await updateReportStatus(id, 'resolved')
+      } catch {
+        const loc = containers.find((c) => c.id === id)?.area || t('admin.unknownLocation')
+        pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
+        return
+      }
     }
-    setContainers((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c
-        if (c.issueOpen && !c.resolvedRewardGiven && c.reportedById && c.reportedById.includes('@')) awardPoints(c.reportedById, 2)
-        return { ...c, issue: 'none', issueOpen: false, resolvedRewardGiven: true }
-      }),
-    )
+    setContainers((prev) => prev.map((c) => (c.id === id ? { ...c, issue: 'none', issueOpen: false } : c)))
+    refreshData()
   }
 
   const stats = [

@@ -233,7 +233,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus }) {
 }
 
 export function AdminPanelPage() {
-  const { auth, wasteReports, setWasteReports, smellAlerts, containers, setContainers, pushNotification, awardPoints, t } = useApp()
+  const { auth, wasteReports, setWasteReports, smellAlerts, containers, setContainers, pushNotification, refreshData, t } = useApp()
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy] = useState('date')
@@ -287,18 +287,20 @@ export function AdminPanelPage() {
       }
     }
 
+    // Поените ги доделува ИСКЛУЧИВО backend-от при решавање (+2, еднаш по
+    // пријава) — тука само се ажурира локалниот приказ до следниот poll.
     if (report.type === 'waste') {
-      setWasteReports((prev) => prev.map((r) => {
-        if (r.id !== report.id) return r
-        if (newStatus === 'resolved' && r.status !== 'resolved' && !r.resolvedRewardGiven && r.reportedById && r.reportedById.includes('@')) awardPoints(r.reportedById, 2)
-        return { ...r, status: newStatus, visibility: newStatus === 'resolved' ? 'public' : r.visibility, resolvedAt: newStatus === 'resolved' ? new Date().toISOString() : r.resolvedAt, resolvedRewardGiven: newStatus === 'resolved' ? true : r.resolvedRewardGiven }
-      }))
+      setWasteReports((prev) => prev.map((r) => (
+        r.id === report.id
+          ? { ...r, status: newStatus, visibility: newStatus === 'resolved' ? 'public' : r.visibility, resolvedAt: newStatus === 'resolved' ? new Date().toISOString() : r.resolvedAt }
+          : r
+      )))
     } else if (report.type === 'container') {
-      setContainers((prev) => prev.map((c) => {
-        if (c.id !== report.id) return c
-        if (newStatus === 'resolved' && c.issueOpen && !c.resolvedRewardGiven && c.reportedById && c.reportedById.includes('@')) awardPoints(c.reportedById, 2)
-        return { ...c, issueOpen: newStatus !== 'resolved', issue: newStatus === 'resolved' ? 'none' : c.issue, resolvedRewardGiven: newStatus === 'resolved' ? true : c.resolvedRewardGiven }
-      }))
+      setContainers((prev) => prev.map((c) => (
+        c.id === report.id
+          ? { ...c, issueOpen: newStatus !== 'resolved', issue: newStatus === 'resolved' ? 'none' : c.issue }
+          : c
+      )))
     }
 
     // Известување за промена на статус (се зачувува за најавениот админ).
@@ -309,6 +311,8 @@ export function AdminPanelPage() {
 
     // Update selected drawer
     setSelected((s) => s ? { ...s, status: newStatus, resolvedAt: newStatus === 'resolved' ? new Date().toISOString() : s.resolvedAt } : null)
+    // Повлечи ги свежите бројки од базата (статистики, лидерборд, поени).
+    refreshData()
   }
 
   const counts = useMemo(() => ({
