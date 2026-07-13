@@ -40,6 +40,8 @@ if (typeof timer.unref === 'function') timer.unref()
 containersRouter.get('/points', async (req, res, next) => {
   try {
     if (!snapshot) await refresh()          // прв повик пред снимката да е готова
+    // Serverless: тајмерот не работи меѓу повици → освежи во позадина ако е старо.
+    else if (Date.now() - snapshot.at > REFRESH_MS) refresh()
     if (!snapshot) return res.json([])      // Overpass сè уште недостапен → frontend fallback
     res.setHeader('ETag', snapshot.etag)
     res.setHeader('Cache-Control', 'public, max-age=3600')

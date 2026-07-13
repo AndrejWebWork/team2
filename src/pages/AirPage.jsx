@@ -499,7 +499,18 @@ export function AirPage() {
               ))}
               {visiblePulseSensors.map((s) => (
                 <Marker key={s.id} position={[s.lat, s.lng]} icon={pulseIcon}>
-                  <Popup><p className='font-bold'>{sensorName(s, t)}</p><p className='text-xs'>{t('air.pulseSensor')}</p></Popup>
+                  <Popup>
+                    <p className='font-bold'>{sensorName(s, t)}</p>
+                    <p className='text-xs'>{t('air.pulseSensor')}</p>
+                    {s.aqi != null && <p className='text-xs'>AQI: <b>{s.aqi}</b> · {t(`aqi.${aqiColor(s.aqi).key}`)}</p>}
+                    {s.pm25 != null && <p className='text-xs'>PM2.5: {s.pm25} µg/m³</p>}
+                    {s.pm10 != null && <p className='text-xs'>PM10: {s.pm10} µg/m³</p>}
+                    {s.updatedAt && (
+                      <p className='text-[11px] text-slate-400'>
+                        {t('air.measuredAt', { time: new Date(s.updatedAt).toLocaleTimeString('mk-MK', { hour: '2-digit', minute: '2-digit' }) })}
+                      </p>
+                    )}
+                  </Popup>
                 </Marker>
               ))}
               {visibleCitySensors.map((s) => (

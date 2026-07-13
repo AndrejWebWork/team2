@@ -42,6 +42,13 @@ if (typeof timer.unref === 'function') timer.unref()
 airRouter.get('/pulse', async (req, res, next) => {
   try {
     if (!snapshot) await refresh()           // прв повик пред снимката да е готова
+    else if (Date.now() - snapshot.at > REFRESH_MS) {
+      // Serverless (Vercel): тајмерите не работат меѓу повици → освежи при
+      // барање. Малку застарена снимка се сервира веднаш (освежување во
+      // позадина); многу стара (>2 мин) се чека за да не се служат стари мерења.
+      if (Date.now() - snapshot.at > 4 * REFRESH_MS) await refresh()
+      else refresh()
+    }
     if (!snapshot) return res.json([])       // Pulse.eco сè уште недостапен
     res.setHeader('ETag', snapshot.etag)
     res.setHeader('Cache-Control', 'public, max-age=15')
