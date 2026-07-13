@@ -77,11 +77,11 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
             <button
               onClick={() => navigate('/leaderboard')}
               aria-label={t('topbar.rewards')}
-              className='group hidden items-center gap-1.5 rounded-full px-1.5 py-1.5 text-xs font-semibold text-amber-600 transition-colors hover:text-amber-700 lg:flex'
+              className='group hidden items-center gap-1.5 rounded-full px-1.5 py-1.5 text-sm font-semibold text-amber-600 transition-colors hover:text-amber-700 lg:flex'
             >
-              <Gift className='h-4 w-4 transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110' />
+              <Gift className='h-[18px] w-[18px] transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-110' />
               {t('topbar.rewards')}
-              <span className='rounded-full bg-gradient-to-br from-amber-400 to-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm shadow-amber-500/30'>{currentUserPoints}</span>
+              <span className='rounded-full bg-gradient-to-br from-amber-400 to-amber-500 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm shadow-amber-500/30'>{currentUserPoints}</span>
             </button>
 
             {/* Вертикален разделник — визуелно ги одвојува наградите од ѕвончето */}
@@ -111,17 +111,17 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
 
             {/* Login/Logout — desktop only */}
             {!isAnonymous ? (
-              <Button variant='outline' size='sm' onClick={logout} className='hidden border-slate-200 text-slate-600 lg:flex'>
-                <LogOut className='h-3.5 w-3.5' />{t('topbar.logout')}
+              <Button variant='outline' size='sm' onClick={logout} className='hidden border-slate-200 text-sm text-slate-600 lg:flex'>
+                <LogOut className='h-4 w-4' />{t('topbar.logout')}
               </Button>
             ) : (
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => navigate('/login', { state: { allowLogin: true } })}
-                className='hidden border-emerald-200 text-emerald-700 hover:bg-emerald-50 lg:flex'
+                className='hidden border-emerald-200 text-sm text-emerald-700 hover:bg-emerald-50 lg:flex'
               >
-                <LogIn className='h-3.5 w-3.5' />{t('topbar.login')}
+                <LogIn className='h-4 w-4' />{t('topbar.login')}
               </Button>
             )}
           </div>
