@@ -59,7 +59,7 @@ const dict = {
     settings: {
       title: 'Поставки', subtitle: 'Управувај со твојот профил и преференции.', profile: 'Профил',
       anonymous: 'Анонимен', displayName: 'Прикажано име', displayNamePh: 'Твоето име', email: 'Е-пошта',
-      save: 'Зачувај промени', saved: 'Профилот е зачуван.', notifications: 'Известувања',
+      save: 'Зачувај промени', saved: 'Профилот е зачуван.', saving: 'Се зачувува…', saveFailed: 'Зачувувањето не успеа. Обидете се повторно.', notifications: 'Известувања',
       notifAir: 'Предупредувања за квалитет на воздух', notifAirSub: 'Кога AQI надминува 100',
       notifWaste: 'Ажурирања на пријави за отпад', notifWasteSub: 'Статус промени на твоите пријави',
       notifEvents: 'Потсетници за еко настани', notifEventsSub: 'Пред настани на кои си запишан',
@@ -348,7 +348,7 @@ const dict = {
     settings: {
       title: 'Settings', subtitle: 'Manage your profile and preferences.', profile: 'Profile',
       anonymous: 'Anonymous', displayName: 'Display name', displayNamePh: 'Your name', email: 'Email',
-      save: 'Save changes', saved: 'Profile saved.', notifications: 'Notifications',
+      save: 'Save changes', saved: 'Profile saved.', saving: 'Saving…', saveFailed: 'Failed to save. Please try again.', notifications: 'Notifications',
       notifAir: 'Air quality alerts', notifAirSub: 'When AQI exceeds 100',
       notifWaste: 'Waste report updates', notifWasteSub: 'Status changes on your reports',
       notifEvents: 'Eco event reminders', notifEventsSub: 'Before events you signed up for',
@@ -637,7 +637,7 @@ const dict = {
     settings: {
       title: 'Cilësimet', subtitle: 'Menaxho profilin dhe preferencat tuaja.', profile: 'Profili',
       anonymous: 'Anonim', displayName: 'Emri i shfaqur', displayNamePh: 'Emri juaj', email: 'Email',
-      save: 'Ruaj ndryshimet', saved: 'Profili u ruajt.', notifications: 'Njoftime',
+      save: 'Ruaj ndryshimet', saved: 'Profili u ruajt.', saving: 'Duke u ruajtur…', saveFailed: 'Ruajtja dështoi. Provoni përsëri.', notifications: 'Njoftime',
       notifAir: 'Njoftime për cilësinë e ajrit', notifAirSub: 'Kur AQI kalon 100',
       notifWaste: 'Përditësime të raporteve për mbeturina', notifWasteSub: 'Ndryshime statusi në raportet tuaja',
       notifEvents: 'Kujtesa për ngjarje ekologjike', notifEventsSub: 'Para ngjarjeve ku jeni regjistruar',

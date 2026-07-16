@@ -376,16 +376,22 @@ export async function fetchUser(email, signal) {
   return res.json()
 }
 
-// Го зачувува избраниот јазик на корисникот во базата (upsert по email).
+// Го зачувува избраниот јазик на корисникот во базата.
 export async function saveUserLanguage(email, language, signal) {
-  const res = await fetch(`${API_URL}/api/users/language`, {
+  return updateUserSettingsApi({ email, language }, signal)
+}
+
+// PATCH /api/users/settings — профил и поставки (име, јазик, нотификации).
+export async function updateUserSettingsApi({ email, displayName, language, notifAir, notifWaste, notifEvents }, signal) {
+  const res = await fetch(`${API_URL}/api/users/settings`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, language }),
+    body: JSON.stringify({ email, displayName, language, notifAir, notifWaste, notifEvents }),
     signal,
   })
-  if (!res.ok) throw new Error('Зачувувањето на јазикот не успеа.')
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Зачувувањето на поставките не успеа.')
+  return data
 }
 
 // ---- Трансформации: серверски ред (type + photo_1..6) → облици во frontend ----

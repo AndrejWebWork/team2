@@ -20,15 +20,28 @@ function publicCommunityUser(u) {
   }
 }
 
-// GET /api/users?email=...  → основни податоци + избран јазик
+function publicUser(u) {
+  return {
+    id: u.id,
+    email: u.email,
+    display_name: u.display_name,
+    role: u.role,
+    language: u.language,
+    notif_air: u.notif_air,
+    notif_waste: u.notif_waste,
+    notif_events: u.notif_events,
+    points: u.points ?? 0,
+  }
+}
+
+// GET /api/users?email=...  → основни податоци + поставки
 usersRouter.get('/', async (req, res, next) => {
   try {
     const email = req.query.email
     if (!email) return res.status(400).json({ error: 'Недостасува email.' })
-    // Поените се МЕСЕЧНИ (како leaderboard_monthly): збир од points_events за
-    // тековниот месец → на 1-ви секој месец сите почнуваат од 0 автоматски.
     const { rows } = await query(
       `SELECT id, email, display_name, role, language,
+              notif_air, notif_waste, notif_events,
               COALESCE((SELECT SUM(pe.points) FROM points_events pe
                         WHERE pe.user_id = users.id
                           AND pe.created_at >= date_trunc('month', now())), 0)::int AS points
@@ -36,7 +49,7 @@ usersRouter.get('/', async (req, res, next) => {
       [email],
     )
     if (rows.length === 0) return res.status(404).json({ error: 'Корисникот не постои.' })
-    res.json(rows[0])
+    res.json(publicUser(rows[0]))
   } catch (err) { next(err) }
 })
 
@@ -112,21 +125,74 @@ usersRouter.delete('/community/:email', requireAdmin, async (req, res, next) => 
   } catch (err) { next(err) }
 })
 
-// PATCH /api/users/language  { email, language } → зачувува избран јазик
-// Прави upsert: ако корисникот не постои, го креира со тој јазик.
+// PATCH /api/users/settings  { email, displayName?, language?, notifAir?, notifWaste?, notifEvents? }
+// Зачувување на профил и поставки (како јазикот) — делумно ажурирање по поле.
+usersRouter.patch('/settings', async (req, res, next) => {
+  try {
+    const {
+      email,
+      displayName,
+      language,
+      notifAir,
+      notifWaste,
+      notifEvents,
+    } = req.body
+    if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Недостасува или е невалидна е-пошта.' })
+
+    const sets = []
+    const vals = [email]
+    let i = 2
+
+    if (displayName !== undefined) {
+      const name = String(displayName).trim()
+      if (!name) return res.status(400).json({ error: 'Прикажаното име не смее да биде празно.' })
+      sets.push(`display_name = $${i++}`)
+      vals.push(name)
+    }
+    if (language !== undefined) {
+      if (!LANGS.includes(language)) return res.status(400).json({ error: 'Невалиден јазик.' })
+      sets.push(`language = $${i++}`)
+      vals.push(language)
+    }
+    if (notifAir !== undefined) {
+      sets.push(`notif_air = $${i++}`)
+      vals.push(Boolean(notifAir))
+    }
+    if (notifWaste !== undefined) {
+      sets.push(`notif_waste = $${i++}`)
+      vals.push(Boolean(notifWaste))
+    }
+    if (notifEvents !== undefined) {
+      sets.push(`notif_events = $${i++}`)
+      vals.push(Boolean(notifEvents))
+    }
+
+    if (sets.length === 0) return res.status(400).json({ error: 'Нема полиња за ажурирање.' })
+
+    const { rows } = await query(
+      `UPDATE users SET ${sets.join(', ')}, updated_at = now()
+         WHERE email = $1
+       RETURNING id, email, display_name, role, language, notif_air, notif_waste, notif_events`,
+      vals,
+    )
+    if (rows.length === 0) return res.status(404).json({ error: 'Корисникот не постои.' })
+    res.json(publicUser(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// PATCH /api/users/language  { email, language } → зачувува избран јазик (задржано за компатибилност)
 usersRouter.patch('/language', async (req, res, next) => {
   try {
     const { email, language } = req.body
     if (!email) return res.status(400).json({ error: 'Недостасува email.' })
     if (!LANGS.includes(language)) return res.status(400).json({ error: 'Невалиден јазик.' })
     const { rows } = await query(
-      `INSERT INTO users (email, language)
-         VALUES ($1, $2)
-       ON CONFLICT (email) DO UPDATE
-         SET language = EXCLUDED.language, updated_at = now()
-       RETURNING id, email, display_name, role, language`,
+      `UPDATE users SET language = $2, updated_at = now()
+         WHERE email = $1
+       RETURNING id, email, display_name, role, language, notif_air, notif_waste, notif_events`,
       [email, language],
     )
-    res.json(rows[0])
+    if (rows.length === 0) return res.status(404).json({ error: 'Корисникот не постои.' })
+    res.json(publicUser(rows[0]))
   } catch (err) { next(err) }
 })

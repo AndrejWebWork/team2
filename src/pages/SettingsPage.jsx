@@ -1,5 +1,5 @@
 import { Bell, ChevronRight, Database, FileText, LogOut, Languages, Scale, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
 import { LANGUAGES } from '../i18n/translations'
-import { deleteAccountApi } from '../lib/api'
+import { deleteAccountApi, fetchUser, updateUserSettingsApi } from '../lib/api'
 
 const ROLE_COLORS = {
   user: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -25,15 +25,60 @@ export function SettingsPage() {
   const [notifWaste, setNotifWaste] = useState(true)
   const [notifEvents, setNotifEvents] = useState(false)
   const [toast, setToast] = useState('')
+  const [saving, setSaving] = useState(false)
   // Бришење сметка: бара потврда со лозинка (Play/App Store барање).
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
   const [deleting, setDeleting] = useState(false)
 
-  function saveProfile(e) {
+  // Вчитај поставки од базата при отворање (име, нотификации).
+  useEffect(() => {
+    if (!auth.email || auth.isAnonymous) return
+    let cancelled = false
+    fetchUser(auth.email)
+      .then((user) => {
+        if (cancelled || !user) return
+        if (user.display_name) setDisplayName(user.display_name)
+        if (user.notif_air != null) setNotifAir(user.notif_air)
+        if (user.notif_waste != null) setNotifWaste(user.notif_waste)
+        if (user.notif_events != null) setNotifEvents(user.notif_events)
+      })
+      .catch(() => { /* офлајн — остануваат локалните вредности */ })
+    return () => { cancelled = true }
+  }, [auth.email, auth.isAnonymous])
+
+  async function saveProfile(e) {
     e.preventDefault()
-    setAuth((a) => ({ ...a, displayName: displayName.trim() }))
-    setToast(t('settings.saved'))
+    const name = displayName.trim()
+    if (!name) return setToast(t('settings.displayNamePh'))
+
+    if (auth.isAnonymous || !auth.email) {
+      setAuth((a) => ({ ...a, displayName: name }))
+      setToast(t('settings.saved'))
+      return
+    }
+
+    setSaving(true)
+    try {
+      await updateUserSettingsApi({ email: auth.email, displayName: name })
+      setAuth((a) => ({ ...a, displayName: name }))
+      setToast(t('settings.saved'))
+    } catch (err) {
+      setToast(err.message || t('settings.saveFailed'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function saveNotif(key, value, setter) {
+    setter(value)
+    if (auth.isAnonymous || !auth.email) return
+    try {
+      await updateUserSettingsApi({ email: auth.email, [key]: value })
+    } catch {
+      setter(!value)
+      setToast(t('settings.saveFailed'))
+    }
   }
 
   function logout() {
@@ -92,7 +137,7 @@ export function SettingsPage() {
               <label className='text-sm font-medium text-slate-700'>{t('settings.email')}</label>
               <Input value={auth.email || ''} disabled className='h-10 bg-slate-50 text-slate-400 cursor-not-allowed' />
             </div>
-            <Button type='submit' size='sm'>{t('settings.save')}</Button>
+            <Button type='submit' size='sm' disabled={saving}>{saving ? t('settings.saving') : t('settings.save')}</Button>
           </form>
         </CardContent>
       </Card>
@@ -107,9 +152,9 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent className='space-y-3'>
           {[
-            { label: t('settings.notifAir'), sub: t('settings.notifAirSub'), value: notifAir, set: setNotifAir },
-            { label: t('settings.notifWaste'), sub: t('settings.notifWasteSub'), value: notifWaste, set: setNotifWaste },
-            { label: t('settings.notifEvents'), sub: t('settings.notifEventsSub'), value: notifEvents, set: setNotifEvents },
+            { label: t('settings.notifAir'), sub: t('settings.notifAirSub'), value: notifAir, key: 'notifAir', set: setNotifAir },
+            { label: t('settings.notifWaste'), sub: t('settings.notifWasteSub'), value: notifWaste, key: 'notifWaste', set: setNotifWaste },
+            { label: t('settings.notifEvents'), sub: t('settings.notifEventsSub'), value: notifEvents, key: 'notifEvents', set: setNotifEvents },
           ].map((item) => (
             <div key={item.label} className='flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
               <div>
@@ -118,7 +163,7 @@ export function SettingsPage() {
               </div>
               <button
                 type='button'
-                onClick={() => item.set((v) => !v)}
+                onClick={() => saveNotif(item.key, !item.value, item.set)}
                 className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${item.value ? 'bg-emerald-500' : 'bg-slate-300'}`}
               >
                 <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${item.value ? 'translate-x-5' : 'translate-x-0'}`} />
