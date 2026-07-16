@@ -404,13 +404,34 @@ export function AppProvider({ children }) {
     }
     try {
       await persistReportWithPhotos(backendPayload)
-      // Поените се доделуваат ИСКЛУЧИВО од backend и само за регистрирани
-      // корисници (+1 за пријава контејнер/депонија, +2 при решавање = 3).
-      // Анонимните корисници немаат поени — не се доделуваат локално.
       refreshData()
+      // Потврда по успешна пријава: in-app + телефонска нотификација (како депонија).
+      if (payload.type === 'waste') {
+        pushNotification({
+          title: t('deponija.newReportTitle'),
+          body: t('deponija.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
+        })
+      } else if (payload.type === 'container') {
+        pushNotification({
+          title: t('container.newReportTitle'),
+          body: t('container.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
+        })
+      }
       return { ok: true }
     } catch {
       optimisticInsertReport(payload)
+      // И офлајн: корисникот добива потврда дека пријавата е зачувана локално.
+      if (payload.type === 'waste') {
+        pushNotification({
+          title: t('deponija.newReportTitle'),
+          body: t('deponija.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
+        })
+      } else if (payload.type === 'container') {
+        pushNotification({
+          title: t('container.newReportTitle'),
+          body: t('container.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
+        })
+      }
       return { ok: true, offline: true }
     }
   }

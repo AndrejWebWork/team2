@@ -256,7 +256,7 @@ function SmellForm({ submitReport, onDone, loc, t }) {
   )
 }
 
-function DeponijForm({ submitReport, pushNotification, onDone, loc, t }) {
+function DeponijForm({ submitReport, onDone, loc, t }) {
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState([])
   const [toast, setToast] = useState('')
@@ -277,7 +277,6 @@ function DeponijForm({ submitReport, pushNotification, onDone, loc, t }) {
       description: description.trim(),
       dataUrls: photos,
     })
-    pushNotification({ title: t('deponija.newReportTitle'), body: t('deponija.newReportBody', { loc: loc.label }) })
     setBusy(false)
     setDescription('')
     setPhotos([])
@@ -395,7 +394,7 @@ const TYPES = [
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { submitReport, pushNotification, auth, t } = useApp()
+  const { submitReport, auth, t } = useApp()
   const [type, setType] = useState('smell')
   const [submitted, setSubmitted] = useState(false)
   const [heroVisible, setHeroVisible] = useState(true)
@@ -450,7 +449,7 @@ export function HomePage() {
               <SmellForm submitReport={submitReport} onDone={handleDone} loc={loc} t={t} />
             )}
             {type === 'deponija' && (
-              <DeponijForm submitReport={submitReport} pushNotification={pushNotification} onDone={handleDone} loc={loc} t={t} />
+              <DeponijForm submitReport={submitReport} onDone={handleDone} loc={loc} t={t} />
             )}
             {type === 'container' && (
               <ContainerForm submitReport={submitReport} onDone={handleDone} loc={loc} t={t} />

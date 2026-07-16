@@ -122,6 +122,7 @@ const dict = {
     container: {
       type: 'Тип на контејнер', problemType: 'Вид на проблем', full: 'Полн контејнер', smell: 'Миризба',
       broken: 'Дефект', descPlaceholder: 'Дополнителен опис (опционално)...', sent: 'Пријавата е испратена.',
+      newReportTitle: 'Нова пријава за контејнер', newReportBody: 'Пријавата за {loc} е испратена.',
     },
     air: {
       title: 'Квалитет на воздух', subtitle: 'Реални мерења од сензори во Скопје',
@@ -411,6 +412,7 @@ const dict = {
     container: {
       type: 'Container type', problemType: 'Problem type', full: 'Full container', smell: 'Smell',
       broken: 'Defect', descPlaceholder: 'Additional description (optional)...', sent: 'Report submitted.',
+      newReportTitle: 'New container report', newReportBody: 'The report for {loc} has been submitted.',
     },
     air: {
       title: 'Air quality', subtitle: 'Real measurements from sensors in Skopje',
@@ -700,6 +702,7 @@ const dict = {
     container: {
       type: 'Lloji i kontejnerit', problemType: 'Lloji i problemit', full: 'Kontejner plot', smell: 'Erë',
       broken: 'Defekt', descPlaceholder: 'Përshkrim shtesë (opsional)...', sent: 'Raporti u dërgua.',
+      newReportTitle: 'Raport i ri për kontejner', newReportBody: 'Raporti për {loc} u dërgua.',
     },
     air: {
       title: 'Cilësia e ajrit', subtitle: 'Matje reale nga sensorët në Shkup',
