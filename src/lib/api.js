@@ -146,8 +146,9 @@ export async function createEventApi(payload, signal) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload), signal,
   })
-  if (!res.ok) throw new Error('Креирањето на настанот не успеа.')
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Креирањето на настанот не успеа.')
+  return data
 }
 
 export async function signupEventApi(id, payload, signal) {
@@ -155,8 +156,9 @@ export async function signupEventApi(id, payload, signal) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload), signal,
   })
-  if (!res.ok) throw new Error('Пријавувањето не успеа.')
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Пријавувањето не успеа.')
+  return data
 }
 
 export async function leaveEventApi(id, email, signal) {

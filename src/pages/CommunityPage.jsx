@@ -9,6 +9,7 @@ import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
 import { createEventApi, deleteEventApi, leaveEventApi, signupEventApi } from '../lib/api'
+import { formatDisplayDate, isTodayOrFuture, maskDisplayDateInput, parseDisplayDate, todayIso } from '../lib/dates'
 
 const STATUS_META = {
   open:     { key: 'event.open',    cls: 'bg-emerald-100 text-emerald-700' },
@@ -18,8 +19,7 @@ const STATUS_META = {
 
 // Локален датум YYYY-MM-DD (без UTC поместување, точно за Скопје).
 function todayStr() {
-  const n = new Date()
-  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+  return todayIso()
 }
 
 function EventBadge({ status }) {
@@ -72,8 +72,9 @@ function SignUpModal({ event, onClose, onConfirm }) {
   )
 }
 
-function EventDetailPage({ event, past, canManage, onBack, onSignUp, onNotify, onCancelEvent }) {
+function EventDetailPage({ event, past, canManage, isOrganizer, onBack, onSignUp, onNotify, onCancelEvent }) {
   const { t } = useApp()
+  const displayDate = formatDisplayDate(event.date)
   return (
     <div className='space-y-5'>
       <button onClick={onBack} className='flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800'>
@@ -95,7 +96,7 @@ function EventDetailPage({ event, past, canManage, onBack, onSignUp, onNotify, o
         <div className='px-6 py-5 space-y-4'>
           <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
             {[
-              { icon: CalendarDays, label: t('comm.date'), value: event.date },
+              { icon: CalendarDays, label: t('comm.date'), value: displayDate },
               { icon: MapPin, label: t('comm.location'), value: event.location || t('comm.defaultLocation') },
               { icon: Users, label: t('comm.signedUp'), value: event.signupCount ?? 0 },
             ].map(({ icon: Icon, label, value }) => (
@@ -112,13 +113,19 @@ function EventDetailPage({ event, past, canManage, onBack, onSignUp, onNotify, o
             <p className='text-sm leading-relaxed text-slate-600'>{event.description}</p>
           )}
 
-          {!past && (
+          {!past && !isOrganizer && (
             <div className='flex flex-col gap-2 pt-1 sm:flex-row'>
               <Button className='flex-1' onClick={() => onSignUp(event)}>
                 {event.joined ? t('comm.cancelSignup') : t('comm.signupEvent')}
               </Button>
               <Button variant='outline' onClick={() => onNotify(event)}>{t('comm.notifyMe')}</Button>
             </div>
+          )}
+
+          {!past && isOrganizer && (
+            <p className='rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700'>
+              {t('comm.organizerCannotSignup')}
+            </p>
           )}
 
           {canManage && (
@@ -140,7 +147,7 @@ export function CommunityPage() {
   const { events, setEvents, auth, pushNotification, t } = useApp()
   const navigate = useNavigate()
   const [toast, setToast] = useState('')
-  const [newEvent, setNewEvent] = useState({ title: '', date: '', location: '', description: '' })
+  const [newEvent, setNewEvent] = useState({ title: '', dateDisplay: '', location: '', description: '' })
   const [signUpEvent, setSignUpEvent] = useState(null)
   const [detailEvent, setDetailEvent] = useState(null)
   const [showPast, setShowPast] = useState(false)
@@ -154,7 +161,14 @@ export function CommunityPage() {
   function canManage(event) {
     if (auth.isAnonymous) return false
     if (auth.role === 'admin') return true
-    return Boolean(auth.email && event.organizer && event.organizer.toLowerCase() === auth.email.toLowerCase())
+    const orgEmail = (event.organizerEmail || event.organizer || '').toLowerCase()
+    return Boolean(auth.email && orgEmail === auth.email.toLowerCase())
+  }
+
+  function isOrganizer(event) {
+    if (!auth.email || auth.isAnonymous) return false
+    const orgEmail = (event.organizerEmail || event.organizer || '').toLowerCase()
+    return orgEmail === auth.email.toLowerCase()
   }
 
   function requireRegistered() {
@@ -164,16 +178,39 @@ export function CommunityPage() {
 
   function openSignUp(event) {
     if (!requireRegistered()) return
+    if (isOrganizer(event)) return setToast(t('comm.organizerCannotSignup'))
+    if (String(event.id).startsWith('local-')) return setToast(t('comm.eventStillSaving'))
     setSignUpEvent(event)
   }
 
-  function confirmSignUp(form) {
+  async function confirmSignUp(form) {
     const target = signUpEvent
-    setEvents((prev) => prev.map((e) => (e.id === target.id ? { ...e, joined: true } : e)))
-    signupEventApi(target.id, { email: auth.email, fullName: form.name, note: form.note }).catch(() => {})
-    pushNotification({ title: t('comm.signupConfirmed'), body: t('comm.signedUpFor', { title: target.title }) })
-    setToast(t('comm.signupSuccess', { title: target.title }))
-    setSignUpEvent(null)
+    if (!target) return
+    if (isOrganizer(target)) {
+      setToast(t('comm.organizerCannotSignup'))
+      setSignUpEvent(null)
+      return
+    }
+    if (String(target.id).startsWith('local-')) {
+      setToast(t('comm.eventStillSaving'))
+      setSignUpEvent(null)
+      return
+    }
+    try {
+      await signupEventApi(target.id, { email: auth.email, fullName: form.name, note: form.note })
+      setEvents((prev) => prev.map((e) => (
+        e.id === target.id
+          ? { ...e, joined: true, signupCount: (e.signupCount ?? 0) + (e.joined ? 0 : 1) }
+          : e
+      )))
+      pushNotification({ title: t('comm.signupConfirmed'), body: t('comm.signedUpFor', { title: target.title }) })
+      setToast(t('comm.signupSuccess', { title: target.title }))
+      setSignUpEvent(null)
+    } catch (err) {
+      const msg = err.message === 'ORGANIZER_CANNOT_SIGNUP' ? t('comm.organizerCannotSignup') : (err.message || t('comm.signupFailed'))
+      setToast(msg)
+      setSignUpEvent(null)
+    }
   }
 
   function leaveEvent(id) {
@@ -197,22 +234,41 @@ export function CommunityPage() {
     setToast(t('comm.eventCancelled'))
   }
 
-  function createEvent(e) {
+  async function createEvent(e) {
     e.preventDefault()
-    if (!newEvent.title || !newEvent.date || !newEvent.location || !newEvent.description) return setToast(t('comm.fillAll'))
-    const optimistic = { id: `local-${Date.now()}`, title: newEvent.title, date: newEvent.date, status: 'open', signupCount: 0, joined: false, organizer: auth.email || t('comm.orgFallback'), location: newEvent.location, description: newEvent.description }
+    if (!newEvent.title || !newEvent.dateDisplay || !newEvent.location || !newEvent.description) return setToast(t('comm.fillAll'))
+    const iso = parseDisplayDate(newEvent.dateDisplay)
+    if (!iso) return setToast(t('comm.invalidDate'))
+    if (!isTodayOrFuture(iso)) return setToast(t('comm.pastDateNotAllowed'))
+
+    const tempId = `local-${Date.now()}`
+    const optimistic = {
+      id: tempId, title: newEvent.title, date: iso, status: 'open', signupCount: 0, joined: false,
+      organizer: auth.displayName || auth.email || t('comm.orgFallback'),
+      organizerEmail: auth.email || null,
+      location: newEvent.location, description: newEvent.description,
+    }
     setEvents((prev) => [optimistic, ...prev])
-    createEventApi({
-      title: newEvent.title, description: newEvent.description, date: newEvent.date,
-      location: newEvent.location, organizerEmail: auth.email, organizerName: auth.email,
-    }).catch(() => {})
-    setNewEvent({ title: '', date: '', location: '', description: '' })
-    setToast(t('comm.eventCreated'))
+    try {
+      const created = await createEventApi({
+        title: newEvent.title, description: newEvent.description, date: iso,
+        location: newEvent.location, organizerEmail: auth.email, organizerName: auth.displayName || auth.email,
+      })
+      setEvents((prev) => prev.map((ev) => (
+        ev.id === tempId ? { ...created, organizerEmail: auth.email || created.organizerEmail } : ev
+      )))
+      setNewEvent({ title: '', dateDisplay: '', location: '', description: '' })
+      setToast(t('comm.eventCreated'))
+    } catch (err) {
+      setEvents((prev) => prev.filter((ev) => ev.id !== tempId))
+      setToast(err.message || t('comm.eventCreateFailed'))
+    }
   }
 
   function renderEventRow(event, isPast) {
     const isToday = event.date === today
     const accent = isPast ? 'bg-slate-300' : event.status === 'few_left' ? 'bg-orange-400' : event.status === 'closed' ? 'bg-slate-300' : 'bg-emerald-500'
+    const organizerOwns = isOrganizer(event)
     return (
       <div
         key={event.id}
@@ -225,16 +281,17 @@ export function CommunityPage() {
               <p className='font-semibold text-slate-900'>{event.title}</p>
               {isPast ? <TimeBadge kind='past' /> : isToday ? <TimeBadge kind='today' /> : <EventBadge status={event.status} />}
               {!isPast && event.joined && <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700'>{t('comm.joined')}</span>}
+              {!isPast && organizerOwns && <span className='rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700'>{t('comm.organizerBadge')}</span>}
             </div>
             <div className='mt-1.5 flex flex-wrap gap-x-4 gap-y-1'>
-              <span className='flex items-center gap-1.5 text-xs text-slate-500'><CalendarDays className='h-3.5 w-3.5' />{event.date}</span>
+              <span className='flex items-center gap-1.5 text-xs text-slate-500'><CalendarDays className='h-3.5 w-3.5' />{formatDisplayDate(event.date)}</span>
               <span className='flex items-center gap-1.5 text-xs text-slate-500'><MapPin className='h-3.5 w-3.5' />{event.location || t('comm.skopje')}</span>
               <span className='flex items-center gap-1.5 text-xs text-slate-500'><Users className='h-3.5 w-3.5' />{event.signupCount ?? 0} {t('comm.signedUpWord')}</span>
             </div>
           </div>
 
           <div className='flex shrink-0 flex-wrap gap-2' onClick={(e) => e.stopPropagation()}>
-            {!isPast && (event.joined ? (
+            {!isPast && !organizerOwns && (event.joined ? (
               <Button size='sm' variant='outline' className='border-rose-200 text-rose-600 hover:bg-rose-50' onClick={() => leaveEvent(event.id)}>{t('comm.cancel')}</Button>
             ) : (
               <Button size='sm' onClick={() => openSignUp(event)}>{t('comm.signup')}</Button>
@@ -260,6 +317,7 @@ export function CommunityPage() {
           event={{ ...live, isToday: live.date === today }}
           past={isPast}
           canManage={canManage(live)}
+          isOrganizer={isOrganizer(live)}
           onBack={() => setDetailEvent(null)}
           onSignUp={(ev) => live.joined ? leaveEvent(ev.id) : openSignUp(ev)}
           onNotify={notifyMe}
@@ -313,7 +371,13 @@ export function CommunityPage() {
             <form onSubmit={createEvent} className='space-y-4'>
               <div className='grid gap-3 sm:grid-cols-2'>
                 <Input value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} placeholder={t('comm.eventTitlePlaceholder')} />
-                <Input type='date' value={newEvent.date} onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })} />
+                <Input
+                  value={newEvent.dateDisplay}
+                  onChange={(e) => setNewEvent({ ...newEvent, dateDisplay: maskDisplayDateInput(e.target.value) })}
+                  placeholder={t('comm.datePlaceholder')}
+                  inputMode='numeric'
+                  maxLength={10}
+                />
                 <Input value={newEvent.location} onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })} placeholder={t('comm.locationPlaceholder')} />
                 <Input value={auth.email || ''} disabled placeholder={t('comm.organizerPlaceholder')} />
               </div>

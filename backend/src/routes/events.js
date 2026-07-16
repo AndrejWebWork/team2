@@ -13,7 +13,7 @@ const EVENTS_TTL_MS = 10000
 function rowToEvent(r) {
   const date = r.event_date instanceof Date
     ? r.event_date.toISOString().slice(0, 10)
-    : r.event_date
+    : String(r.event_date || '').slice(0, 10)
   return {
     id: r.id,
     title: r.title,
@@ -23,11 +23,18 @@ function rowToEvent(r) {
     seats: r.seats,
     status: r.status,
     organizer: r.organizer_name,
+    organizerEmail: r.organizer_email || null,
     signupCount: Number(r.signup_count || 0),
     joined: Boolean(r.joined),
     createdAt: r.created_at,
   }
 }
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // GET /api/events?email=  → сите настани (јавни) + дали тековниот корисник е пријавен
 eventsRouter.get('/', async (req, res, next) => {
@@ -39,6 +46,7 @@ eventsRouter.get('/', async (req, res, next) => {
       producer: async () => {
         const { rows } = await query(
           `SELECT e.*,
+             ou.email AS organizer_email,
              (SELECT COUNT(*) FROM event_signups s WHERE s.event_id = e.id) AS signup_count,
              EXISTS(
                SELECT 1 FROM event_signups s
@@ -46,6 +54,7 @@ eventsRouter.get('/', async (req, res, next) => {
                WHERE s.event_id = e.id AND u.email = $1
              ) AS joined
            FROM events e
+           LEFT JOIN users ou ON ou.id = e.organizer_id
            ORDER BY e.event_date ASC`,
           [email],
         )
@@ -63,11 +72,15 @@ eventsRouter.post('/', async (req, res, next) => {
       seats = 0, organizerEmail = null, organizerName = null,
     } = req.body
     if (!title || !date) return res.status(400).json({ error: 'Недостасува наслов или датум.' })
+    const isoDate = String(date).slice(0, 10)
+    if (isoDate < todayIso()) {
+      return res.status(400).json({ error: 'Не може да се креира настан со датум во минатото.' })
+    }
     const organizerId = await resolveUserId(organizerEmail, organizerName)
     const { rows } = await query(
       `INSERT INTO events (title, description, event_date, location, seats, organizer_id, organizer_name)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [title, description, date, location, seats, organizerId, organizerName || organizerEmail],
+      [title, description, isoDate, location, seats, organizerId, organizerName || organizerEmail],
     )
     invalidateCache('events:')
     res.status(201).json(rowToEvent({ ...rows[0], signup_count: 0, joined: false }))
@@ -106,6 +119,31 @@ eventsRouter.post('/:id/signup', async (req, res, next) => {
   try {
     const { email = null, fullName = null, note = null } = req.body
     if (!email) return res.status(400).json({ error: 'Потребна е најава за пријавување.' })
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ error: 'Настанот сè уште се зачувува. Обидете се повторно за момент.' })
+    }
+
+    const { rows: eventRows } = await query(
+      `SELECT e.event_date, ou.email AS organizer_email
+         FROM events e
+         LEFT JOIN users ou ON ou.id = e.organizer_id
+        WHERE e.id = $1`,
+      [req.params.id],
+    )
+    if (!eventRows[0]) return res.status(404).json({ error: 'Настанот не постои.' })
+
+    const eventDate = eventRows[0].event_date instanceof Date
+      ? eventRows[0].event_date.toISOString().slice(0, 10)
+      : String(eventRows[0].event_date || '').slice(0, 10)
+    if (eventDate < todayIso()) {
+      return res.status(400).json({ error: 'Настанот веќе помина — пријавувањето не е достапно.' })
+    }
+
+    const organizerEmail = eventRows[0].organizer_email
+    if (organizerEmail && String(email).toLowerCase() === String(organizerEmail).toLowerCase()) {
+      return res.status(400).json({ error: 'ORGANIZER_CANNOT_SIGNUP' })
+    }
+
     const userId = await resolveUserId(email, fullName)
     const inserted = await query(
       `INSERT INTO event_signups (event_id, user_id, full_name, email, note)
