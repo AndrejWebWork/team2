@@ -6,7 +6,7 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/uploads/(.*)", "destination": "/api/index" },
-    { "source": "/((?!api|assets|uploads).*)", "destination": "/index.html" }
+    { "source": "/((?!api|assets|uploads|favicon\\.svg|logo\\.png|logo\\.svg|apple-touch-icon\\.png|icons\\.svg).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/index.js": {
