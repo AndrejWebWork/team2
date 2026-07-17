@@ -1,10 +1,11 @@
 import { AlertTriangle, ArrowUpDown, Biohazard, Camera, ChevronRight, Flame, MapPin, Recycle, Siren, Trash2, Wind, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Navigate } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { useApp } from '../context/AppContext'
-import { updateReportStatus } from '../lib/api'
+import { updateReportStatus, serverToContainer, serverToWaste } from '../lib/api'
+import { buildSmellClusterCounts, fetchAllAirSensors, resolveSmellSensor, smellUrgencyWithCluster } from '../lib/smellSensor'
 function mkDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('mk-MK', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -38,17 +39,25 @@ function TypePill({ type }) {
 const institutionLabelKey = (id) => `institution.${id || 'drugo'}`
 const containerKindLabelKey = (id) => `containerKind.${id || 'mesan'}`
 
-function urgencyScore(r) {
-  if (r.type === 'smell') return (r.intensity || 1) * 10 + (r.severity === 'critical' ? 20 : 0)
+function urgencyScore(r, clusterCounts, sensors) {
+  if (r.type === 'smell') {
+    const { sensorId } = sensors?.length ? resolveSmellSensor(r, sensors) : { sensorId: r.nearestSensorId || '_unknown' }
+    const count = clusterCounts?.get(sensorId) || 1
+    return smellUrgencyWithCluster(r, count)
+  }
   if (r.type === 'waste') return r.status === 'pending' ? 15 : r.status === 'in_progress' ? 8 : 0
   if (r.type === 'container') return r.issueOpen ? 10 : 0
   return 0
 }
 
-function ReportDrawer({ report, onClose, onUpdateStatus }) {
+function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorName }) {
   const { t } = useApp()
   const [pendingStatus, setPendingStatus] = useState(report.status)
   const changed = pendingStatus !== report.status
+
+  useEffect(() => {
+    setPendingStatus(report.status)
+  }, [report.id, report.status])
 
   const statusFlow = [
     { key: 'pending',     label: t('status.pending') },
@@ -136,6 +145,13 @@ function ReportDrawer({ report, onClose, onUpdateStatus }) {
                 </div>
               </div>
             )}
+            {report.type === 'smell' && clusterCount > 1 && (
+              <div className='rounded-xl border border-rose-200 bg-rose-50 p-3'>
+                <p className='text-sm font-semibold text-rose-800'>
+                  {t('admin.smellClusterDetail', { count: clusterCount, sensor: sensorName || t('admin.unknownLocation') })}
+                </p>
+              </div>
+            )}
             {report.type === 'container' && (
               <div>
                 <p className='text-xs font-semibold uppercase tracking-wide text-slate-400'>{t('admin.containerType')}</p>
@@ -214,7 +230,10 @@ function ReportDrawer({ report, onClose, onUpdateStatus }) {
             <Button
               className='flex-1'
               disabled={!changed}
-              onClick={() => { onUpdateStatus(report, pendingStatus); onClose() }}
+              onClick={async () => {
+                const ok = await onUpdateStatus(report, pendingStatus)
+                if (ok !== false) onClose()
+              }}
             >
               {t('admin.saveStatus')}
             </Button>
@@ -239,6 +258,18 @@ export function AdminPanelPage() {
   const [sortBy, setSortBy] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
   const [selected, setSelected] = useState(null)
+  const [airSensors, setAirSensors] = useState([])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchAllAirSensors(controller.signal).then(setAirSensors).catch(() => {})
+    return () => controller.abort()
+  }, [smellAlerts.length])
+
+  const smellClusterCounts = useMemo(
+    () => buildSmellClusterCounts(smellAlerts, airSensors),
+    [smellAlerts, airSensors],
+  )
 
   if (auth.role !== 'admin') return <Navigate to='/home' replace />
 
@@ -257,12 +288,12 @@ export function AdminPanelPage() {
     return [...list].sort((a, b) => {
       let va, vb
       if (sortBy === 'date') { va = new Date(a.createdAt || 0).getTime(); vb = new Date(b.createdAt || 0).getTime() }
-      else if (sortBy === 'urgency') { va = urgencyScore(a); vb = urgencyScore(b) }
+      else if (sortBy === 'urgency') { va = urgencyScore(a, smellClusterCounts, airSensors); vb = urgencyScore(b, smellClusterCounts, airSensors) }
       else if (sortBy === 'type') { va = a.type; vb = b.type; return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va) }
       else { va = 0; vb = 0 }
       return sortDir === 'asc' ? va - vb : vb - va
     })
-  }, [allReports, typeFilter, statusFilter, sortBy, sortDir])
+  }, [allReports, typeFilter, statusFilter, sortBy, sortDir, smellClusterCounts, airSensors])
 
   function toggleSort(col) {
     if (sortBy === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc')
@@ -275,32 +306,44 @@ export function AdminPanelPage() {
 
     // Ако пријавата доаѓа од базата (UUID id), прво ажурирај на backend.
     // При неуспех (пр. невалиден админ токен) НЕ прикажувај лажен успех.
+    let serverRow = null
     if (typeof report.id === 'string' && report.id.includes('-')) {
       try {
-        await updateReportStatus(report.id, newStatus)
-      } catch {
+        serverRow = await updateReportStatus(report.id, newStatus)
+      } catch (err) {
         pushNotification({
           title: t('admin.statusUpdateFailedTitle'),
-          body: t('admin.statusUpdateFailedBody', { loc: location }),
+          body: err?.message || t('admin.statusUpdateFailedBody', { loc: location }),
         })
-        return
+        return false
       }
     }
 
     // Поените ги доделува ИСКЛУЧИВО backend-от при решавање (+2, еднаш по
-    // пријава) — тука само се ажурира локалниот приказ до следниот poll.
+    // пријава) — тука се ажурира локалниот приказ од одговорот на PATCH.
     if (report.type === 'waste') {
-      setWasteReports((prev) => prev.map((r) => (
-        r.id === report.id
-          ? { ...r, status: newStatus, visibility: newStatus === 'resolved' ? 'public' : r.visibility, resolvedAt: newStatus === 'resolved' ? new Date().toISOString() : r.resolvedAt }
-          : r
-      )))
+      const mapped = serverRow ? serverToWaste(serverRow) : null
+      setWasteReports((prev) => prev.map((r) => {
+        if (r.id !== report.id) return r
+        if (mapped) return { ...r, ...mapped, type: 'waste' }
+        return {
+          ...r,
+          status: newStatus,
+          visibility: newStatus === 'resolved' ? 'public' : r.visibility,
+          resolvedAt: newStatus === 'resolved' ? new Date().toISOString() : r.resolvedAt,
+        }
+      }))
     } else if (report.type === 'container') {
-      setContainers((prev) => prev.map((c) => (
-        c.id === report.id
-          ? { ...c, issueOpen: newStatus !== 'resolved', issue: newStatus === 'resolved' ? 'none' : c.issue }
-          : c
-      )))
+      const mapped = serverRow ? serverToContainer(serverRow) : null
+      setContainers((prev) => prev.map((c) => {
+        if (c.id !== report.id) return c
+        if (mapped) return mapped
+        return {
+          ...c,
+          issueOpen: newStatus !== 'resolved',
+          issue: newStatus === 'resolved' ? 'none' : c.issue,
+        }
+      }))
     }
 
     // Известување за промена на статус (се зачувува за најавениот админ).
@@ -311,8 +354,8 @@ export function AdminPanelPage() {
 
     // Update selected drawer
     setSelected((s) => s ? { ...s, status: newStatus, resolvedAt: newStatus === 'resolved' ? new Date().toISOString() : s.resolvedAt } : null)
-    // Повлечи ги свежите бројки од базата (статистики, лидерборд, поени).
     refreshData()
+    return true
   }
 
   const counts = useMemo(() => ({
@@ -417,7 +460,11 @@ export function AdminPanelPage() {
                 <tr><td colSpan={7} className='px-4 py-10 text-center text-sm text-slate-400'>{t('admin.noReports')}</td></tr>
               )}
               {filtered.map((r) => {
-                const urgency = urgencyScore(r)
+                const { sensorId, sensorName } = r.type === 'smell' && airSensors.length
+                  ? resolveSmellSensor(r, airSensors)
+                  : { sensorId: r.nearestSensorId || '_unknown', sensorName: null }
+                const clusterCount = r.type === 'smell' ? (smellClusterCounts.get(sensorId) || 1) : 1
+                const urgency = urgencyScore(r, smellClusterCounts, airSensors)
                 return (
                   <tr
                     key={`${r.type}-${r.id}`}
@@ -427,6 +474,12 @@ export function AdminPanelPage() {
                     <td className='px-4 py-3'><TypePill type={r.type} /></td>
                     <td className='px-4 py-3'>
                       <p className='font-medium text-slate-900 truncate max-w-[160px]'>{r.location || r.area || '—'}</p>
+                      {r.type === 'smell' && sensorName && (
+                        <p className='mt-0.5 truncate text-[11px] text-slate-500'>{t('admin.smellSensor')}: {sensorName}</p>
+                      )}
+                      {r.type === 'smell' && clusterCount > 1 && (
+                        <p className='mt-0.5 text-[11px] font-semibold text-rose-600'>{t('admin.smellClusterCount', { count: clusterCount })}</p>
+                      )}
                       {r.intensity != null && (
                         <div className='mt-0.5 flex gap-0.5'>
                           {[1,2,3,4,5].map((n) => <Flame key={n} className='h-3 w-3' style={{ fill: r.intensity >= n ? '#fb923c' : 'none', color: r.intensity >= n ? '#ea580c' : '#e2e8f0' }} />)}
@@ -459,6 +512,18 @@ export function AdminPanelPage() {
           report={selected}
           onClose={() => setSelected(null)}
           onUpdateStatus={updateStatus}
+          clusterCount={
+            selected.type === 'smell'
+              ? (smellClusterCounts.get(
+                  resolveSmellSensor(selected, airSensors).sensorId,
+                ) || 1)
+              : 1
+          }
+          sensorName={
+            selected.type === 'smell'
+              ? resolveSmellSensor(selected, airSensors).sensorName
+              : null
+          }
         />
       )}
     </div>

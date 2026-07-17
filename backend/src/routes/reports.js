@@ -2,15 +2,15 @@ import { Router } from 'express'
 import multer from 'multer'
 import { config } from '../config.js'
 import { query } from '../db.js'
-import { sendPushToUser } from '../lib/fcm.js'
-import { invalidateCache, serveCachedJson } from '../lib/responseCache.js'
+import { sendPushToDevice, sendPushToUser } from '../lib/fcm.js'
+import { invalidateCache, serveCachedJson, serveFreshJson } from '../lib/responseCache.js'
 import { requireAdmin } from '../middleware/requireAdmin.js'
 import { resolveUserId } from '../services/users.js'
 
 export const reportsRouter = Router()
 
 // Јавната листа пријави е иста за сите → кеш 5s (заштита при 200k корисници).
-const REPORTS_TTL_MS = 5000
+const REPORTS_TTL_MS = 60000
 
 // Сликите се примаат во меморија и се складираат како BYTEA во база (без диск).
 const ALLOWED_IMAGE = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -122,21 +122,27 @@ reportsRouter.get('/', async (req, res, next) => {
   try {
     const type = req.query.type || ''
     const status = req.query.status || ''
+    const producer = async () => {
+      const clauses = []
+      const params = []
+      if (type) { params.push(type); clauses.push(`type = $${params.length}`) }
+      if (status) { params.push(status); clauses.push(`status = $${params.length}`) }
+      const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
+      const { rows } = await query(
+        `SELECT ${LIST_COLUMNS} FROM reports ${where} ORDER BY created_at DESC LIMIT 500`,
+        params,
+      )
+      return rows.map(rowToReport)
+    }
+    // На Vercel in-memory кешот не е споделен меѓу инстанци → свежи податоци.
+    if (process.env.VERCEL) {
+      await serveFreshJson(req, res, producer)
+      return
+    }
     await serveCachedJson(req, res, {
       key: `reports:${type}:${status}`,
       ttlMs: REPORTS_TTL_MS,
-      producer: async () => {
-        const clauses = []
-        const params = []
-        if (type) { params.push(type); clauses.push(`type = $${params.length}`) }
-        if (status) { params.push(status); clauses.push(`status = $${params.length}`) }
-        const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
-        const { rows } = await query(
-          `SELECT ${LIST_COLUMNS} FROM reports ${where} ORDER BY created_at DESC LIMIT 500`,
-          params,
-        )
-        return rows.map(rowToReport)
-      },
+      producer,
     })
   } catch (err) { next(err) }
 })
@@ -255,16 +261,19 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
       if (isPointsEligible(rows[0].type)) {
         await awardPointsOnce(rows[0].reporter_id, 2, 'report_resolved', rows[0].id)
       }
-      // Извести го пријавувачот (регистриран): in-app запис + push на телефон.
+      // Извести го пријавувачот: регистриран (in-app + push) или анонимен (push по уред).
+      const title = 'Пријавата е решена'
+      const body = `Твојата пријава (${rows[0].location_label || 'локација'}) е означена како решена. Ти благодариме!`
       if (rows[0].reporter_id) {
-        const title = 'Пријавата е решена'
-        const body = `Твојата пријава (${rows[0].location_label || 'локација'}) е означена како решена. Ти благодариме!`
         await query(
           `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
           [rows[0].reporter_id, title, body],
         ).catch(() => {})
         sendPushToUser(rows[0].reporter_id, { title, body }).catch(() => {})
+      } else if (rows[0].reporter_device_id) {
+        sendPushToDevice(rows[0].reporter_device_id, { title, body }).catch(() => {})
       }
+      invalidateCache('notifications:')
     }
     invalidateCache('reports:')
     invalidateCache('leaderboard:')

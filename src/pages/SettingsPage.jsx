@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
-import { LANGUAGES } from '../i18n/translations'
+import { LANGUAGES, translate } from '../i18n/translations'
 import { deleteAccountApi, fetchUser, updateUserSettingsApi } from '../lib/api'
 
 const ROLE_COLORS = {
@@ -186,7 +186,11 @@ export function SettingsPage() {
             <p className='mb-2 text-sm font-medium text-slate-700'>{t('settings.languageLabel')}</p>
             <select
               value={language}
-              onChange={(e) => { setLanguage(e.target.value); setToast(t('settings.langSaved')) }}
+              onChange={(e) => {
+                const next = e.target.value
+                setLanguage(next)
+                setToast(translate(next, 'settings.langSaved'))
+              }}
               className='h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm'
             >
               {LANGUAGES.map((l) => (

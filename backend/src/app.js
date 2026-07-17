@@ -5,7 +5,7 @@ import { config } from './config.js'
 import { pool } from './db.js'
 import { airRouter } from './routes/air.js'
 import { authRouter } from './routes/auth.js'
-import { containersRouter } from './routes/containers.js'
+import { cronRouter } from './routes/cron.js'
 import { devicesRouter } from './routes/devices.js'
 import { eventsRouter } from './routes/events.js'
 import { leaderboardRouter } from './routes/leaderboard.js'
@@ -101,6 +101,7 @@ app.get('/api/health', async (_req, res) => {
 
 app.use('/api/auth', authRateLimit, authRouter)
 app.use('/api/air', airRouter)
+app.use('/api/cron', cronRouter)
 app.use('/api/containers', containersRouter)
 app.use('/api/devices', devicesRouter)
 app.use('/api/uploads', uploadsRouter)

@@ -8,6 +8,7 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
+import { LOGO_SRC } from '../lib/brand'
 
 function useAutoGPS(t) {
   const [loc, setLoc] = useState({ lat: null, lng: null, label: '', loading: true, error: '', denied: false })
@@ -377,7 +378,7 @@ function HeroSection({ t }) {
           </p>
         </div>
         <img
-          src='/logo.png'
+          src={LOGO_SRC}
           alt='EkoSkopje'
           className='relative h-20 w-auto shrink-0 rounded-2xl bg-white px-4 py-3 object-contain sm:h-32 sm:px-5 sm:py-4'
         />

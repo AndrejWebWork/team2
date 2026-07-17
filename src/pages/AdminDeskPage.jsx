@@ -1,11 +1,12 @@
 import { AlertTriangle, Camera, CheckCircle2, Flame, MapPin, Recycle, Siren, Trash2, Wind } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
 import { updateReportStatus } from '../lib/api'
+import { fetchAllAirSensors, groupSmellsBySensor } from '../lib/smellSensor'
 function mkDate(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleString('mk-MK', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -78,10 +79,10 @@ function WasteRow({ report, onStatus }) {
   )
 }
 
-function SmellRow({ alert }) {
+function SmellRow({ alert, nested = false }) {
   const { t } = useApp()
   return (
-    <div className='flex items-start gap-4 border-b border-slate-100 py-4 last:border-0'>
+    <div className={`flex items-start gap-4 border-b border-slate-100 py-4 last:border-0 ${nested ? 'pl-2 border-l-2 border-l-rose-100' : ''}`}>
       <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50'>
         <Flame className='h-5 w-5 text-rose-500' />
       </div>
@@ -106,6 +107,29 @@ function SmellRow({ alert }) {
         <LocationMeta lat={alert.lat} lng={alert.lng} municipality={alert.municipality} />
         <p className='text-xs font-medium text-sky-600'>→ {t(institutionLabelKey(alert.institutionId))}</p>
       </div>
+    </div>
+  )
+}
+
+function SmellClusterBlock({ group }) {
+  const { t } = useApp()
+  const title = group.sensorName
+    ? t('desk.smellClusterTitle', { sensor: group.sensorName, count: group.count })
+    : `${t('desk.smellNearSensor')} · ${group.count}`
+
+  return (
+    <div className='border-b border-slate-200 last:border-0'>
+      <div className='flex flex-wrap items-center gap-2 bg-slate-50 px-1 py-3'>
+        <Wind className='h-4 w-4 shrink-0 text-rose-500' />
+        <p className='text-sm font-bold text-slate-900'>{title}</p>
+        {group.hasCritical && <Badge variant='destructive'>{t('badge.critical')}</Badge>}
+        {group.count > 1 && (
+          <Badge variant='warning'>{t('admin.smellClusterCount', { count: group.count })}</Badge>
+        )}
+      </div>
+      {group.alerts.map((a) => (
+        <SmellRow key={a.id} alert={a} nested />
+      ))}
     </div>
   )
 }
@@ -150,6 +174,18 @@ function ContainerRow({ container, onReset }) {
 export function AdminDeskPage() {
   const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, pushNotification, refreshData, t } = useApp()
   const [tab, setTab] = useState('waste')
+  const [airSensors, setAirSensors] = useState([])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchAllAirSensors(controller.signal).then(setAirSensors).catch(() => {})
+    return () => controller.abort()
+  }, [smellAlerts.length])
+
+  const smellGroups = useMemo(
+    () => groupSmellsBySensor(smellAlerts, airSensors),
+    [smellAlerts, airSensors],
+  )
 
   if (auth.role !== 'admin') return <Navigate to='/air' replace />
 
@@ -258,7 +294,7 @@ export function AdminDeskPage() {
           {tab === 'smell' && (
             smellAlerts.length === 0
               ? <SectionEmpty text={t('desk.emptySmell')} />
-              : smellAlerts.map((a) => <SmellRow key={a.id} alert={a} />)
+              : smellGroups.map((group) => <SmellClusterBlock key={group.sensorId} group={group} />)
           )}
           {tab === 'containers' && (
             openContainers.length === 0

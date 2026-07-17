@@ -1,5 +1,5 @@
-import { CalendarDays, ChevronLeft, MapPin, Trash2, Users, X } from 'lucide-react'
-import { useState } from 'react'
+import { CalendarDays, ChevronLeft, Loader2, MapPin, Trash2, Users, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { Toast } from '../components/Toast'
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
-import { createEventApi, deleteEventApi, leaveEventApi, signupEventApi } from '../lib/api'
+import { createEventApi, deleteEventApi, fetchEventSignupsApi, leaveEventApi, signupEventApi } from '../lib/api'
 import { formatDisplayDate, isTodayOrFuture, maskDisplayDateInput, parseDisplayDate, todayIso } from '../lib/dates'
 
 const STATUS_META = {
@@ -36,14 +36,17 @@ function TimeBadge({ kind }) {
 }
 
 function SignUpModal({ event, onClose, onConfirm }) {
-  const { t } = useApp()
-  const [form, setForm] = useState({ name: '', email: '', note: '' })
+  const { auth, t } = useApp()
+  const [form, setForm] = useState({
+    name: auth.displayName || '',
+    email: auth.email || '',
+    note: '',
+  })
   const [error, setError] = useState('')
 
   function submit(e) {
     e.preventDefault()
     if (!form.name.trim()) return setError(t('comm.enterName'))
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) return setError(t('comm.enterValidEmail'))
     onConfirm(form)
   }
 
@@ -59,7 +62,7 @@ function SignUpModal({ event, onClose, onConfirm }) {
         </div>
         <form onSubmit={submit} className='space-y-3'>
           <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('comm.namePlaceholder')} />
-          <Input type='email' value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder={t('comm.emailPlaceholder')} />
+          <Input type='email' value={form.email} disabled placeholder={t('comm.emailPlaceholder')} />
           <Textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={t('comm.notePlaceholder')} className='min-h-16' />
           {error && <p className='text-sm text-rose-600'>{error}</p>}
           <div className='flex gap-2 pt-1'>
@@ -72,7 +75,55 @@ function SignUpModal({ event, onClose, onConfirm }) {
   )
 }
 
-function EventDetailPage({ event, past, canManage, isOrganizer, onBack, onSignUp, onNotify, onCancelEvent }) {
+function EventSignupsPanel({ eventId, organizerEmail }) {
+  const { t } = useApp()
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!eventId || !organizerEmail || String(eventId).startsWith('local-')) {
+      setRows([])
+      setLoading(false)
+      return undefined
+    }
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    fetchEventSignupsApi(eventId, organizerEmail)
+      .then((data) => { if (!cancelled) setRows(Array.isArray(data) ? data : []) })
+      .catch((err) => { if (!cancelled) setError(err.message || t('comm.signupsLoadFailed')) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [eventId, organizerEmail, t])
+
+  return (
+    <div className='rounded-xl border border-slate-200 bg-slate-50 p-4'>
+      <p className='mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900'>
+        <Users className='h-4 w-4 text-emerald-600' />{t('comm.signupsTitle')}
+      </p>
+      {loading ? (
+        <p className='flex items-center gap-2 text-sm text-slate-500'><Loader2 className='h-4 w-4 animate-spin' />{t('comm.signupsLoading')}</p>
+      ) : error ? (
+        <p className='text-sm text-rose-600'>{error}</p>
+      ) : rows.length === 0 ? (
+        <p className='text-sm text-slate-500'>{t('comm.signupsEmpty')}</p>
+      ) : (
+        <ul className='divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white'>
+          {rows.map((row, idx) => (
+            <li key={`${row.email}-${idx}`} className='px-3 py-2.5 text-sm'>
+              <p className='font-semibold text-slate-900'>{row.fullName || row.email}</p>
+              <p className='text-xs text-slate-500'>{row.email}</p>
+              {row.note && <p className='mt-1 text-xs text-slate-600'>{row.note}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function EventDetailPage({ event, past, canManage, isOrganizer, organizerEmail, onBack, onSignUp, onCancelEvent }) {
   const { t } = useApp()
   const displayDate = formatDisplayDate(event.date)
   return (
@@ -118,14 +169,24 @@ function EventDetailPage({ event, past, canManage, isOrganizer, onBack, onSignUp
               <Button className='flex-1' onClick={() => onSignUp(event)}>
                 {event.joined ? t('comm.cancelSignup') : t('comm.signupEvent')}
               </Button>
-              <Button variant='outline' onClick={() => onNotify(event)}>{t('comm.notifyMe')}</Button>
             </div>
           )}
 
-          {!past && isOrganizer && (
-            <p className='rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700'>
-              {t('comm.organizerCannotSignup')}
+          {!past && !isOrganizer && event.joined && (
+            <p className='rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800'>
+              {t('comm.reminder24hInfo')}
             </p>
+          )}
+
+          {isOrganizer && (
+            <>
+              {!past && (
+                <p className='rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700'>
+                  {t('comm.organizerCannotSignup')}
+                </p>
+              )}
+              <EventSignupsPanel eventId={event.id} organizerEmail={organizerEmail} />
+            </>
           )}
 
           {canManage && (
@@ -197,7 +258,7 @@ export function CommunityPage() {
       return
     }
     try {
-      await signupEventApi(target.id, { email: auth.email, fullName: form.name, note: form.note })
+      await signupEventApi(target.id, { email: auth.email, fullName: form.name.trim() || auth.displayName, note: form.note })
       setEvents((prev) => prev.map((e) => (
         e.id === target.id
           ? { ...e, joined: true, signupCount: (e.signupCount ?? 0) + (e.joined ? 0 : 1) }
@@ -217,12 +278,6 @@ export function CommunityPage() {
     setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, joined: false } : e)))
     if (auth.email) leaveEventApi(id, auth.email).catch(() => {})
     setToast(t('comm.leftEvent'))
-  }
-
-  function notifyMe(event) {
-    if (!requireRegistered()) return
-    pushNotification({ title: t('comm.eventReminder'), body: t('comm.willRemind', { title: event.title }) })
-    setToast(t('comm.willBeNotified'))
   }
 
   function cancelEvent(event) {
@@ -318,9 +373,9 @@ export function CommunityPage() {
           past={isPast}
           canManage={canManage(live)}
           isOrganizer={isOrganizer(live)}
+          organizerEmail={auth.email || ''}
           onBack={() => setDetailEvent(null)}
           onSignUp={(ev) => live.joined ? leaveEvent(ev.id) : openSignUp(ev)}
-          onNotify={notifyMe}
           onCancelEvent={cancelEvent}
         />
         {signUpEvent && <SignUpModal event={signUpEvent} onClose={() => setSignUpEvent(null)} onConfirm={confirmSignUp} />}

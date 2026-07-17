@@ -23,7 +23,13 @@ export function CommunityUsersManager() {
       .catch(() => { /* backend офлајн — прикажи празна листа */ })
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchCommunityUsersApi(controller.signal)
+      .then((list) => { if (!controller.signal.aborted) setUsers(Array.isArray(list) ? list : []) })
+      .catch(() => { /* backend офлајн — прикажи празна листа */ })
+    return () => controller.abort()
+  }, [])
 
   async function onSubmit(e) {
     e.preventDefault()

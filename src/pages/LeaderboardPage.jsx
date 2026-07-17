@@ -1,4 +1,4 @@
-import { Award, Crown, FileText, Leaf, Medal, ShieldCheck, TrendingUp, Trophy, Users } from 'lucide-react'
+import { Award, CalendarDays, Crown, FileText, Leaf, Medal, ShieldCheck, TrendingUp, Trophy, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
@@ -49,13 +49,17 @@ export function LeaderboardPage() {
   // не само меѓу топ 100 прикажани во листата.
   const [serverRank, setServerRank] = useState(null)
   useEffect(() => {
-    if (isAnon) { setServerRank(null); return undefined }
-    const controller = new AbortController()
-    fetchMyLeaderboardRank(auth.email, controller.signal).then((r) => {
-      if (r && r.rank != null) setServerRank(r.rank)
+    if (isAnon || !auth.email) {
+      setServerRank(null)
+      return undefined
+    }
+    let cancelled = false
+    fetchMyLeaderboardRank(auth.email).then((r) => {
+      if (!cancelled && r && r.rank != null) setServerRank(r.rank)
+      else if (!cancelled) setServerRank(null)
     })
-    return () => controller.abort()
-  }, [isAnon, auth.email, leaderboardMonthly])
+    return () => { cancelled = true }
+  }, [isAnon, auth.email])
 
   // Ранг = место меѓу сите корисници според поени; исти поени = исто место
   // (стандарден натпреварувачки ранг). Локална пресметка како резерва/за анонимни.
@@ -85,16 +89,15 @@ export function LeaderboardPage() {
   return (
     <div className='space-y-6'>
       {/* Header */}
-      <div className='flex flex-wrap items-start justify-between gap-3'>
-        <div>
-          <h1 className='flex items-center gap-2 text-2xl font-bold text-slate-900'>
-            <Trophy className='h-6 w-6 text-amber-500' />{t('lead.title')}
-          </h1>
-          <p className='mt-0.5 text-sm text-slate-500'>{t('lead.subtitle')}</p>
-        </div>
-        <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'>
-          <TrendingUp className='h-3.5 w-3.5' />{t('lead.thisMonth')}
-        </span>
+      <div>
+        <h1 className='flex items-center gap-2 text-2xl font-bold text-slate-900'>
+          <Trophy className='h-6 w-6 text-amber-500' />{t('lead.title')}
+        </h1>
+        <p className='mt-0.5 text-sm text-slate-500'>{t('lead.subtitle')}</p>
+        <p className='mt-1.5 flex items-center gap-1.5 text-xs text-slate-400'>
+          <CalendarDays className='h-3.5 w-3.5 shrink-0 text-slate-400' aria-hidden />
+          <span>{t('lead.thisMonth')}</span>
+        </p>
       </div>
 
       {/* Stat row */}

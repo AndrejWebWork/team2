@@ -125,3 +125,12 @@ export async function sendPushToUser(userId, payload) {
     await sendPushToTokens(rows.map((r) => r.token), payload)
   } catch { /* игнорирај */ }
 }
+
+// Праќа push до анонимен уред (по device_id од локалниот идентитет).
+export async function sendPushToDevice(deviceId, payload) {
+  if (!isPushConfigured() || !deviceId) return
+  try {
+    const { rows } = await query('SELECT token FROM device_tokens WHERE device_id = $1', [deviceId])
+    await sendPushToTokens(rows.map((r) => r.token), payload)
+  } catch { /* игнорирај */ }
+}

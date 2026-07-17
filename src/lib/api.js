@@ -1,6 +1,8 @@
 // Клиент за EkoSkopje backend API-то (заедничко за веб + мобилни клиенти).
 // Ако VITE_API_URL не е зададено: во dev → локален backend; во продукциски
 // build (Vercel) → ист домен (релативни /api патеки).
+import { hashPasswordForTransit } from './password'
+
 const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:4000' : '')).replace(/\/$/, '')
 // Админ токен за заштитените операции (менување статус, community корисници).
 // Backend-от го враќа при успешна админ најава; се памети локално по сесија.
@@ -22,6 +24,15 @@ function getAdminToken() {
   return (import.meta.env.VITE_ADMIN_TOKEN || '').trim()
 }
 
+export function getStoredAdminToken() {
+  return getAdminToken()
+}
+
+// Го брише кешираниот ETag за условно GET — по мутации (пр. статус) да се врати свеж одговор.
+export function clearConditionalEtag(url) {
+  etagStore.delete(url)
+}
+
 export const apiBase = API_URL
 
 // Сигнал дека серверот вратил 304 (истите податоци) — повикувачот треба да ја
@@ -32,6 +43,16 @@ export const NOT_MODIFIED = Symbol('not-modified')
 // одговори со 304, огромно мнозинство polling барања поминуваат без тело —
 // суштинско за скалирање на многу истовремени корисници.
 const etagStore = new Map()
+
+// Спречува паралелни идентични GET барања (пр. React StrictMode двоен mount).
+const inflightGets = new Map()
+function dedupeGet(key, fn) {
+  const existing = inflightGets.get(key)
+  if (existing) return existing
+  const p = fn().finally(() => inflightGets.delete(key))
+  inflightGets.set(key, p)
+  return p
+}
 
 // GET со условно барање: праќа If-None-Match; при 304 враќа NOT_MODIFIED.
 async function conditionalGet(url, signal, errorMsg) {
@@ -107,8 +128,10 @@ export async function updateReportStatus(id, status, extra = {}, signal) {
     body: JSON.stringify({ status, ...extra }),
     signal,
   })
-  if (!res.ok) throw new Error('Ажурирањето на статусот не успеа.')
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Ажурирањето на статусот не успеа.')
+  clearConditionalEtag(`${API_URL}/api/reports`)
+  return data
 }
 
 // Креира пријава со слики во ЕДНО multipart барање. Сликите одат како бинарни
@@ -169,6 +192,16 @@ export async function leaveEventApi(id, email, signal) {
   return res.json()
 }
 
+export async function fetchEventSignupsApi(eventId, email, signal) {
+  const res = await fetch(
+    `${API_URL}/api/events/${eventId}/signups?email=${encodeURIComponent(email)}`,
+    { signal, cache: 'no-store' },
+  )
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Вчитувањето на пријавените не успеа.')
+  return data
+}
+
 // Откажување/бришење на цел настан (организатор или админ) — исчезнува за сите.
 export async function deleteEventApi(id, email, signal) {
   const qs = email ? `?email=${encodeURIComponent(email)}` : ''
@@ -222,51 +255,59 @@ export async function fetchLeaderboard(signal) {
 
 // Ранг на конкретен корисник меѓу СИТЕ корисници (не само топ 100 од листата).
 // Враќа { points, rank } или null ако backend е недостапен.
-export async function fetchMyLeaderboardRank(email, signal) {
-  try {
-    const res = await fetch(
-      `${API_URL}/api/leaderboard/me?email=${encodeURIComponent(email)}`,
-      { signal, cache: 'no-store' },
-    )
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
-  }
+export async function fetchMyLeaderboardRank(email, _signal) {
+  const e = String(email || '').trim()
+  if (!e) return null
+  return dedupeGet(`leaderboard:me:${e.toLowerCase()}`, async () => {
+    try {
+      const res = await fetch(
+        `${API_URL}/api/leaderboard/me?email=${encodeURIComponent(e)}`,
+        { cache: 'no-store' },
+      )
+      if (!res.ok) return null
+      return await res.json()
+    } catch {
+      return null
+    }
+  })
 }
 
 // ---- Воздух: нереферентни (граѓански) сензори од Pulse.eco (преку backend) ----
 
 // Ги враќа граѓанските сензори во живо. Ако backend/Pulse.eco е недостапен → [].
-export async function fetchPulseSensors(signal) {
-  try {
-    // no-store: секогаш најсвежиот снимок од backend (без прелистувачки кеш).
-    const res = await fetch(`${API_URL}/api/air/pulse`, { signal, cache: 'no-store' })
-    if (!res.ok) return []
-    return await res.json()
-  } catch {
-    return []
-  }
+// dedupeGet + без AbortSignal: StrictMode/remount не откажуваат успешен snapshot повик.
+export async function fetchPulseSensors(_signal) {
+  return dedupeGet('air:pulse', async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/air/pulse`, { cache: 'no-store' })
+      if (!res.ok) return []
+      return await res.json()
+    } catch {
+      return []
+    }
+  })
 }
 
 // Сензори на Град Скопје (category='city') од базата. Мрежата на Градот
 // (по 1 сензор во секоја општина) моментално не е активна → обично [].
-export async function fetchCitySensors(signal) {
-  try {
-    const res = await fetch(`${API_URL}/api/air/city`, { signal, cache: 'no-store' })
-    if (!res.ok) return []
-    const rows = await res.json()
-    return rows
-      .filter((r) => r.lat != null && r.lng != null && r.aqi != null)
-      .map((r) => ({
-        id: r.id, name: r.name, area: r.area || '', category: 'city',
-        source: r.source || 'Град Скопје', lat: Number(r.lat), lng: Number(r.lng),
-        aqi: Number(r.aqi), pm25: r.pm25 != null ? Number(r.pm25) : null,
-        pm10: r.pm10 != null ? Number(r.pm10) : null, status: r.status || null,
-      }))
-  } catch {
-    return []
-  }
+export async function fetchCitySensors(_signal) {
+  return dedupeGet('air:city', async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/air/city`, { cache: 'no-store' })
+      if (!res.ok) return []
+      const rows = await res.json()
+      return rows
+        .filter((r) => r.lat != null && r.lng != null && r.aqi != null)
+        .map((r) => ({
+          id: r.id, name: r.name, area: r.area || '', category: 'city',
+          source: r.source || 'Град Скопје', lat: Number(r.lat), lng: Number(r.lng),
+          aqi: Number(r.aqi), pm25: r.pm25 != null ? Number(r.pm25) : null,
+          pm10: r.pm10 != null ? Number(r.pm10) : null, status: r.status || null,
+        }))
+    } catch {
+      return []
+    }
+  })
 }
 
 // ---- Јавни точки за отпад (OSM преку backend) ----
@@ -300,13 +341,15 @@ export async function registerDeviceTokenApi({ token, email, deviceId, platform 
 // Регистрира нов корисник со лозинка. Враќа {id,email,role,displayName,language}.
 // Админ: листа на influencer/community корисници.
 export async function fetchCommunityUsersApi(signal) {
-  const res = await fetch(`${API_URL}/api/users/community`, {
-    headers: getAdminToken() ? { 'X-Admin-Token': getAdminToken() } : {},
-    signal,
+  return dedupeGet('community-users', async () => {
+    const res = await fetch(`${API_URL}/api/users/community`, {
+      headers: getAdminToken() ? { 'X-Admin-Token': getAdminToken() } : {},
+      signal,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || 'Не успеа вчитувањето на корисници.')
+    return data
   })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || 'Не успеа вчитувањето на корисници.')
-  return data
 }
 
 // Админ: додади/унапреди influencer/community корисник (улога 'organization').
@@ -314,9 +357,11 @@ export async function addCommunityUserApi({ email, displayName, organizationName
   const headers = { 'Content-Type': 'application/json' }
   const adminToken = getAdminToken()
   if (adminToken) headers['X-Admin-Token'] = adminToken
+  const payload = { email, displayName, organizationName, language }
+  if (password) payload.passwordHash = await hashPasswordForTransit(password)
   const res = await fetch(`${API_URL}/api/users/community`, {
     method: 'POST', headers,
-    body: JSON.stringify({ email, displayName, organizationName, password, language }), signal,
+    body: JSON.stringify(payload), signal,
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Додавањето на корисник не успеа.')
@@ -336,9 +381,10 @@ export async function removeCommunityUserApi(email, signal) {
 }
 
 export async function registerApi({ email, password, displayName, language }, signal) {
+  const passwordHash = await hashPasswordForTransit(password)
   const res = await fetch(`${API_URL}/api/auth/register`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, displayName, language }), signal,
+    body: JSON.stringify({ email, passwordHash, displayName, language }), signal,
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Регистрацијата не успеа.')
@@ -347,9 +393,10 @@ export async function registerApi({ email, password, displayName, language }, si
 
 // Најава со е-пошта + лозинка. Враќа профил или фрла грешка при погрешни податоци.
 export async function loginApi({ email, password }, signal) {
+  const passwordHash = await hashPasswordForTransit(password)
   const res = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }), signal,
+    body: JSON.stringify({ email, passwordHash }), signal,
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Најавата не успеа.')
@@ -358,9 +405,10 @@ export async function loginApi({ email, password }, signal) {
 
 // Трајно бришење на сметка (со потврда на лозинка). Барање на Play/App Store.
 export async function deleteAccountApi({ email, password }, signal) {
+  const passwordHash = await hashPasswordForTransit(password)
   const res = await fetch(`${API_URL}/api/auth/account`, {
     method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }), signal,
+    body: JSON.stringify({ email, passwordHash }), signal,
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Бришењето не успеа.')
@@ -455,6 +503,7 @@ export function serverToContainer(r) {
 }
 
 export function serverToSmell(r) {
+  const isAirSensor = r.nearest_point_type === 'air_sensor'
   return {
     id: r.id,
     location: r.location_label,
@@ -467,5 +516,7 @@ export function serverToSmell(r) {
     institutionId: r.institution_id,
     createdBy: r.reporter_name,
     createdAt: r.created_at,
+    nearestSensorId: isAirSensor ? r.nearest_point_id : null,
+    nearestSensorDistanceM: isAirSensor ? (r.nearest_point_distance_m ?? null) : null,
   }
 }

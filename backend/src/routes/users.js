@@ -1,6 +1,6 @@
-import bcrypt from 'bcryptjs'
 import { Router } from 'express'
 import { query } from '../db.js'
+import { extractClientPasswordHash, hashForStorage } from '../lib/clientPassword.js'
 import { requireAdmin } from '../middleware/requireAdmin.js'
 
 export const usersRouter = Router()
@@ -64,12 +64,11 @@ usersRouter.get('/community', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// POST /api/users/community  { email, displayName, organizationName?, password?, language? }
-// Админ додава influencer/community корисник (улога 'organization') кој може да
-// објавува акции. Ако корисникот веќе постои → го унапредува во 'organization'.
+// POST /api/users/community  { email, displayName, organizationName?, passwordHash?, language? }
 usersRouter.post('/community', requireAdmin, async (req, res, next) => {
   try {
-    const { email, displayName = null, organizationName = null, password = null, language = 'mk' } = req.body
+    const { email, displayName = null, organizationName = null, language = 'mk' } = req.body
+    const clientHash = extractClientPasswordHash(req.body)
     if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Внесете валидна е-пошта.' })
     const lang = LANGS.includes(language) ? language : 'mk'
     const name = (displayName && String(displayName).trim()) || String(email).split('@')[0]
@@ -77,8 +76,7 @@ usersRouter.post('/community', requireAdmin, async (req, res, next) => {
     const existing = await query('SELECT id FROM users WHERE email = $1', [email])
 
     if (existing.rows.length > 0) {
-      // Постоечки корисник → унапреди во community; по желба смени лозинка.
-      const passwordHash = password ? await bcrypt.hash(String(password), 10) : null
+      const passwordHash = clientHash ? await hashForStorage(clientHash) : null
       const { rows } = await query(
         `UPDATE users SET
            role = 'organization',
@@ -95,16 +93,16 @@ usersRouter.post('/community', requireAdmin, async (req, res, next) => {
       return res.json(publicCommunityUser(rows[0]))
     }
 
-    // Нов корисник → мора да има лозинка за да може да се најави и објавува.
-    if (!password || String(password).length < 6) {
+    // Нов корисник → мора да има лозинка (хеширана на клиентот) за да може да се најави.
+    if (!clientHash) {
       return res.status(400).json({ error: 'За нов корисник внесете лозинка (мин. 6 знаци).' })
     }
-    const passwordHash = await bcrypt.hash(String(password), 10)
+    const storedHash = await hashForStorage(clientHash)
     const { rows } = await query(
       `INSERT INTO users (email, password_hash, display_name, organization_name, role, language, is_anonymous, notif_events)
          VALUES ($1, $2, $3, $4, 'organization', $5, FALSE, TRUE)
        RETURNING id, email, display_name, organization_name, role, language, created_at`,
-      [email, passwordHash, name, organizationName, lang],
+      [email, storedHash, name, organizationName, lang],
     )
     res.status(201).json(publicCommunityUser(rows[0]))
   } catch (err) { next(err) }

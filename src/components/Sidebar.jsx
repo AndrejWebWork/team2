@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { navItems } from './navConfig'
 import { cx } from '../utils/ui'
 import { useApp } from '../context/AppContext'
+import { BRAND_SRC } from '../lib/brand'
 
 export function Sidebar({ role }) {
   const { t } = useApp()
@@ -18,7 +19,7 @@ export function Sidebar({ role }) {
       <div className='flex flex-1 flex-col p-5'>
         <div className='relative mb-6 overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5'>
           <img
-            src='/skopje-brand.png'
+            src={BRAND_SRC}
             alt={t('comm.skopje')}
             className='h-24 w-full object-cover'
             loading='lazy'

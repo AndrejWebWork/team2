@@ -1,7 +1,7 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CheckCircle2, Flame, Loader2, MapPin, Wind, XCircle } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet'
 import { MapLayers } from '../components/MapLayers'
 import { SubmitSuccessModal } from '../components/SubmitSuccessModal'
@@ -14,7 +14,7 @@ import { fetchSkopjeSensors } from '../lib/waqi'
 import { fetchCitySensors, fetchPulseSensors } from '../lib/api'
 
 // Колку често се освежуваат мерењата во живо од WAQI (референтни МЖСПП + граѓански).
-const AIR_REFRESH_MS = 15000
+const AIR_REFRESH_MS = 3 * 60 * 1000
 
 const userIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -79,9 +79,15 @@ function distanceKm(a, b) {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
 }
 
-function RecenterMap({ center }) {
+// Центрирај ја мапата само при првото добивање GPS — не при секое освежување на сензорите.
+function RecenterMap({ lat, lng }) {
   const map = useMap()
-  useEffect(() => { map.setView(center, 13) }, [center, map])
+  const centered = useRef(false)
+  useEffect(() => {
+    if (centered.current || lat == null || lng == null) return
+    centered.current = true
+    map.setView([lat, lng], 13)
+  }, [lat, lng, map])
   return null
 }
 
@@ -198,13 +204,17 @@ export function AirPage() {
   //  • официјални/референтни (МЖСПП) → context `sensors`,
   //  • информативни/нереферентни: граѓански (WAQI) + Pulse.eco → `pulse`,
   //  • Град Скопје (од базата) → `citySensors`.
-  // Се освежува на ~AIR_REFRESH_MS и се паузира кога табот е скриен.
+  // Се освежува на ~3 мин и се паузира кога табот е скриен.
   useEffect(() => {
     let cancelled = false
     let timer = null
     const controller = new AbortController()
 
+    let loadInFlight = false
     async function load() {
+      if (loadInFlight) return
+      loadInFlight = true
+      try {
       // Трите извори се НЕЗАВИСНИ: пад на еден (пр. WAQI) не смее да ги блокира
       // другите (Pulse.eco, Град Скопје). Секој се вчитува паралелно.
       const [waqiRes, pulseRes, cityRes] = await Promise.allSettled([
@@ -229,6 +239,9 @@ export function AirPage() {
 
       const anyLive = waqiRes.status === 'fulfilled' || pulseRes.status === 'fulfilled'
       setAirStatus((prev) => (anyLive ? 'live' : prev === 'live' ? 'live' : 'offline'))
+      } finally {
+        loadInFlight = false
+      }
     }
 
     const schedule = () => { timer = setTimeout(tick, AIR_REFRESH_MS) }
@@ -306,6 +319,10 @@ export function AirPage() {
       description: smellDesc.trim(),
       intensity,
       severity: intensity >= 4 ? 'critical' : 'warning',
+      nearestSensorId: nearest?.id || null,
+      nearestSensorDistanceM: nearest && userLocation
+        ? Math.round(distanceKm(userLocation, nearest) * 1000)
+        : null,
     })
     setSmellDesc('')
     setIntensity(3)
@@ -479,7 +496,7 @@ export function AirPage() {
             {/* Почетниот поглед на мапата е Скопје (само поглед, не податок);
                 маркерот „Вашата локација" се црта САМО со реален GPS. */}
             <MapContainer center={[41.9981, 21.4254]} zoom={13} maxZoom={20} className='h-full w-full'>
-              {userLocation && <RecenterMap center={[userLocation.lat, userLocation.lng]} />}
+              {userLocation && <RecenterMap lat={userLocation.lat} lng={userLocation.lng} />}
               <MapLayers />
               {userLocation && (
                 <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>

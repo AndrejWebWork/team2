@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { useApp } from '../context/AppContext'
 import { updateReportStatus } from '../lib/api'
 import { getDeviceId } from '../lib/device'
+import { isMyReport } from '../lib/reportOwnership'
 
 function mkDate(iso, noDate) {
   if (!iso) return noDate
@@ -17,14 +18,8 @@ function mkDate(iso, noDate) {
 
 export function WastePage() {
   const { wasteReports, setWasteReports, auth, awardPoints, t } = useApp()
-  const deviceId = getDeviceId()
 
-  // „Мои пријави": за регистриран — по неговиот email; за анонимен — по ID-то на
-  // уредот (истото што апликацијата го памети локално, како за сè останато).
-  const isMine = (r) =>
-    (auth.email && (r.reportedBy === auth.email || r.reportedById === auth.email)) ||
-    r.reportedByDevice === deviceId ||
-    r.reportedById === deviceId
+  const isMine = (r) => isMyReport(r, auth, getDeviceId())
 
   // Решените пријави се ЈАВНИ ПОСТОВИ — секој граѓанин ги гледа сите (од кого
   // било), како доказ дека пријавите се решаваат.

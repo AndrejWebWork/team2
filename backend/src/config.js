@@ -25,4 +25,6 @@ export const config = {
   // до .json фајлот. Ако е празно, push е исклучен (работат само локалните).
   // Го добиваш од Firebase Console → Project settings → Service accounts.
   fcmServiceAccount: (process.env.FCM_SERVICE_ACCOUNT || '').trim(),
+  // Таен клуч за Vercel Cron (Authorization: Bearer …). Празно = без проверка (локално).
+  cronSecret: (process.env.CRON_SECRET || '').trim(),
 }

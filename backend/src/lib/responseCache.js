@@ -77,3 +77,18 @@ export function invalidateCache(prefix) {
     if (k.startsWith(prefix)) store.delete(k)
   }
 }
+
+// На serverless (Vercel) секоја инстанца има посебен in-memory кеш — по PATCH на
+// една инстанца, GET на друга може да врати застарени податоци. Затоа на Vercel
+// секогаш читаме директно од база, со ETag само за клиентски 304.
+export async function serveFreshJson(req, res, producer) {
+  const data = await producer()
+  const body = JSON.stringify(data)
+  const etag = 'W/"' + crypto.createHash('sha1').update(body).digest('base64') + '"'
+  res.setHeader('ETag', etag)
+  res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate')
+  const inm = req.headers['if-none-match']
+  if (inm && inm === etag) return res.status(304).end()
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  return res.status(200).send(body)
+}

@@ -24,8 +24,10 @@ import {
   serverToWaste,
   signupEventApi,
   updateReportStatus,
+  getStoredAdminToken,
 } from '../lib/api'
 import { getDeviceId } from '../lib/device'
+import { isMyReport, reportsIdentity } from '../lib/reportOwnership'
 import { resolveMunicipality } from '../lib/geo'
 import { registerPushNotifications, scheduleLocalNotification } from '../lib/notifications'
 import { DEFAULT_LANGUAGE, isSupportedLanguage, translate } from '../i18n/translations'
@@ -34,9 +36,9 @@ const AppContext = createContext(null)
 
 const LANG_STORAGE_KEY = 'ekoskopje.language'
 const AUTH_STORAGE_KEY = 'ekoskopje.auth'
-const REPORTS_CACHE_KEY = 'ekoskopje.reports.cache'
+const REPORTS_CACHE_PREFIX = 'ekoskopje.reports.cache.'
 
-const ANON_AUTH = { isAuthenticated: true, role: 'user', email: '', displayName: '', isAnonymous: true }
+const ANON_AUTH = { isAuthenticated: true, role: 'user', email: '', displayName: '', userId: '', isAnonymous: true }
 
 // Сесијата преживува рестарт: најавениот корисник се памти локално (по уред).
 function readStoredAuth() {
@@ -44,17 +46,26 @@ function readStoredAuth() {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY)
     const data = raw ? JSON.parse(raw) : null
     if (data && data.email && !data.isAnonymous) {
-      return { isAuthenticated: true, role: data.role || 'user', email: data.email, displayName: data.displayName || '', isAnonymous: false }
+      // Врати го админ токенот при рестарт — потребен за PATCH статус без повторна најава.
+      if (data.role === 'admin' && data.adminToken) setStoredAdminToken(data.adminToken)
+      return {
+        isAuthenticated: true,
+        role: data.role || 'user',
+        email: data.email,
+        displayName: data.displayName || '',
+        userId: data.userId || '',
+        isAnonymous: false,
+      }
     }
     return ANON_AUTH
   } catch {
     return ANON_AUTH
   }
 }
-// Колку често се освежуваат податоците од backend (real-time приказ ~10s).
-const POLL_INTERVAL_MS = 10000
+// Колку често се освежуваат податоците од backend (reports, events, leaderboard).
+const POLL_INTERVAL_MS = 60000
 // Случаен растур (jitter) за да не удрат сите клиенти истовремено (spikes).
-const POLL_JITTER_MS = 3000
+const POLL_JITTER_MS = 5000
 // Стабилен идентитет на уредот за анонимни корисници (кеш по уред).
 const DEVICE_ID = getDeviceId()
 
@@ -88,10 +99,10 @@ function readStoredLanguage() {
   }
 }
 
-// Го чита последниот кеширан снимок на пријавите (од кога backend-от бил онлајн).
-function readCachedReports() {
+// Го чита последниот кеширан снимок на пријавите за даден идентитет (email или уред).
+function readCachedReports(identity) {
   try {
-    const raw = localStorage.getItem(REPORTS_CACHE_KEY)
+    const raw = localStorage.getItem(`${REPORTS_CACHE_PREFIX}${identity}`)
     if (!raw) return null
     const data = JSON.parse(raw)
     if (!data || !Array.isArray(data.waste)) return null
@@ -106,11 +117,11 @@ function readCachedReports() {
   }
 }
 
-// Го зачувува последниот успешен снимок од базата, за офлајн вчитување.
-function writeCachedReports({ waste, containers, smell }) {
+// Го зачувува последниот успешен снимок од базата, по корисник/уред (како известувањата).
+function writeCachedReports(identity, { waste, containers, smell }) {
   try {
     localStorage.setItem(
-      REPORTS_CACHE_KEY,
+      `${REPORTS_CACHE_PREFIX}${identity}`,
       JSON.stringify({ waste, containers, smell, cachedAt: new Date().toISOString() }),
     )
   } catch {
@@ -123,9 +134,9 @@ export function AppProvider({ children }) {
   // Сите податоци се РЕАЛНИ: сензорите доаѓаат во живо од WAQI (во AirPage),
   // а пријавите од backend-от. Нема измислени (mock) почетни податоци.
   const [sensors, setSensors] = useState([])
-  const [smellAlerts, setSmellAlerts] = useState([])
-  const [wasteReports, setWasteReports] = useState([])
-  const [containers, setContainers] = useState([])
+  const [smellAlerts, setSmellAlerts] = useState(() => readCachedReports(reportsIdentity(readStoredAuth(), DEVICE_ID))?.smell || [])
+  const [wasteReports, setWasteReports] = useState(() => readCachedReports(reportsIdentity(readStoredAuth(), DEVICE_ID))?.waste || [])
+  const [containers, setContainers] = useState(() => readCachedReports(reportsIdentity(readStoredAuth(), DEVICE_ID))?.containers || [])
   const [events, setEvents] = useState([])
   const [notifications, setNotifications] = useState(() => readCachedNotifications(DEVICE_ID))
   const [pointsLedger, setPointsLedger] = useState({})
@@ -136,8 +147,27 @@ export function AppProvider({ children }) {
   // Рачно освежување: покачувањето предизвикува веднаш нов циклус на вчитување
   // (пр. по успешна пријава/промена на статус/настан — без да се чека поллот).
   const [refreshKey, setRefreshKey] = useState(0)
+  const wasteSnapRef = useRef(wasteReports)
+  const containersSnapRef = useRef(containers)
+  const notifiedResolvedRef = useRef(new Set())
 
   const email = auth.email || null
+  const reportsIdentityKey = reportsIdentity(auth, DEVICE_ID)
+
+  // При промена на корисник (најава/одјава): вчитај го неговиот кеш и освежи од сервер.
+  const authSessionRef = useRef(false)
+  useEffect(() => {
+    const cached = readCachedReports(reportsIdentityKey)
+    setWasteReports(cached?.waste || [])
+    setContainers(cached?.containers || [])
+    setSmellAlerts(cached?.smell || [])
+    wasteSnapRef.current = cached?.waste || []
+    containersSnapRef.current = cached?.containers || []
+    notifiedResolvedRef.current = new Set()
+    if (!auth.email) setNotifications(readCachedNotifications(reportsIdentityKey))
+    if (authSessionRef.current) refreshData()
+    else authSessionRef.current = true
+  }, [reportsIdentityKey, auth.email])
 
   // Сите податоци се РЕАЛНИ и во живо:
   //  • backend достапен → единствен извор; се освежуваат на ~POLL_INTERVAL_MS
@@ -157,14 +187,59 @@ export function AppProvider({ children }) {
     const controller = new AbortController()
 
     const loadFromCache = () => {
-      const cached = readCachedReports()
+      const cached = readCachedReports(reportsIdentityKey)
       if (!cached) return
       setWasteReports(cached.waste)
       setContainers(cached.containers)
       setSmellAlerts(cached.smell)
     }
 
+    let syncInFlight = false
+
+    function notifyAnonymousReportResolved(report) {
+      if (auth.role === 'admin' || email) return
+      const key = String(report.id)
+      if (notifiedResolvedRef.current.has(key)) return
+      notifiedResolvedRef.current.add(key)
+      const loc = report.location || report.area || translate(language, 'admin.unknownLocation')
+      const title = translate(language, 'notif.reportResolvedTitle')
+      const body = translate(language, 'notif.reportResolvedBody', { loc })
+      setNotifications((prev) => {
+        const id = `resolved-${key}`
+        if (prev.some((n) => n.id === id)) return prev
+        return [{
+          id,
+          title,
+          body,
+          group: translate(language, 'group.today'),
+          read: false,
+          createdAt: new Date().toISOString(),
+        }, ...prev]
+      })
+      scheduleLocalNotification({ title, body })
+    }
+
+    function detectAnonymousResolved(prevWaste, nextWaste, prevContainers, nextContainers) {
+      if (auth.role === 'admin' || email) return
+      for (const r of nextWaste) {
+        if (!isMyReport(r, auth, DEVICE_ID)) continue
+        const prev = prevWaste.find((p) => p.id === r.id)
+        if (prev && prev.status !== 'resolved' && r.status === 'resolved') {
+          notifyAnonymousReportResolved(r)
+        }
+      }
+      for (const r of nextContainers) {
+        if (!isMyReport(r, auth, DEVICE_ID)) continue
+        const prev = prevContainers.find((p) => p.id === r.id)
+        if (prev && prev.issueOpen && !r.issueOpen) {
+          notifyAnonymousReportResolved(r)
+        }
+      }
+    }
+
     async function sync(initial) {
+      if (syncInFlight) return
+      syncInFlight = true
       try {
         const [rows, evts, board] = await Promise.all([
           fetchReports(controller.signal),
@@ -178,10 +253,13 @@ export function AppProvider({ children }) {
           const waste = rows.filter((r) => r.type === 'waste').map(serverToWaste)
           const containers = rows.filter((r) => r.type === 'container').map(serverToContainer)
           const smell = rows.filter((r) => r.type === 'smell').map(serverToSmell)
+          detectAnonymousResolved(wasteSnapRef.current, waste, containersSnapRef.current, containers)
+          wasteSnapRef.current = waste
+          containersSnapRef.current = containers
           setWasteReports(waste)
           setContainers(containers)
           setSmellAlerts(smell)
-          writeCachedReports({ waste, containers, smell })
+          writeCachedReports(reportsIdentityKey, { waste, containers, smell })
         }
         if (evts !== NOT_MODIFIED) setEvents(evts)
         if (board !== NOT_MODIFIED) setServerLeaderboard(board)
@@ -194,6 +272,8 @@ export function AppProvider({ children }) {
         if (cancelled) return
         setApiOnline(false)
         if (initial) loadFromCache()
+      } finally {
+        syncInFlight = false
       }
     }
 
@@ -216,7 +296,7 @@ export function AppProvider({ children }) {
       if (timer) clearTimeout(timer)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [email, refreshKey])
+  }, [reportsIdentityKey, refreshKey, language, auth.email, auth.role, auth.isAnonymous])
 
   // Веднаш повлечи свежи податоци од backend (по запис што менува состојба).
   function refreshData() {
@@ -260,7 +340,12 @@ export function AppProvider({ children }) {
   useEffect(() => {
     try {
       if (auth.email && !auth.isAnonymous) {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ role: auth.role, email: auth.email, displayName: auth.displayName || '', isAnonymous: false }))
+        const payload = { role: auth.role, email: auth.email, displayName: auth.displayName || '', userId: auth.userId || '', isAnonymous: false }
+        if (auth.role === 'admin') {
+          const token = getStoredAdminToken()
+          if (token) payload.adminToken = token
+        }
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload))
       } else {
         localStorage.removeItem(AUTH_STORAGE_KEY)
       }
@@ -288,6 +373,9 @@ export function AppProvider({ children }) {
         // Освежи го прикажаното име (име и презиме од регистрација) на релоуд.
         if (user?.display_name) {
           setAuth((prev) => (prev.displayName === user.display_name ? prev : { ...prev, displayName: user.display_name }))
+        }
+        if (user?.id) {
+          setAuth((prev) => (prev.userId === user.id ? prev : { ...prev, userId: user.id }))
         }
       } catch {
         /* корисникот сè уште не постои во база — останува локалниот избор */
@@ -355,6 +443,8 @@ export function AppProvider({ children }) {
         message: p.description || '', intensity: p.intensity || 3,
         severity: (p.intensity || 3) >= 4 ? 'critical' : 'warning',
         createdBy: reportedBy, createdAt: now,
+        nearestSensorId: p.nearestSensorId || null,
+        nearestSensorDistanceM: p.nearestSensorDistanceM ?? null,
       }, ...prev])
     } else if (p.type === 'waste') {
       setWasteReports((prev) => [{
@@ -401,6 +491,9 @@ export function AppProvider({ children }) {
       containerIssue: payload.containerIssue ?? null,
       fill: payload.fill ?? null,
       dataUrls: payload.dataUrls || [],
+      nearestPointId: payload.nearestSensorId || payload.nearestPointId || null,
+      nearestPointType: payload.nearestSensorId ? 'air_sensor' : (payload.nearestPointType || null),
+      nearestDistanceM: payload.nearestSensorDistanceM ?? payload.nearestDistanceM ?? null,
     }
     try {
       await persistReportWithPhotos(backendPayload)
@@ -453,14 +546,28 @@ export function AppProvider({ children }) {
     const user = await loginApi({ email: e, password })
     // Админ токен за заштитените операции — backend го враќа само за админ.
     setStoredAdminToken(user.adminToken || '')
-    setAuth({ isAuthenticated: true, role: user.role || 'user', email: user.email || e, displayName: user.displayName || '', isAnonymous: false })
+    setAuth({
+      isAuthenticated: true,
+      role: user.role || 'user',
+      email: user.email || e,
+      displayName: user.displayName || '',
+      userId: user.id || '',
+      isAnonymous: false,
+    })
     if (user.language && isSupportedLanguage(user.language)) setLanguage(user.language)
     return user
   }
 
   async function register({ email: e, password, displayName }) {
     const user = await registerApi({ email: e, password, displayName, language })
-    setAuth({ isAuthenticated: true, role: user.role || 'user', email: user.email || e, displayName: user.displayName || displayName || '', isAnonymous: false })
+    setAuth({
+      isAuthenticated: true,
+      role: user.role || 'user',
+      email: user.email || e,
+      displayName: user.displayName || displayName || '',
+      userId: user.id || '',
+      isAnonymous: false,
+    })
     return user
   }
 

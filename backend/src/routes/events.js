@@ -7,7 +7,7 @@ import { resolveUserId } from '../services/users.js'
 export const eventsRouter = Router()
 
 // Настаните ретко се менуваат → кеш 10s. Клучот вклучува email заради „joined“.
-const EVENTS_TTL_MS = 10000
+const EVENTS_TTL_MS = 60000
 
 // Претвора ред + број пријавени во облик што го користи frontend-от.
 function rowToEvent(r) {
@@ -32,6 +32,25 @@ function rowToEvent(r) {
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10)
+}
+
+async function assertOrganizerOrAdmin(eventId, email, adminToken) {
+  const { rows } = await query(
+    `SELECT ou.email AS organizer_email
+       FROM events e
+       LEFT JOIN users ou ON ou.id = e.organizer_id
+      WHERE e.id = $1`,
+    [eventId],
+  )
+  if (!rows[0]) return { ok: false, status: 404, error: 'Настанот не постои.' }
+  const orgEmail = rows[0].organizer_email
+  const isOrganizer = email && orgEmail
+    && String(email).toLowerCase() === String(orgEmail).toLowerCase()
+  const isAdmin = config.adminToken && adminToken === config.adminToken
+  if (!isOrganizer && !isAdmin) {
+    return { ok: false, status: 403, error: 'Само организаторот може да ги види пријавените.' }
+  }
+  return { ok: true }
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -72,6 +91,16 @@ eventsRouter.post('/', async (req, res, next) => {
       seats = 0, organizerEmail = null, organizerName = null,
     } = req.body
     if (!title || !date) return res.status(400).json({ error: 'Недостасува наслов или датум.' })
+    if (organizerEmail) {
+      const { rows: orgRows } = await query(
+        `SELECT role FROM users WHERE email = $1`,
+        [organizerEmail],
+      )
+      const role = orgRows[0]?.role
+      if (role && role !== 'organization' && role !== 'admin') {
+        return res.status(403).json({ error: 'Само community корисници можат да креираат настани.' })
+      }
+    }
     const isoDate = String(date).slice(0, 10)
     if (isoDate < todayIso()) {
       return res.status(400).json({ error: 'Не може да се креира настан со датум во минатото.' })
@@ -111,6 +140,33 @@ eventsRouter.delete('/:id', async (req, res, next) => {
     await query('DELETE FROM events WHERE id = $1', [req.params.id])
     invalidateCache('events:')
     res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
+// GET /api/events/:id/signups?email=  → листа пријавени (организатор или админ)
+eventsRouter.get('/:id/signups', async (req, res, next) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ error: 'Невалиден настан.' })
+    }
+    const email = req.query.email || null
+    const adminToken = req.get('x-admin-token') || ''
+    const access = await assertOrganizerOrAdmin(req.params.id, email, adminToken)
+    if (!access.ok) return res.status(access.status).json({ error: access.error })
+
+    const { rows } = await query(
+      `SELECT s.full_name, s.email, s.note, s.created_at
+         FROM event_signups s
+        WHERE s.event_id = $1
+        ORDER BY s.created_at ASC`,
+      [req.params.id],
+    )
+    res.json(rows.map((r) => ({
+      fullName: r.full_name,
+      email: r.email,
+      note: r.note || '',
+      signedUpAt: r.created_at,
+    })))
   } catch (err) { next(err) }
 })
 
