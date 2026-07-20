@@ -53,6 +53,11 @@ export function LoginPage() {
     }
   }
 
+  function toggleMode() {
+    setMode((m) => (m === 'login' ? 'register' : 'login'))
+    setToast('')
+  }
+
   return (
     <div className='relative min-h-screen bg-gradient-to-br from-emerald-50 via-white to-sky-50 flex items-center justify-center p-4'>
       {/* Копче назад — горе ЛЕВО, стрелка + збор „Назад" во балонче (сите уреди). */}
@@ -165,11 +170,27 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className='mt-6 text-center text-sm text-slate-500'>
+          {/* Мобилен: посебно копче (поголемо, појасно од link). */}
+          <div className='mt-6 space-y-3 lg:hidden'>
+            <p className='text-center text-sm text-slate-500'>
+              {mode === 'login' ? t('login.noAccountQ') : t('login.haveAccountQ')}
+            </p>
+            <Button
+              type='button'
+              variant='outline'
+              className='h-11 w-full border-emerald-200 text-base font-semibold text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50'
+              onClick={toggleMode}
+            >
+              {mode === 'login' ? t('login.signUp') : t('login.signIn')}
+            </Button>
+          </div>
+
+          {/* Desktop: inline link како досега. */}
+          <p className='mt-6 hidden text-center text-sm text-slate-500 lg:block'>
             {mode === 'login' ? t('login.noAccountQ') : t('login.haveAccountQ')}{' '}
             <button
               type='button'
-              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setToast('') }}
+              onClick={toggleMode}
               className='font-semibold text-emerald-600 hover:text-emerald-700'
             >
               {mode === 'login' ? t('login.signUp') : t('login.signIn')}

@@ -107,8 +107,8 @@ const dict = {
       photoLabel: 'Фотографии', preview: 'Преглед', retake: 'Повторно сними', addPhoto: 'Додади слика', camera: 'Камера', gallery: 'Од галерија',
     },
     home: {
-      heroLine1: 'Добредојдовте во', heroLine2: 'паметна еко платформа',
-      heroSubtitle: 'Следете го квалитетот на воздухот, пријавувајте депонии и контејнери, и придонесете за почисто Скопје.',
+      heroLine1: 'Добредојде на еко-платформата', heroLine2: 'на Град Скопје',
+      heroSubtitle: 'Регистрирај се, пријавувај и добивај награди',
       reportProblem: 'Пријави проблем', reportSubtitle: 'Изберете вид на пријава. Локацијата се снима автоматски.',
       typeSmell: 'Миризба / загаден воздух', typeDeponija: 'Дива депонија', typeContainer: 'Проблем со контејнер',
       reportSuccess: 'Пријавата е успешно испратена!', statsMaps: 'Статистика и мапи',
@@ -405,8 +405,8 @@ const dict = {
       photoLabel: 'Photos', preview: 'Preview', retake: 'Retake', addPhoto: 'Add photo', camera: 'Camera', gallery: 'From gallery',
     },
     home: {
-      heroLine1: 'Welcome to the', heroLine2: 'smart eco platform',
-      heroSubtitle: 'Track air quality, report illegal dumps and containers, and help make Skopje cleaner.',
+      heroLine1: 'Welcome to the eco platform', heroLine2: 'of the City of Skopje',
+      heroSubtitle: 'Register, report issues and earn rewards',
       reportProblem: 'Report a problem', reportSubtitle: 'Choose a report type. Location is captured automatically.',
       typeSmell: 'Smell / polluted air', typeDeponija: 'Illegal dump', typeContainer: 'Container problem',
       reportSuccess: 'Report submitted successfully!', statsMaps: 'Statistics and maps',
@@ -703,8 +703,8 @@ const dict = {
       photoLabel: 'Foto', preview: 'Pamje', retake: 'Fotografo përsëri', addPhoto: 'Shto foto', camera: 'Kamera', gallery: 'Nga galeria',
     },
     home: {
-      heroLine1: 'Mirë se vini në', heroLine2: 'platformën e mençur ekologjike',
-      heroSubtitle: 'Ndiqni cilësinë e ajrit, raportoni deponi dhe kontejnerë, dhe kontribuoni për një Shkup më të pastër.',
+      heroLine1: 'Mirë se vini në platformën ekologjike', heroLine2: 'të Qytetit të Shkupit',
+      heroSubtitle: 'Regjistrohu, raporto dhe fito shpërblime',
       reportProblem: 'Raporto një problem', reportSubtitle: 'Zgjidhni llojin e raportit. Vendndodhja regjistrohet automatikisht.',
       typeSmell: 'Erë / ajër i ndotur', typeDeponija: 'Deponi ilegale', typeContainer: 'Problem me kontejnerin',
       reportSuccess: 'Raporti u dërgua me sukses!', statsMaps: 'Statistika dhe harta',
