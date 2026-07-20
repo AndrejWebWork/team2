@@ -14,12 +14,6 @@
       "memory": 1024
     }
   },
-  "crons": [
-    {
-      "path": "/api/cron/event-reminders",
-      "schedule": "0 * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/assets/(.*)",
