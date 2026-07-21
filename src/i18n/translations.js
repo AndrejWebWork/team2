@@ -40,10 +40,15 @@ const dict = {
       attributionLink: 'Извори на податоци',
       sectionTitle: 'Правни информации',
     },
+    impressum: {
+      back: 'Назад',
+      link: 'Импресум',
+    },
     nav: {
       home: 'Дома', air: 'Воздух', waste: 'Диви Депонии', wasteShort: 'Депонии',
       containers: 'Контејнери', containersShort: 'Контејн.', community: 'Заедница',
       communityShort: 'Заедн.', panel: 'Панел', stats: 'Статистика', settings: 'Поставки',
+      impressum: 'Импресум',
       communityUsers: 'Корисници на заедницата',
       ariaMain: 'Главна навигација',
     },
@@ -143,6 +148,8 @@ const dict = {
       officialTitle: 'Официјални / референтни сензори', officialSubtitle: 'Министерство за животна средина и просторно планирање (МЖСПП)',
       informativeTitle: 'Информативни / нереферентни сензори', informativeSubtitle: 'Граѓански мрежи (Pulse Eco) — служат само за информација',
       cityTitle: 'Сензори на Град Скопје',
+      sensorDisclaimer1: 'Сензорните уреди не извршуваат мерења по референтни методи и податоците произлезени од иститите се исклучиво за првична проценка на квалитетот на амбиентниот воздух.',
+      sensorDisclaimer2: 'За секоја подетална анализа и толкување на состојбите со амбиентниот воздух се потребни дополнителни мерења согласно законската регулатива од областа на амбиентниот воздух.',
     },
     aqi: { unhealthy: 'Нездраво', moderate: 'Умерено', good: 'Добро' },
     sensor: {
@@ -338,10 +345,15 @@ const dict = {
       attributionLink: 'Data sources',
       sectionTitle: 'Legal information',
     },
+    impressum: {
+      back: 'Back',
+      link: 'Impressum',
+    },
     nav: {
       home: 'Home', air: 'Air', waste: 'Illegal Dumps', wasteShort: 'Dumps',
       containers: 'Containers', containersShort: 'Contain.', community: 'Community',
       communityShort: 'Commun.', panel: 'Panel', stats: 'Statistics', settings: 'Settings',
+      impressum: 'Impressum',
       communityUsers: 'Community members',
       ariaMain: 'Main navigation',
     },
@@ -441,6 +453,8 @@ const dict = {
       officialTitle: 'Official / reference sensors', officialSubtitle: 'Ministry of Environment and Physical Planning (MoEPP)',
       informativeTitle: 'Informational / non-reference sensors', informativeSubtitle: 'Civic networks (Pulse Eco) — for information only',
       cityTitle: 'City of Skopje sensors',
+      sensorDisclaimer1: 'Sensor devices do not perform measurements using reference methods, and the data derived from them is exclusively for a preliminary assessment of ambient air quality.',
+      sensorDisclaimer2: 'For any detailed analysis and interpretation of ambient air conditions, additional measurements are required in accordance with the legal regulations in the field of ambient air.',
     },
     aqi: { unhealthy: 'Unhealthy', moderate: 'Moderate', good: 'Good' },
     sensor: {
@@ -636,10 +650,15 @@ const dict = {
       attributionLink: 'Burimet e të dhënave',
       sectionTitle: 'Informacione ligjore',
     },
+    impressum: {
+      back: 'Prapa',
+      link: 'Impresum',
+    },
     nav: {
       home: 'Ballina', air: 'Ajri', waste: 'Deponi ilegale', wasteShort: 'Deponi',
       containers: 'Kontejnerë', containersShort: 'Kontej.', community: 'Komuniteti',
       communityShort: 'Komun.', panel: 'Paneli', stats: 'Statistika', settings: 'Cilësimet',
+      impressum: 'Impresum',
       communityUsers: 'Përdorues të komunitetit',
       ariaMain: 'Navigimi kryesor',
     },
@@ -739,6 +758,8 @@ const dict = {
       officialTitle: 'Sensorë zyrtarë / referentë', officialSubtitle: 'Ministria e Mjedisit dhe Planifikimit Hapësinor (MMJPH)',
       informativeTitle: 'Sensorë informativë / jo-referentë', informativeSubtitle: 'Rrjete qytetare (Pulse Eco) — vetëm për informacion',
       cityTitle: 'Sensorët e Qytetit të Shkupit',
+      sensorDisclaimer1: 'Pajisjet e sensorëve nuk kryejnë matje sipas metodave referente dhe të dhënat e nxjerra prej tyre janë ekskluzivisht për vlerësimin paraprak të cilësisë së ajrit ambient.',
+      sensorDisclaimer2: 'Për çdo analizë dhe interpretim të detajuar të gjendjeve të ajrit ambient nevojiten matje shtesë sipas rregullores ligjore në fushën e ajrit ambient.',
     },
     aqi: { unhealthy: 'E pashëndetshme', moderate: 'Mesatare', good: 'Mirë' },
     sensor: {

@@ -1,4 +1,4 @@
-import { Bell, ChevronRight, Database, FileText, LogOut, Languages, Scale, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
+import { Bell, ChevronRight, Database, FileText, LogOut, Languages, Scale, ScrollText, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
@@ -211,14 +211,15 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent className='space-y-2'>
           {[
-            { tab: 'privacy', label: t('legal.privacyLink'), icon: ShieldCheck },
-            { tab: 'terms', label: t('legal.termsLink'), icon: FileText },
-            { tab: 'attribution', label: t('legal.attributionLink'), icon: Database },
-          ].map(({ tab, label, icon: Icon }) => (
+            { tab: 'privacy', label: t('legal.privacyLink'), icon: ShieldCheck, path: '/legal?tab=privacy' },
+            { tab: 'terms', label: t('legal.termsLink'), icon: FileText, path: '/legal?tab=terms' },
+            { tab: 'attribution', label: t('legal.attributionLink'), icon: Database, path: '/legal?tab=attribution' },
+            { tab: 'impressum', label: t('impressum.link'), icon: ScrollText, path: '/impressum' },
+          ].map(({ tab, label, icon: Icon, path }) => (
             <button
               key={tab}
               type='button'
-              onClick={() => navigate(`/legal?tab=${tab}`)}
+              onClick={() => navigate(path)}
               className='flex w-full items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-left transition-colors hover:bg-slate-100'
             >
               <Icon className='h-4 w-4 shrink-0 text-slate-500' />

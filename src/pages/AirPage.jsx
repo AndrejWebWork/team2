@@ -1,6 +1,6 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { CheckCircle2, Flame, Loader2, MapPin, Wind, XCircle } from 'lucide-react'
+import { CheckCircle2, Flame, Info, Loader2, MapPin, Wind, XCircle } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet'
 import { MapLayers } from '../components/MapLayers'
@@ -357,6 +357,14 @@ export function AirPage() {
         )}
       </div>
 
+      <div className='flex gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600'>
+        <Info className='mt-0.5 h-4 w-4 shrink-0 text-slate-400' aria-hidden />
+        <div className='space-y-2'>
+          <p>{t('air.sensorDisclaimer1')}</p>
+          <p>{t('air.sensorDisclaimer2')}</p>
+        </div>
+      </div>
+
       {/* Без реален GPS нема „најблизок сензор" — јасна порака наместо лажна близина. */}
       {!userLocation && !gps.loading && (
         <div className='rounded-2xl border border-slate-200 bg-slate-50 p-5'>
@@ -525,6 +533,9 @@ export function AirPage() {
                         {t('air.measuredAt', { time: new Date(s.updatedAt).toLocaleTimeString('mk-MK', { hour: '2-digit', minute: '2-digit' }) })}
                       </p>
                     )}
+                    <p className='mt-2 border-t border-slate-200 pt-2 text-[10px] leading-snug text-slate-500'>
+                      {t('air.sensorDisclaimer1')}
+                    </p>
                   </Popup>
                 </Marker>
               ))}

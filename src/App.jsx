@@ -11,6 +11,7 @@ import { CommunityPage } from './pages/CommunityPage'
 import { ContainersPage } from './pages/ContainersPage'
 import { HomePage } from './pages/HomePage'
 import { LeaderboardPage } from './pages/LeaderboardPage'
+import { ImpressumPage } from './pages/ImpressumPage'
 import { LegalPage } from './pages/LegalPage'
 import { LoginPage } from './pages/LoginPage'
 import { NotificationsPage } from './pages/NotificationsPage'
@@ -31,6 +32,7 @@ export default function App() {
         <Route path='/auth-loading' element={<AuthLoadingPage />} />
         <Route path='/login' element={<LoginPage />} />
         <Route path='/legal' element={<LegalPage />} />
+        <Route path='/impressum' element={<ImpressumPage />} />
         <Route element={<ProtectedLayout />}>
           <Route path='/home' element={<HomePage />} />
           <Route path='/admin-panel' element={<AdminPanelPage />} />

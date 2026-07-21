@@ -1,4 +1,4 @@
-import { Bell, Gift, LogIn, LogOut, Settings, UserCircle2, X } from 'lucide-react'
+import { Bell, Gift, LogIn, LogOut, ScrollText, Settings, UserCircle2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
@@ -159,6 +159,12 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
 
             {/* Чисти редови без рамки — како на десктоп страничното мени */}
             <div className='mt-4 space-y-0.5 border-t border-slate-100 pt-4'>
+              <button
+                onClick={() => { navigate('/impressum'); setOpenMenu(false) }}
+                className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900'
+              >
+                <ScrollText className='h-5 w-5 shrink-0' />{t('nav.impressum')}
+              </button>
               <button
                 onClick={() => { navigate('/settings'); setOpenMenu(false) }}
                 className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900'

@@ -98,6 +98,8 @@ export const legalContent = {
         { h: 'Квалитет на воздух', p: [
           'Податоците за квалитетот на воздухот се обезбедени од World Air Quality Index (WAQI) — waqi.info и од pulse.eco мрежата на сензори.',
           'Референтните мерења потекнуваат од официјалните станици на надлежните институции, додека нереферентните се од граѓански/приватни сензори и служат само информативно.',
+          'Сензорните уреди не извршуваат мерења по референтни методи и податоците произлезени од иститите се исклучиво за првична проценка на квалитетот на амбиентниот воздух.',
+          'За секоја подетална анализа и толкување на состојбите со амбиентниот воздух се потребни дополнителни мерења согласно законската регулатива од областа на амбиентниот воздух.',
         ] },
         { h: 'Картографски податоци', p: [
           'Мапите и геолокациските податоци се базираат на OpenStreetMap (© OpenStreetMap contributors) и услуги за обратно геокодирање (Nominatim).',
@@ -199,6 +201,8 @@ export const legalContent = {
         { h: 'Air quality', p: [
           'Air quality data is provided by the World Air Quality Index (WAQI) — waqi.info and by the pulse.eco sensor network.',
           'Reference measurements come from official stations of the responsible institutions, while non-reference ones come from citizen/private sensors and are for information only.',
+          'Sensor devices do not perform measurements using reference methods, and the data derived from them is exclusively for a preliminary assessment of ambient air quality.',
+          'For any detailed analysis and interpretation of ambient air conditions, additional measurements are required in accordance with the legal regulations in the field of ambient air.',
         ] },
         { h: 'Map data', p: [
           'Maps and geolocation data are based on OpenStreetMap (© OpenStreetMap contributors) and reverse-geocoding services (Nominatim).',
@@ -300,6 +304,8 @@ export const legalContent = {
         { h: 'Cilësia e ajrit', p: [
           'Të dhënat për cilësinë e ajrit ofrohen nga World Air Quality Index (WAQI) — waqi.info dhe nga rrjeti i sensorëve pulse.eco.',
           'Matjet referente vijnë nga stacionet zyrtare të institucioneve përgjegjëse, ndërsa ato jo-referente vijnë nga sensorë qytetarë/privatë dhe janë vetëm për informim.',
+          'Pajisjet e sensorëve nuk kryejnë matje sipas metodave referente dhe të dhënat e nxjerra prej tyre janë ekskluzivisht për vlerësimin paraprak të cilësisë së ajrit ambient.',
+          'Për çdo analizë dhe interpretim të detajuar të gjendjeve të ajrit ambient nevojiten matje shtesë sipas rregullores ligjore në fushën e ajrit ambient.',
         ] },
         { h: 'Të dhënat hartografike', p: [
           'Hartat dhe të dhënat e gjeolokacionit bazohen në OpenStreetMap (© OpenStreetMap contributors) dhe shërbimet e gjeokodimit të kundërt (Nominatim).',
