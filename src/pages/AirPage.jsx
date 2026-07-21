@@ -216,7 +216,7 @@ export function AirPage() {
         fetchPulseSensors(controller.signal),
       ])
       if (cancelled) return
-      const valid = (s) => s.lat != null && s.lng != null && s.aqi != null
+      const valid = (s) => s.lat != null && s.lng != null && (s.aqi != null || s.pm25 != null || s.pm10 != null)
       const waqi = waqiRes.status === 'fulfilled' ? waqiRes.value : []
       const pulseLive = pulseRes.status === 'fulfilled' ? pulseRes.value.filter(valid) : []
 

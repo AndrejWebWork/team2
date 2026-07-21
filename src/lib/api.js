@@ -280,8 +280,12 @@ export async function fetchPulseSensors(_signal) {
   return dedupeGet('air:pulse', async () => {
     try {
       const res = await fetch(`${API_URL}/api/air/pulse`, { cache: 'no-store' })
+      if (res.status === 304) return []
       if (!res.ok) return []
-      return await res.json()
+      const text = await res.text()
+      if (!text) return []
+      const data = JSON.parse(text)
+      return Array.isArray(data) ? data : []
     } catch {
       return []
     }
