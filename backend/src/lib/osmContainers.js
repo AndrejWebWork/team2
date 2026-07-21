@@ -1,9 +1,21 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dir = path.dirname(fileURLToPath(import.meta.url))
+let FALLBACK_POINTS = []
+try {
+  FALLBACK_POINTS = JSON.parse(
+    readFileSync(path.join(__dir, '../data/containerPoints.json'), 'utf8'),
+  )
+} catch {
+  FALLBACK_POINTS = []
+}
 // ============================================================================
 // OpenStreetMap (Overpass) — јавни точки за отпад во Скопје, во живо.
 // Три категории: контејнери за рециклирање (amenity=recycling), јавни корпи
 // (amenity=waste_basket) и контејнери за отпад (amenity=waste_disposal).
-// Се влече преку backend (CORS + кеш) — Overpass е бавен и рате-лимитиран,
-// па снимката се освежува ретко (точките не се менуваат често).
+// При пад на Overpass се користи локална снимка (containerPoints.json).
 // ============================================================================
 
 // Граници на Скопскиот регион (југозапад -> североисток).
@@ -73,5 +85,6 @@ export async function fetchOsmContainers(signal) {
       lastErr = err
     }
   }
+  if (FALLBACK_POINTS.length > 0) return FALLBACK_POINTS
   throw lastErr || new Error('Overpass недостапен')
 }

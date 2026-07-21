@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { useApp } from '../context/AppContext'
 import { fetchContainerPoints, updateReportStatus } from '../lib/api'
 import { containerKinds } from '../data/catalog'
-import { skopjeRecyclingContainers, skopjeWasteBaskets } from '../data/skopjeContainersMap'
+import { skopjeAllContainerPoints } from '../data/skopjeContainersMap'
 import { isNativePlatform } from '../lib/notifications'
 
 // Бесплатна линија на „Комунална хигиена" за пријава на кабаст отпад.
@@ -86,22 +86,28 @@ export function ContainersPage() {
   useEffect(() => {
     const controller = new AbortController()
     fetchContainerPoints(controller.signal).then((pts) => {
-      if (pts.length > 0) setLivePoints(pts)
+      setLivePoints(Array.isArray(pts) ? pts : [])
     })
     return () => controller.abort()
   }, [])
 
+  const mapPoints = useMemo(() => {
+    const byId = new Map(skopjeAllContainerPoints.map((p) => [p.id, p]))
+    for (const p of livePoints || []) byId.set(p.id, p)
+    return [...byId.values()]
+  }, [livePoints])
+
   const recyclingPoints = useMemo(
-    () => (livePoints ? livePoints.filter((p) => p.type === 'recycling_container') : skopjeRecyclingContainers),
-    [livePoints],
+    () => mapPoints.filter((p) => p.type === 'recycling_container'),
+    [mapPoints],
   )
   const basketPoints = useMemo(
-    () => (livePoints ? livePoints.filter((p) => p.type === 'waste_basket') : skopjeWasteBaskets),
-    [livePoints],
+    () => mapPoints.filter((p) => p.type === 'waste_basket'),
+    [mapPoints],
   )
   const disposalPoints = useMemo(
-    () => (livePoints ? livePoints.filter((p) => p.type === 'waste_disposal') : []),
-    [livePoints],
+    () => mapPoints.filter((p) => p.type === 'waste_disposal'),
+    [mapPoints],
   )
   const allMapPoints = useMemo(
     () => [...recyclingPoints, ...basketPoints, ...disposalPoints],

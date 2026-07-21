@@ -1,4 +1,4 @@
-import { fetchCitySensors, fetchPulseSensors } from './api'
+import { fetchPulseSensors } from './api'
 import { fetchSkopjeSensors } from './waqi'
 
 /** Максимална дистанца (м) за да се смета пријавата „околу" сензорот. */
@@ -25,17 +25,15 @@ const validSensor = (s) => s?.lat != null && s?.lng != null
 
 /** Сите референтни + граѓански + градски сензори (за групирање на admin). */
 export async function fetchAllAirSensors(signal) {
-  const [waqiRes, pulseRes, cityRes] = await Promise.allSettled([
+  const [waqiRes, pulseRes] = await Promise.allSettled([
     fetchSkopjeSensors(signal),
     fetchPulseSensors(signal),
-    fetchCitySensors(signal),
   ])
   const waqi = waqiRes.status === 'fulfilled' ? waqiRes.value : []
   const pulse = pulseRes.status === 'fulfilled' ? pulseRes.value : []
-  const city = cityRes.status === 'fulfilled' ? cityRes.value : []
   const civic = waqi.filter((s) => s.category !== 'referent' && validSensor(s))
   const referent = waqi.filter((s) => s.category === 'referent' && validSensor(s))
-  return [...referent, ...civic, ...pulse.filter(validSensor), ...city.filter(validSensor)]
+  return [...referent, ...civic, ...pulse.filter(validSensor)]
 }
 
 export function findNearestSensor(lat, lng, sensors, maxM = SMELL_SENSOR_RADIUS_M) {

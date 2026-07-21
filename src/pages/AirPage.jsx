@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
 import { fetchSkopjeSensors } from '../lib/waqi'
-import { fetchCitySensors, fetchPulseSensors } from '../lib/api'
+import { fetchPulseSensors } from '../lib/api'
 
 // Колку често се освежуваат мерењата во живо од WAQI (референтни МЖСПП + граѓански).
 const AIR_REFRESH_MS = 3 * 60 * 1000
@@ -33,7 +33,6 @@ function makeSensorIcon(bg, border) {
 }
 
 const pulseIcon = makeSensorIcon('#34d399', '#10b981')
-const cityIcon = makeSensorIcon('#a78bfa', '#8b5cf6')
 
 // Официјалните МЖСПП станици: значка со живата AQI вредност, обоена според
 // квалитетот (зелена/жолта/црвена), со покажувач кон точната локација.
@@ -193,17 +192,12 @@ export function AirPage() {
   // Нереферентни (граѓански) сензори: WAQI граѓански + Pulse.eco во живо.
   // Само реални податоци — почнува празно и се полни од API при првото вчитување.
   const [pulse, setPulse] = useState([])
-  // Сензори на Град Скопје (category='city') — од базата преку backend.
-  // Градската мрежа (10 сензори, по 1 во општина) моментално не е активна,
-  // па ова е обично празно; штом Градот внесе мерења, се прикажуваат веднаш.
-  const [citySensors, setCitySensors] = useState([])
   // Статус на живото вчитување: 'loading' | 'live' | 'offline'.
   const [airStatus, setAirStatus] = useState('loading')
 
-  // Реални мерења во живо од WAQI (aqicn.org) за Скопскиот регион:
+  // Реални мерења во живо од WAQI (aqicn.org) + Pulse.eco:
   //  • официјални/референтни (МЖСПП) → context `sensors`,
-  //  • информативни/нереферентни: граѓански (WAQI) + Pulse.eco → `pulse`,
-  //  • Град Скопје (од базата) → `citySensors`.
+  //  • информативни/нереферентни: граѓански (WAQI) + Pulse.eco → `pulse`.
   // Се освежува на ~3 мин и се паузира кога табот е скриен.
   useEffect(() => {
     let cancelled = false
@@ -217,25 +211,33 @@ export function AirPage() {
       try {
       // Трите извори се НЕЗАВИСНИ: пад на еден (пр. WAQI) не смее да ги блокира
       // другите (Pulse.eco, Град Скопје). Секој се вчитува паралелно.
-      const [waqiRes, pulseRes, cityRes] = await Promise.allSettled([
+      const [waqiRes, pulseRes] = await Promise.allSettled([
         fetchSkopjeSensors(controller.signal),
         fetchPulseSensors(controller.signal),
-        fetchCitySensors(controller.signal),
       ])
       if (cancelled) return
       const valid = (s) => s.lat != null && s.lng != null && s.aqi != null
       const waqi = waqiRes.status === 'fulfilled' ? waqiRes.value : []
-      const pulseLive = pulseRes.status === 'fulfilled' ? pulseRes.value : []
-      const city = cityRes.status === 'fulfilled' ? cityRes.value : []
+      const pulseLive = pulseRes.status === 'fulfilled' ? pulseRes.value.filter(valid) : []
 
       const referent = waqi.filter((s) => s.category === 'referent' && valid(s))
       const civic = waqi.filter((s) => s.category !== 'referent' && valid(s))
-      // Не бриши претходно прикажани сензори при привремен пад на изворот.
       if (waqiRes.status === 'fulfilled') setSensors(referent)
-      if (waqiRes.status === 'fulfilled' || pulseRes.status === 'fulfilled') {
-        setPulse([...civic, ...pulseLive])
-      }
-      if (cityRes.status === 'fulfilled') setCitySensors(city)
+      setPulse((prev) => {
+        const nextCivic = waqiRes.status === 'fulfilled'
+          ? civic
+          : prev.filter((s) => String(s.id).startsWith('WAQI-'))
+        const nextPulse = pulseRes.status === 'fulfilled'
+          ? pulseLive
+          : prev.filter((s) => String(s.id).startsWith('PULSE-'))
+        if (waqiRes.status !== 'fulfilled' && pulseRes.status !== 'fulfilled') return prev
+        const seen = new Set()
+        return [...nextCivic, ...nextPulse].filter((s) => {
+          if (seen.has(s.id)) return false
+          seen.add(s.id)
+          return true
+        })
+      })
 
       const anyLive = waqiRes.status === 'fulfilled' || pulseRes.status === 'fulfilled'
       setAirStatus((prev) => (anyLive ? 'live' : prev === 'live' ? 'live' : 'offline'))
@@ -291,7 +293,7 @@ export function AirPage() {
     [sensors, userLocation],
   )
 
-  const allSensors = useMemo(() => [...sensors, ...pulse, ...citySensors], [sensors, pulse, citySensors])
+  const allSensors = useMemo(() => [...sensors, ...pulse], [sensors, pulse])
   const visibleMinistrySensors = useMemo(
     () => (sourceFilter === 'all' || sourceFilter === 'ministry' ? sensors : []),
     [sensors, sourceFilter],
@@ -300,11 +302,7 @@ export function AirPage() {
     () => (sourceFilter === 'all' || sourceFilter === 'pulse' ? pulse : []),
     [pulse, sourceFilter],
   )
-  const visibleCitySensors = useMemo(
-    () => (sourceFilter === 'all' || sourceFilter === 'city' ? citySensors : []),
-    [citySensors, sourceFilter],
-  )
-  const visibleCount = visibleMinistrySensors.length + visiblePulseSensors.length + visibleCitySensors.length
+  const visibleCount = visibleMinistrySensors.length + visiblePulseSensors.length
 
   async function submitSmell(e) {
     e.preventDefault()
@@ -441,19 +439,9 @@ export function AirPage() {
         <p className='rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500'>
           {t('air.nonreferentInfo1')}{t('air.nonreferentInfo2')}
         </p>
-      </section>
-
-      {/* Сензори на Град Скопје */}
-      <section className='space-y-3'>
-        <div className='flex items-center gap-2'>
-          <span className='h-2.5 w-2.5 shrink-0 rounded-full border-2 border-violet-500 bg-violet-300' />
-          <div>
-            <h2 className='text-base font-bold text-slate-900'>{t('air.cityTitle')}</h2>
-          </div>
-        </div>
-        {citySensors.length > 0 ? (
+        {pulse.length > 0 ? (
           <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-            {citySensors.map((s) => (
+            {pulse.map((s) => (
               <SensorCard
                 key={s.id}
                 sensor={s}
@@ -463,9 +451,13 @@ export function AirPage() {
               />
             ))}
           </div>
+        ) : airStatus === 'loading' ? (
+          <p className='rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700'>
+            {t('air.loadingLive')}
+          </p>
         ) : (
-          <p className='rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-700'>
-            {t('air.cityNotice')}
+          <p className='rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500'>
+            {t('air.offline')}
           </p>
         )}
       </section>
@@ -479,7 +471,7 @@ export function AirPage() {
         </CardHeader>
         <CardContent className='space-y-3'>
           <div className='flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1'>
-            {[['all', t('filter.all')], ['ministry', t('air.filterMinistry')], ['pulse', 'Pulse Eco'], ['city', t('air.filterCity')]].map(([val, label]) => (
+            {[['all', t('filter.all')], ['ministry', t('air.filterMinistry')], ['pulse', 'Pulse Eco']].map(([val, label]) => (
               <button
                 key={val}
                 type='button'
@@ -530,15 +522,6 @@ export function AirPage() {
                   </Popup>
                 </Marker>
               ))}
-              {visibleCitySensors.map((s) => (
-                <Marker key={s.id} position={[s.lat, s.lng]} icon={cityIcon}>
-                  <Popup>
-                    <p className='font-bold'>{sensorName(s, t)}</p>
-                    <p className='text-xs'>{t('air.citySensor')}</p>
-                    <p className='text-xs'>AQI: <b>{s.aqi}</b></p>
-                  </Popup>
-                </Marker>
-              ))}
             </MapContainer>
           </div>
           <div className='flex flex-wrap items-center gap-3 text-xs text-slate-500'>
@@ -548,7 +531,6 @@ export function AirPage() {
               {t('air.legendReferent')}
             </span>
             <span className='flex items-center gap-1.5'><span className='h-2.5 w-2.5 rounded-full border-2 border-emerald-400 bg-emerald-200' />{t('air.legendNonreferent')}</span>
-            <span className='flex items-center gap-1.5'><span className='h-2.5 w-2.5 rounded-full border-2 border-violet-400 bg-violet-200' />{t('air.legendCity')}</span>
             <span className='ml-auto'>{t('air.shownLabel')}: {visibleCount} / {allSensors.length}</span>
           </div>
         </CardContent>

@@ -59,22 +59,25 @@ async function getJson(url, signal) {
   return res.json()
 }
 
-// Имињата/позициите на сензорите ретко се менуваат → кеш 1 час, за да не ја
-// влечеме таа поголема листа при секое освежување на мерењата (побрзо + помалку).
-const NAMES_TTL_MS = 60 * 60 * 1000
-let namesCache = { map: new Map(), at: 0 }
+// Имиња/позиции на сензорите ретко се менуваат → кеш 1 час.
+const META_TTL_MS = 60 * 60 * 1000
+let metaCache = { map: new Map(), at: 0 }
 
-async function getSensorNames(signal) {
-  if (Date.now() - namesCache.at < NAMES_TTL_MS && namesCache.map.size) {
-    return namesCache.map
+async function getSensorMeta(signal) {
+  if (Date.now() - metaCache.at < META_TTL_MS && metaCache.map.size) {
+    return metaCache.map
   }
   const sensors = await getJson(`${BASE}/sensor`, signal).catch(() => null)
-  if (!Array.isArray(sensors)) return namesCache.map // задржи стар кеш при неуспех
+  if (!Array.isArray(sensors)) return metaCache.map
   const map = new Map()
   for (const s of sensors) {
-    if (s?.sensorId) map.set(s.sensorId, s.description || s.comments || null)
+    if (!s?.sensorId) continue
+    map.set(s.sensorId, {
+      name: s.description || s.comments || null,
+      position: s.position || null,
+    })
   }
-  namesCache = { map, at: Date.now() }
+  metaCache = { map, at: Date.now() }
   return map
 }
 
@@ -82,9 +85,9 @@ async function getSensorNames(signal) {
 // облик како референтните (WAQI) сензори за директно спојување во клиентот.
 export async function fetchPulseSensors(signal) {
   // Само мерењата се влечат секогаш (свежи); имињата се од долгиот кеш.
-  const [current, nameById] = await Promise.all([
+  const [current, metaById] = await Promise.all([
     getJson(`${BASE}/current`, signal),
-    getSensorNames(signal),
+    getSensorMeta(signal),
   ])
 
   // Групирај мерења по сензор; чувај ги последните вредности по тип.
@@ -107,10 +110,11 @@ export async function fetchPulseSensors(signal) {
     const pm10 = num(entry.values.pm10)
     // Прикажуваме само сензори со реален PM податок (тоа е поентата на воздух).
     if (pm25 == null && pm10 == null) continue
-    const { lat, lng } = parsePosition(entry.position)
+    const meta = metaById.get(entry.sensorId)
+    const { lat, lng } = parsePosition(entry.position || meta?.position)
     if (lat == null || lng == null || !inSkopje(lat, lng)) continue
-    const aqi = aqiFromPm25(pm25) ?? 0
-    const rawName = nameById.get(entry.sensorId)
+    const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
+    const rawName = meta?.name
     const name = (rawName && rawName.trim()) || `Граѓански сензор ${String(entry.sensorId).slice(0, 6)}`
     // Официјалните МЖСПП станици веќе доаѓаат како референтни преку WAQI —
     // прескокни ги нивните копии во Pulse.eco за да нема дупли маркери.
