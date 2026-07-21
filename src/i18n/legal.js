@@ -61,7 +61,7 @@ export const legalContent = {
         ] },
         { h: 'Споделување со трети страни и обработувачи', p: [
           'Податоците од пријавите може да се проследат до надлежни комунални и инспекциски служби заради постапување.',
-          'За техничко функционирање користиме обработувачи: Vercel Inc. (хостинг на веб-версијата), Neon Inc. (база на податоци, сервери во ЕУ — Франкфурт), Google LLC (Firebase Cloud Messaging — push на Android) и Apple Inc. (Apple Push Notification service — push на iOS). Овие даватели обработуваат податоци исклучиво по наши инструкции и не за рекламни цели.',
+          'За испорака на push известувања користиме обработувачи: Google LLC (Firebase Cloud Messaging — Android) и Apple Inc. (Apple Push Notification service — iOS). Овие даватели обработуваат податоци исклучиво по наши инструкции и не за рекламни цели.',
           'Не продаваме, не изнајмувааме и не споделуваме лични податоци за маркетинг или рекламно таргетирање на трети страни.',
         ] },
         { h: 'Без реклами и следење', p: [
@@ -198,7 +198,7 @@ export const legalContent = {
         ] },
         { h: 'Sharing with third parties and processors', p: [
           'Report data may be forwarded to responsible municipal and inspection services for action.',
-          'For technical operation we use processors: Vercel Inc. (web hosting), Neon Inc. (database, EU servers — Frankfurt), Google LLC (Firebase Cloud Messaging — Android push) and Apple Inc. (Apple Push Notification service — iOS push). These providers process data only on our instructions and not for advertising.',
+          'For push notification delivery we use processors: Google LLC (Firebase Cloud Messaging — Android) and Apple Inc. (Apple Push Notification service — iOS). These providers process data only on our instructions and not for advertising.',
           'We do not sell, rent or share personal data with third parties for marketing or ad targeting.',
         ] },
         { h: 'No ads or tracking', p: [
@@ -334,7 +334,7 @@ export const legalContent = {
         ] },
         { h: 'Ndarja me palë të treta dhe përpunuesit', p: [
           'Të dhënat e raporteve mund t’u përcillen shërbimeve komunale dhe inspektuese përgjegjëse për veprim.',
-          'Për funksionim teknik përdorim përpunues: Vercel Inc. (hostim web), Neon Inc. (bazë të dhënash, BE — Frankfurt), Google LLC (FCM — Android) dhe Apple Inc. (APNs — iOS). Këta ofrues i përpunojnë të dhënat vetëm sipas udhëzimeve tona dhe jo për reklama.',
+          'Për dërgimin e njoftimeve push përdorim përpunues: Google LLC (Firebase Cloud Messaging — Android) dhe Apple Inc. (Apple Push Notification service — iOS). Këta ofrues i përpunojnë të dhënat vetëm sipas udhëzimeve tona dhe jo për reklama.',
           'Nuk shesim, nuk japim me qira dhe nuk ndajmë të dhëna personale për marketing ose reklama të synuara.',
         ] },
         { h: 'Pa reklama dhe pa ndjekje', p: [
