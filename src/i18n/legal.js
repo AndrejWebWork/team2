@@ -1,12 +1,11 @@
-// Правни текстови (шаблон) за EkoSkopje — Приватност, Услови и Атрибуција.
-// Одвоено од translations.js за прегледност. Секој документ има наслов и
-// низа секции { h, p: [...] }. Ова се стандардни шаблонски текстови усогласени
-// со ЗЗЛП (RS Македонија) и начелата на GDPR — финалната верзија треба да ја
-// потврди правно лице од Град Скопје.
+// Правни текстови за EkoSkopje — Приватност, Услови и Атрибуција.
+// Покриваат веб, Android (Google Play), iOS (App Store), дозволи на уредот,
+// push известувања, бришење сметка и store transparency (Data safety / App Privacy).
 
-export const LEGAL_UPDATED = '2026-07-13'
+export const LEGAL_UPDATED = '2026-07-21'
 export const LEGAL_OPERATOR = 'Град Скопје'
 export const LEGAL_CONTACT = 'kontakt@skopje.gov.mk'
+export const LEGAL_APP_ID = 'mk.gov.skopje.ekoskopje'
 
 export const legalContent = {
   mk: {
@@ -16,15 +15,33 @@ export const legalContent = {
       title: 'Политика за приватност',
       sections: [
         { h: 'Вовед', p: [
-          'Оваа Политика за приватност објаснува како апликацијата „EkoSkopje“ ги собира, користи, чува и заштитува вашите лични податоци. Оператор на обработката е Град Скопје. Обработката се врши во согласност со Законот за заштита на личните податоци и начелата на Општата регулатива за заштита на податоци (GDPR).',
-          'Со користење на апликацијата потврдувате дека сте ја прочитале оваа политика. Ако не се согласувате, може да ја користите апликацијата анонимно или да престанете со користење.',
+          'Оваа Политика за приватност објаснува како апликацијата „EkoSkopje“ ги собира, користи, чува и заштитува вашите лични податоци — на веб, на Android (Google Play Store) и на iOS (Apple App Store). Оператор на обработката е Град Скопје. Обработката се врши во согласност со Законот за заштита на личните податоци и начелата на Општата регулатива за заштита на податоци (GDPR).',
+          'Со користење на апликацијата (преку прелистувач, преку Google Play или App Store) потврдувате дека сте ја прочитале оваа политика. Ако не се согласувате, може да ја користите апликацијата анонимно или да престанете со користење.',
+        ] },
+        { h: 'Платформи и дистрибуција', p: [
+          'EkoSkopje е достапна како веб-aplikacija во интернет-прелистувач и како мобилна апликација за Android (Google Play Store) и iOS (Apple App Store), изградена со Capacitor (веб-содржина во заштитена мобилна обвивка).',
+          'Идентификатор на пакетот (bundle ID): mk.gov.skopje.ekoskopje. Оваа политика важи за сите верзии — веб, Android и iOS — освен ако е изрично наведено поинаку.',
+          'Инсталирање или користење преку продавница за апликации значи дека дополнително важат и условите на Google Play / Apple App Store и на производителот на вашиот уред.',
         ] },
         { h: 'Кои податоци ги собираме', p: [
           'Податоци од регистрација (по избор): е-пошта, име и презиме и лозинка (која се чува исклучиво во криптиран/хеширан облик и никогаш во читлив текст).',
           'Податоци од пријави: локација (GPS координати), општина, опис, категорија и фотографии што доброволно ги прикачувате.',
           'Технички податоци: идентификатор на уред за анонимни корисници, избран јазик, статус на сесијата и основни поставки, зачувани локално на вашиот уред.',
-          'Известувања: ако дозволите push известувања, се чува токен за испраќање пораки до вашиот уред (преку Google Firebase Cloud Messaging). Дозволата може да ја повлечете во секое време во поставките на уредот.',
+          'Известувања: ако дозволите push известувања на мобилен уред, се чува FCM/APNs токен за испраќање пораки (Google Firebase Cloud Messaging на Android; Apple Push Notification service на iOS). Локални известувања на уредот се користат за потврда на ваши пријави. Дозволата може да ја повлечете во секое време во поставките на уредот или во апликацијата.',
           'Не собираме повеќе податоци отколку што е неопходно за функционирање на услугата (начело на минимизација).',
+        ] },
+        { h: 'Дозволи на уредот (Android и iOS)', p: [
+          'Дозволите се бараат само кога се потребни за конкретна функција; можете да ги одбиете или повлечете во секое време во поставките на уредот (со тоа може да биде ограничен пристап до таа функција).',
+          'Локација (GPS): за автоматско пополнување на координати при поднесување пријава, приказ на најблизок сензор за воздух и мапи. Android: ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION. iOS: Location When In Use.',
+          'Камера: само кога доброволно снимате фотографија за пријава (не пристапуваме до галеријата без ваша акција). Android: CAMERA. iOS: Camera.',
+          'Известувања: push и локални известувања за статус на вашите пријави и релевантни системски пораки — само ако дозволите. Android 13+: POST_NOTIFICATIONS.',
+          'Интернет: за комуникација со серверот (пријави, податоци за воздух, најава). Android: INTERNET (задолжително).',
+          'Не користиме дозволи за контакти, микрофон, Bluetooth, календар, SMS или целосен пристап до датотеки/галерија на уредот.',
+        ] },
+        { h: 'Локално зачувување и колачиња', p: [
+          'На веб: локално зачувување (localStorage) за јазик, сесија на анонимен корисник, поставки и избор за колачиња/кеш (видете банерот за согласност при прво отворање).',
+          'На Android и iOS: слични податоци се чуваат во заштитено складиште на апликацијата; бришењето на податоците на апликацијата или деинсталацијата ги отстранува локалните податоци на уредот.',
+          'Не користиме колачиња или SDK за рекламно следење или профилирање од страна на трети страни.',
         ] },
         { h: 'Зошто ги обработуваме', p: [
           'За прием и обработка на пријави за диви депонии, контејнери и загадување, и нивно проследување до надлежните служби.',
@@ -44,8 +61,16 @@ export const legalContent = {
         ] },
         { h: 'Споделување со трети страни и обработувачи', p: [
           'Податоците од пријавите може да се проследат до надлежни комунални и инспекциски служби заради постапување.',
-          'За техничко функционирање користиме обработувачи: Vercel Inc. (хостинг на апликацијата), Neon Inc. (база на податоци, сервери во ЕУ — Франкфурт) и Google LLC (Firebase Cloud Messaging, само за испорака на известувања). Овие даватели обработуваат податоци исклучиво по наши инструкции.',
-          'Не продаваме и не изнајмуваме лични податоци за маркетинг цели на трети страни.',
+          'За техничко функционирање користиме обработувачи: Vercel Inc. (хостинг на веб-версијата), Neon Inc. (база на податоци, сервери во ЕУ — Франкфурт), Google LLC (Firebase Cloud Messaging — push на Android) и Apple Inc. (Apple Push Notification service — push на iOS). Овие даватели обработуваат податоци исклучиво по наши инструкции и не за рекламни цели.',
+          'Не продаваме, не изнајмувааме и не споделуваме лични податоци за маркетинг или рекламно таргетирање на трети страни.',
+        ] },
+        { h: 'Без реклами и следење', p: [
+          'EkoSkopje не прикажува реклами и не користи идентификатори за следење низ апликации или веб-страници од други компании (нема персонализирани реклами, нема App Tracking Transparency за маркетинг).',
+          'Google Firebase се користи исклучиво за техничко работење и испорака на push известувања, не за рекламни мрежи.',
+        ] },
+        { h: 'Google Play и App Store — транспарентност', p: [
+          'За објавување во Google Play (Data safety) и Apple App Store (App Privacy): собираме лични податоци (е-пошта, име — по избор), приближна локација (GPS при пријава), фотографии (по избор), идентификатор на уред и FCM/APNs токен за известувања; податоците не се продаваат; преносот е шифриран (HTTPS); корисникот може да ја избрише сметката во апликацијата (Поставки → Сметка → Избриши сметка).',
+          'Оваа политика е јавно достапна преку менито Поставки → Правни информации → Политика за приватност и на истата URL-адреса на веб-версијата на апликацијата (за внесување во store-формуларите).',
         ] },
         { h: 'Деца', p: [
           'Апликацијата не е наменета за деца под 16 години и свесно не собираме нивни лични податоци. Ако сте родител/старател и сметате дека дете ни доставило лични податоци, контактирајте нè за да ги избришеме.',
@@ -66,10 +91,18 @@ export const legalContent = {
       title: 'Услови за користење',
       sections: [
         { h: 'Прифаќање на условите', p: [
-          'Со користење на апликацијата „EkoSkopje“ се согласувате со овие Услови за користење. Ако не се согласувате, ве молиме не ја користете апликацијата.',
+          'Со користење на апликацијата „EkoSkopje“ (преку веб, Google Play или App Store) се согласувате со овие Услови за користење. Ако не се согласувате, ве молиме не ја користете апликацијата.',
         ] },
         { h: 'Намена на услугата', p: [
           'EkoSkopje е граѓанска платформа за пријавување еколошки проблеми (диви депонии, контејнери, загадување) и следење на квалитетот на воздухот на подрачјето на Град Скопје.',
+        ] },
+        { h: 'Платформи и достапност', p: [
+          'Услугата се користи преку веб-прелистувач или преку официјалната мобилна апликација EkoSkopje на Google Play Store и Apple App Store. Функционалноста може да се разликува по платформа и верзија на оперативен систем.',
+          'Потребна е активна интернет-врска. Локацијата, камерата и известувањата се опционални, но се препорачани за полна функционалност.',
+        ] },
+        { h: 'Услови на продавниците за апликации', p: [
+          'При преземање преку Google Play Store или Apple App Store дополнително важат условите и политиките на Google LLC, Apple Inc. и на продавницата во вашата земја.',
+          'EkoSkopje е бесплатна граѓанска услуга; евентуални надоместоци или наплата преку продавницата се регулираат само таму.',
         ] },
         { h: 'Обврски на корисникот', p: [
           'Пријавите мора да бидат вистинити и добронамерни. Забрането е поднесување лажни, навредливи, заведувачки или злонамерни пријави.',
@@ -119,15 +152,33 @@ export const legalContent = {
       title: 'Privacy Policy',
       sections: [
         { h: 'Introduction', p: [
-          'This Privacy Policy explains how the “EkoSkopje” app collects, uses, stores and protects your personal data. The data controller is the City of Skopje. Processing is carried out in accordance with the Law on Personal Data Protection and the principles of the General Data Protection Regulation (GDPR).',
-          'By using the app you confirm you have read this policy. If you do not agree, you may use the app anonymously or stop using it.',
+          'This Privacy Policy explains how the “EkoSkopje” app collects, uses, stores and protects your personal data — on the web, on Android (Google Play Store) and on iOS (Apple App Store). The data controller is the City of Skopje. Processing is carried out in accordance with the Law on Personal Data Protection and the principles of the General Data Protection Regulation (GDPR).',
+          'By using the app (via browser, Google Play or App Store) you confirm you have read this policy. If you do not agree, you may use the app anonymously or stop using it.',
+        ] },
+        { h: 'Platforms and distribution', p: [
+          'EkoSkopje is available as a web app in a browser and as a native mobile app for Android (Google Play Store) and iOS (Apple App Store), built with Capacitor.',
+          'Bundle ID: mk.gov.skopje.ekoskopje. This policy applies to all versions — web, Android and iOS — unless stated otherwise.',
+          'Installing or using the app via an app store also means Google Play / Apple App Store terms and your device manufacturer terms apply additionally.',
         ] },
         { h: 'Data we collect', p: [
           'Registration data (optional): email, full name and password (stored only in encrypted/hashed form, never in plain text).',
           'Report data: location (GPS coordinates), municipality, description, category and photos you voluntarily upload.',
           'Technical data: device identifier for anonymous users, chosen language, session status and basic settings, stored locally on your device.',
-          'Notifications: if you allow push notifications, a token is stored for delivering messages to your device (via Google Firebase Cloud Messaging). You can withdraw this permission at any time in your device settings.',
+          'Notifications: if you allow push notifications on a mobile device, an FCM/APNs token is stored (Google Firebase Cloud Messaging on Android; Apple Push Notification service on iOS). Local notifications confirm your reports. You can withdraw permission in device or app settings.',
           'We do not collect more data than is necessary for the service to function (data minimisation).',
+        ] },
+        { h: 'Device permissions (Android and iOS)', p: [
+          'Permissions are requested only when needed for a specific feature; you may deny or revoke them in device settings (some features may then be limited).',
+          'Location (GPS): to fill in coordinates when submitting a report, show the nearest air sensor and maps. Android: ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION. iOS: Location When In Use.',
+          'Camera: only when you voluntarily take a photo for a report (we do not access the gallery without your action). Android: CAMERA. iOS: Camera.',
+          'Notifications: push and local notifications for report status — only if you allow. Android 13+: POST_NOTIFICATIONS.',
+          'Internet: to communicate with the server. Android: INTERNET (required).',
+          'We do not use contacts, microphone, Bluetooth, calendar, SMS or broad file/gallery access.',
+        ] },
+        { h: 'Local storage and cookies', p: [
+          'On the web: localStorage for language, anonymous session, settings and cookie/cache choice (see consent banner on first visit).',
+          'On Android and iOS: similar data in the app secure storage; clearing app data or uninstalling removes local device data.',
+          'We do not use cookies or SDKs for ad tracking or third-party profiling.',
         ] },
         { h: 'Why we process it', p: [
           'To receive and process reports of illegal dumping, containers and pollution, and forward them to the responsible services.',
@@ -147,8 +198,16 @@ export const legalContent = {
         ] },
         { h: 'Sharing with third parties and processors', p: [
           'Report data may be forwarded to responsible municipal and inspection services for action.',
-          'For technical operation we use processors: Vercel Inc. (app hosting), Neon Inc. (database, EU servers — Frankfurt) and Google LLC (Firebase Cloud Messaging, solely for notification delivery). These providers process data only on our instructions.',
-          'We do not sell or rent personal data to third parties for marketing.',
+          'For technical operation we use processors: Vercel Inc. (web hosting), Neon Inc. (database, EU servers — Frankfurt), Google LLC (Firebase Cloud Messaging — Android push) and Apple Inc. (Apple Push Notification service — iOS push). These providers process data only on our instructions and not for advertising.',
+          'We do not sell, rent or share personal data with third parties for marketing or ad targeting.',
+        ] },
+        { h: 'No ads or tracking', p: [
+          'EkoSkopje shows no ads and does not use cross-app or cross-site tracking identifiers for marketing (no personalized ads, no App Tracking Transparency for marketing).',
+          'Google Firebase is used only for technical operation and push delivery, not ad networks.',
+        ] },
+        { h: 'Google Play and App Store — transparency', p: [
+          'For Google Play (Data safety) and Apple App Store (App Privacy): we collect personal data (email, name — optional), approximate location (GPS on report), photos (optional), device identifier and FCM/APNs token; data is not sold; transmission is encrypted (HTTPS); users can delete their account in-app (Settings → Account → Delete account).',
+          'This policy is publicly available via Settings → Legal information → Privacy Policy and at the same URL on the app web version (for store forms).',
         ] },
         { h: 'Children', p: [
           'The app is not intended for children under 16 and we do not knowingly collect their personal data. If you are a parent/guardian and believe a child has provided us personal data, contact us so we can delete it.',
@@ -173,6 +232,14 @@ export const legalContent = {
         ] },
         { h: 'Purpose of the service', p: [
           'EkoSkopje is a civic platform for reporting environmental issues (illegal dumping, containers, pollution) and monitoring air quality in the City of Skopje.',
+        ] },
+        { h: 'Platforms and availability', p: [
+          'The service is used via a web browser or the official EkoSkopje mobile app on Google Play and Apple App Store. Features may vary by platform and OS version.',
+          'An active internet connection is required. Location, camera and notifications are optional but recommended for full functionality.',
+        ] },
+        { h: 'App store terms', p: [
+          'When downloading via Google Play or Apple App Store, the terms and policies of Google LLC, Apple Inc. and your regional store also apply.',
+          'EkoSkopje is a free civic service; any charges via the store are governed only there.',
         ] },
         { h: 'User obligations', p: [
           'Reports must be truthful and in good faith. Submitting false, offensive, misleading or malicious reports is prohibited.',
@@ -222,15 +289,32 @@ export const legalContent = {
       title: 'Politika e privatësisë',
       sections: [
         { h: 'Hyrje', p: [
-          'Kjo Politikë e privatësisë shpjegon si aplikacioni “EkoSkopje” i mbledh, përdor, ruan dhe mbron të dhënat tuaja personale. Kontrolluesi i të dhënave është Qyteti i Shkupit. Përpunimi kryhet në përputhje me Ligjin për mbrojtjen e të dhënave personale dhe parimet e Rregullores së Përgjithshme për Mbrojtjen e të Dhënave (GDPR).',
+          'Kjo Politikë e privatësisë shpjegon si aplikacioni “EkoSkopje” i mbledh, përdor, ruan dhe mbron të dhënat tuaja personale — në web, Android (Google Play Store) dhe iOS (Apple App Store). Kontrolluesi i të dhënave është Qyteti i Shkupit. Përpunimi kryhet në përputhje me Ligjin për mbrojtjen e të dhënave personale dhe parimet e Rregullores së Përgjithshme për Mbrojtjen e të Dhënave (GDPR).',
           'Duke përdorur aplikacionin, konfirmoni se e keni lexuar këtë politikë. Nëse nuk pajtoheni, mund ta përdorni aplikacionin në mënyrë anonime ose të ndaloni përdorimin.',
+        ] },
+        { h: 'Platformat dhe shpërndarja', p: [
+          'EkoSkopje është e disponueshme si aplikacion web në shfletues dhe si aplikacion mobil native për Android (Google Play Store) dhe iOS (Apple App Store), e ndërtuar me Capacitor.',
+          'Bundle ID: mk.gov.skopje.ekoskopje. Kjo politikë vlen për të gjitha versionet — web, Android dhe iOS — përveç nëse thuhet ndryshe.',
+          'Instalimi përmes dyqanit të aplikacioneve nënkupton gjithashtu kushtet e Google Play / Apple App Store.',
         ] },
         { h: 'Të dhënat që mbledhim', p: [
           'Të dhëna regjistrimi (opsionale): email, emri e mbiemri dhe fjalëkalimi (i ruajtur vetëm në formë të enkriptuar/hash-uar, kurrë si tekst i qartë).',
           'Të dhëna raportimi: vendndodhja (koordinatat GPS), komuna, përshkrimi, kategoria dhe fotografitë që ngarkoni vullnetarisht.',
           'Të dhëna teknike: identifikuesi i pajisjes për përdoruesit anonimë, gjuha e zgjedhur, statusi i sesionit dhe cilësimet bazë, të ruajtura lokalisht në pajisjen tuaj.',
-          'Njoftimet: nëse lejoni njoftimet push, ruhet një token për dërgimin e mesazheve në pajisjen tuaj (përmes Google Firebase Cloud Messaging). Lejen mund ta tërhiqni në çdo kohë në cilësimet e pajisjes.',
+          'Njoftimet: nëse lejoni push në pajisje mobile, ruhet token FCM/APNs (Firebase në Android; APNs në iOS). Njoftimet lokale konfirmojnë raportet tuaja.',
           'Nuk mbledhim më shumë të dhëna sesa është e nevojshme për funksionimin e shërbimit (minimizimi i të dhënave).',
+        ] },
+        { h: 'Lejet e pajisjes (Android dhe iOS)', p: [
+          'Lejet kërkohen vetëm kur nevojiten për një funksion; mund t\'i refuzoni ose t\'i tërhiqni në cilësimet e pajisjes.',
+          'Vendndodhja (GPS): për koordinata në raport, sensorin më të afërt dhe harta. Android: ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION. iOS: Location When In Use.',
+          'Kamera: vetëm kur fotografoni vullnetarisht për një raport. Android: CAMERA. iOS: Camera.',
+          'Njoftimet: push dhe njoftime lokale — vetëm nëse lejoni. Android 13+: POST_NOTIFICATIONS.',
+          'Internet: Android INTERNET (i detyrueshëm).',
+        ] },
+        { h: 'Ruajtja lokale dhe cookies', p: [
+          'Në web: localStorage për gjuhë, sesion anonim dhe zgjedhje cookies.',
+          'Në Android/iOS: ruajtje e sigurt në aplikacion; fshirja e të dhënave ose çinstalimi i heq të dhënat lokale.',
+          'Nuk përdorim cookies ose SDK për reklama ose profilim.',
         ] },
         { h: 'Pse i përpunojmë', p: [
           'Për të pranuar e përpunuar raportime për deponi ilegale, kontejnerë dhe ndotje, dhe për t’i përcjellë te shërbimet përgjegjëse.',
@@ -250,8 +334,16 @@ export const legalContent = {
         ] },
         { h: 'Ndarja me palë të treta dhe përpunuesit', p: [
           'Të dhënat e raporteve mund t’u përcillen shërbimeve komunale dhe inspektuese përgjegjëse për veprim.',
-          'Për funksionim teknik përdorim përpunues: Vercel Inc. (hostim i aplikacionit), Neon Inc. (bazë të dhënash, serverë në BE — Frankfurt) dhe Google LLC (Firebase Cloud Messaging, vetëm për dërgimin e njoftimeve). Këta ofrues i përpunojnë të dhënat vetëm sipas udhëzimeve tona.',
-          'Nuk shesim dhe nuk japim me qira të dhëna personale për marketing te palët e treta.',
+          'Për funksionim teknik përdorim përpunues: Vercel Inc. (hostim web), Neon Inc. (bazë të dhënash, BE — Frankfurt), Google LLC (FCM — Android) dhe Apple Inc. (APNs — iOS). Këta ofrues i përpunojnë të dhënat vetëm sipas udhëzimeve tona dhe jo për reklama.',
+          'Nuk shesim, nuk japim me qira dhe nuk ndajmë të dhëna personale për marketing ose reklama të synuara.',
+        ] },
+        { h: 'Pa reklama dhe pa ndjekje', p: [
+          'EkoSkopje nuk shfaq reklama dhe nuk përdor identifikues ndjekjeje ndër-aplikacionesh për marketing.',
+          'Google Firebase përdoret vetëm për funksionim teknik dhe njoftime push, jo për rrjete reklamash.',
+        ] },
+        { h: 'Google Play dhe App Store — transparencë', p: [
+          'Për Google Play (Data safety) dhe Apple App Store (App Privacy): mbledhim të dhëna personale (email, emër — opsional), vendndodhje të përafërt (GPS në raport), foto (opsionale), identifikues pajisjeje dhe token FCM/APNs; të dhënat nuk shiten; transmetimi është i enkriptuar (HTTPS); përdoruesi mund të fshijë llogarinë në aplikacion (Cilësimet → Llogaria → Fshi llogarinë).',
+          'Kjo politikë është publike përmes Cilësimet → Informacione ligjore → Politika e privatësisë dhe në të njëjtën URL të versionit web.',
         ] },
         { h: 'Fëmijët', p: [
           'Aplikacioni nuk është i dedikuar për fëmijë nën 16 vjeç dhe nuk mbledhim me vetëdije të dhënat e tyre personale. Nëse jeni prind/kujdestar dhe besoni se një fëmijë na ka dhënë të dhëna personale, na kontaktoni që t’i fshijmë.',
@@ -276,6 +368,14 @@ export const legalContent = {
         ] },
         { h: 'Qëllimi i shërbimit', p: [
           'EkoSkopje është platformë qytetare për raportimin e problemeve mjedisore (deponi ilegale, kontejnerë, ndotje) dhe monitorimin e cilësisë së ajrit në Qytetin e Shkupit.',
+        ] },
+        { h: 'Platformat dhe disponueshmëria', p: [
+          'Shërbimi përdoret përmes shfletuesit web ose aplikacionit zyrtar mobil EkoSkopje në Google Play dhe App Store.',
+          'Kërkohet lidhje aktive interneti. Vendndodhja, kamera dhe njoftimet janë opsionale por të rekomanduara.',
+        ] },
+        { h: 'Kushtet e dyqanit të aplikacioneve', p: [
+          'Kur shkarkoni përmes Google Play ose App Store, vlejnë gjithashtu kushtet e Google LLC dhe Apple Inc.',
+          'EkoSkopje është shërbim qytetar falas.',
         ] },
         { h: 'Detyrimet e përdoruesit', p: [
           'Raportet duhet të jenë të vërteta dhe me qëllim të mirë. Ndalohet paraqitja e raporteve të rreme, fyese, mashtruese ose keqdashëse.',
