@@ -306,10 +306,6 @@ export function AirPage() {
     () => pulse.filter((s) => !String(s.id).startsWith('PULSE-')),
     [pulse],
   )
-  const pulseEcoCardSensors = useMemo(
-    () => pulse.filter((s) => String(s.id).startsWith('PULSE-')),
-    [pulse],
-  )
   const visibleCount = visibleMinistrySensors.length + visiblePulseSensors.length
 
   async function submitSmell(e) {
@@ -448,34 +444,19 @@ export function AirPage() {
           {t('air.nonreferentInfo1')}{t('air.nonreferentInfo2')}
         </p>
         {pulse.length > 0 ? (
-          <>
-            {civicCardSensors.length > 0 ? (
-              <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-                {civicCardSensors.map((s) => (
-                  <SensorCard
-                    key={s.id}
-                    sensor={s}
-                    selected={selectedSensor?.id === s.id}
-                    onClick={() => setSelectedSensor(selectedSensor?.id === s.id ? null : s)}
-                    t={t}
-                  />
-                ))}
-              </div>
-            ) : null}
-            {pulseEcoCardSensors.length > 0 ? (
-              <div className='hidden md:grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
-                {pulseEcoCardSensors.map((s) => (
-                  <SensorCard
-                    key={s.id}
-                    sensor={s}
-                    selected={selectedSensor?.id === s.id}
-                    onClick={() => setSelectedSensor(selectedSensor?.id === s.id ? null : s)}
-                    t={t}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </>
+          civicCardSensors.length > 0 ? (
+            <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+              {civicCardSensors.map((s) => (
+                <SensorCard
+                  key={s.id}
+                  sensor={s}
+                  selected={selectedSensor?.id === s.id}
+                  onClick={() => setSelectedSensor(selectedSensor?.id === s.id ? null : s)}
+                  t={t}
+                />
+              ))}
+            </div>
+          ) : null
         ) : airStatus === 'loading' ? (
           <p className='rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700'>
             {t('air.loadingLive')}
