@@ -241,29 +241,43 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
     const existing = await query('SELECT status FROM reports WHERE id = $1', [req.params.id])
     if (existing.rowCount === 0) return res.status(404).json({ error: 'Пријавата не постои.' })
 
+    const oldStatus = existing.rows[0].status
     const resolvedAt = status === 'resolved' ? new Date().toISOString() : null
+    // report_status е PostgreSQL ENUM — $1 мора експлицитен cast, иначе CASE WHEN $1 = 'resolved'
+    // дава „inconsistent types deduced for parameter $1" на Neon/production.
     const { rows } = await query(
       `UPDATE reports
-         SET status = $1,
-             visibility = CASE WHEN $1 = 'resolved' THEN 'public' ELSE visibility END,
+         SET status = $1::report_status,
+             visibility = CASE WHEN $1::report_status = 'resolved'::report_status THEN 'public' ELSE visibility END,
              resolved_at = COALESCE($2, resolved_at)
        WHERE id = $3 RETURNING *`,
       [status, resolvedAt, req.params.id],
     )
     await query(
       `INSERT INTO report_status_history (report_id, old_status, new_status, changed_by, note)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [req.params.id, existing.rows[0].status, status, changedBy, note],
+       VALUES ($1, $2::report_status, $3::report_status, $4, $5)`,
+      [req.params.id, oldStatus, status, changedBy, note],
     )
     // Поени за решена пријава — на пријавувачот: +2 (вкупно 3 со пријавата),
     // само за контејнер/дива депонија, еднаш по пријава.
-    if (status === 'resolved' && existing.rows[0].status !== 'resolved') {
+    if (status === 'resolved' && oldStatus !== 'resolved') {
       if (isPointsEligible(rows[0].type)) {
         await awardPointsOnce(rows[0].reporter_id, 2, 'report_resolved', rows[0].id)
       }
-      // Извести го пријавувачот: регистриран (in-app + push) или анонимен (push по уред).
-      const title = 'Пријавата е решена'
-      const body = `Твојата пријава (${rows[0].location_label || 'локација'}) е означена како решена. Ти благодариме!`
+    }
+    // Извести го пријавувачот при секоја промена на статус (не само resolved).
+    if (status !== oldStatus) {
+      const loc = rows[0].location_label || 'локација'
+      const statusLabels = {
+        pending: 'Поднесено',
+        in_progress: 'Во тек на решавање',
+        resolved: 'Решен проблем',
+      }
+      const statusLabel = statusLabels[status] || status
+      const title = status === 'resolved' ? 'Пријавата е решена' : 'Статусот на пријавата е ажуриран'
+      const body = status === 'resolved'
+        ? `Твојата пријава (${loc}) е означена како решена. Ти благодариме!`
+        : `Твојата пријава (${loc}) сега е: ${statusLabel}.`
       if (rows[0].reporter_id) {
         await query(
           `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,

@@ -474,7 +474,7 @@ export function AppProvider({ children }) {
     }
     const backendPayload = {
       type: payload.type,
-      reporterId: auth.isAnonymous ? null : undefined,
+      reporterId: auth.isAnonymous ? null : (auth.userId || undefined),
       // Уредот секогаш се праќа: за анонимни тоа е ЕДИНСТВЕНАТА врска со
       // „моите пријави" на овој уред (истиот ID што се памети во локалниот кеш).
       deviceId: DEVICE_ID,
