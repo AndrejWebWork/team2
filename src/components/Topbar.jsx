@@ -130,7 +130,7 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
       </header>
 
       {/* Mobile slide menu */}
-      <div className={`fixed inset-0 z-50 lg:hidden ${openMenu ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`fixed inset-0 z-[1350] lg:hidden ${openMenu ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         <div
           className={`absolute inset-0 bg-slate-900/30 transition-opacity duration-200 ${openMenu ? 'opacity-100' : 'opacity-0'}`}
           onClick={() => setOpenMenu(false)}

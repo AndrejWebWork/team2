@@ -217,7 +217,7 @@ export function ContainersPage() {
             </span>
           </div>
 
-          <div className='overflow-hidden rounded-2xl border border-slate-200 shadow-md' style={{ height: 420 }}>
+          <div className='app-map-shell'>
             <MapContainer center={[41.9981, 21.4254]} zoom={14} maxZoom={20} className='h-full w-full'>
               <MapLayers />
               {recyclingPoints.map((p) => (

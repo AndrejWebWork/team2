@@ -99,6 +99,32 @@ select:focus {
   z-index: 0 !important;
 }
 
+/* Респonsive Leaflet мапа — пократка на телефон, повисока на tablet/desktop. */
+.app-map-shell {
+  position: relative;
+  isolation: isolate;
+  height: clamp(240px, 48dvh, 440px);
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.06),
+    0 12px 28px -8px rgba(15, 23, 42, 0.12);
+}
+
+.app-map-shell .leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #f1f5f9;
+}
+
+@media (min-width: 640px) {
+  .app-map-shell {
+    height: clamp(300px, 52dvh, 480px);
+    border-radius: 1.25rem;
+  }
+}
+
 /* Тост нотификации: мазно влегување од десно кон лево, и излегување назад. */
 @keyframes toast-in-right {
   from {

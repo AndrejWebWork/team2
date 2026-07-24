@@ -464,7 +464,7 @@ export function AirPage() {
               </button>
             ))}
           </div>
-          <div className='overflow-hidden rounded-xl border border-slate-200' style={{ height: 340 }}>
+          <div className='app-map-shell'>
             {/* Почетниот поглед на мапата е Скопје (само поглед, не податок);
                 маркерот „Вашата локација" се црта САМО со реален GPS. */}
             <MapContainer center={[41.9981, 21.4254]} zoom={13} maxZoom={20} className='h-full w-full'>
