@@ -119,7 +119,10 @@ export function ContainersPage() {
   )
   const activeContainerIssues = containers.filter((c) => c.issueOpen)
   // Решени пријави од граѓани — јавно видливи за сите (маркетинг: Град Скопје решава).
-  const resolvedContainerReports = containers.filter((c) => !c.issueOpen && (c.reportedBy || c.reportedById))
+  const resolvedContainerReports = useMemo(
+    () => containers.filter((c) => !c.issueOpen && (c.reportedBy || c.reportedById)),
+    [containers],
+  )
 
   async function resetIssue(id) {
     if (typeof id === 'string' && id.includes('-')) {
@@ -136,7 +139,13 @@ export function ContainersPage() {
       prev.map((c) => {
         if (c.id !== id) return c
         if (c.issueOpen && !c.resolvedRewardGiven && c.reportedById && c.reportedById.includes('@')) awardPoints(c.reportedById, 2)
-        return { ...c, issue: 'none', issueOpen: false, resolvedRewardGiven: true }
+        return {
+          ...c,
+          issue: 'none',
+          issueOpen: false,
+          resolvedRewardGiven: true,
+          resolvedAt: new Date().toISOString(),
+        }
       }),
     )
     setStatusSuccess({
@@ -296,7 +305,7 @@ export function ContainersPage() {
         title={t('cont.resolvedTitle')}
         subtitle={t('cont.resolvedSubtitle')}
         items={resolvedContainerReports}
-        countLabel={t('waste.posts')}
+        countLabel={t('cont.posts')}
         emptyTitle={t('cont.noResolved')}
         emptyDescription={t('cont.resolvedSubtitle')}
         t={t}
@@ -316,7 +325,7 @@ export function ContainersPage() {
             {c.description && <p className='mt-2 text-sm text-slate-600'>{c.description}</p>}
             <NearestPoint c={c} />
             <p className='mt-2 text-xs text-slate-400'>
-              {t('cont.reportedBy')} {c.reportedBy || t('common.anonymousCitizen')}{c.createdAt ? ` · ${mkDate(c.createdAt)}` : ''}
+              {t('cont.reportedBy')} {c.reportedBy || t('common.anonymousCitizen')}{c.resolvedAt || c.createdAt ? ` · ${mkDate(c.resolvedAt || c.createdAt)}` : ''}
             </p>
           </article>
         )}

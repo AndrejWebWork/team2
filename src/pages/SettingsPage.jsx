@@ -1,6 +1,6 @@
 import { Bell, ChevronRight, Database, FileText, LogOut, Languages, Scale, ScrollText, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -19,8 +19,12 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { auth, setAuth, logout, t, language, setLanguage } = useApp()
   const roleLabel = (r) => t(`role.${r === 'organization' ? 'organization' : r === 'admin' ? 'admin' : 'user'}`)
+  const isAnonymous = auth.isAnonymous || !auth.email
+  const anonymousLabel = t('settings.anonymous')
 
-  const [displayName, setDisplayName] = useState(auth.displayName || auth.email?.split('@')[0] || '')
+  const [displayName, setDisplayName] = useState(
+    isAnonymous ? anonymousLabel : (auth.displayName || auth.email?.split('@')[0] || ''),
+  )
   const [notifAir, setNotifAir] = useState(true)
   const [notifWaste, setNotifWaste] = useState(true)
   const [notifEvents, setNotifEvents] = useState(false)
@@ -33,7 +37,11 @@ export function SettingsPage() {
 
   // Вчитај поставки од базата при отворање (име, нотификации).
   useEffect(() => {
-    if (!auth.email || auth.isAnonymous) return
+    if (isAnonymous) {
+      setDisplayName(anonymousLabel)
+      return undefined
+    }
+    if (!auth.email) return undefined
     let cancelled = false
     fetchUser(auth.email)
       .then((user) => {
@@ -45,18 +53,14 @@ export function SettingsPage() {
       })
       .catch(() => { /* офлајн — остануваат локалните вредности */ })
     return () => { cancelled = true }
-  }, [auth.email, auth.isAnonymous])
+  }, [auth.email, isAnonymous, anonymousLabel])
 
   async function saveProfile(e) {
     e.preventDefault()
+    if (isAnonymous) return
+
     const name = displayName.trim()
     if (!name) return setToast(t('settings.displayNamePh'))
-
-    if (auth.isAnonymous || !auth.email) {
-      setAuth((a) => ({ ...a, displayName: name }))
-      setToast(t('settings.saved'))
-      return
-    }
 
     setSaving(true)
     try {
@@ -118,10 +122,10 @@ export function SettingsPage() {
         <CardContent className='space-y-4'>
           <div className='flex items-center gap-4'>
             <div className='flex aspect-square h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold leading-none text-emerald-700 shrink-0'>
-              {(displayName?.[0] || auth.email?.[0] || '?').toUpperCase()}
+              {(isAnonymous ? anonymousLabel[0] : (displayName?.[0] || auth.email?.[0] || '?')).toUpperCase()}
             </div>
             <div>
-              <p className='font-semibold text-slate-900'>{auth.email || t('settings.anonymous')}</p>
+              <p className='font-semibold text-slate-900'>{isAnonymous ? anonymousLabel : (displayName || auth.email)}</p>
               <span className={`mt-1 inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold ${ROLE_COLORS[auth.role] || ROLE_COLORS.user}`}>
                 {roleLabel(auth.role)}
               </span>
@@ -131,13 +135,33 @@ export function SettingsPage() {
           <form onSubmit={saveProfile} className='space-y-3'>
             <div className='space-y-1'>
               <label className='text-sm font-medium text-slate-700'>{t('settings.displayName')}</label>
-              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={t('settings.displayNamePh')} className='h-10' />
+              <Input
+                value={isAnonymous ? anonymousLabel : displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder={t('settings.displayNamePh')}
+                disabled={isAnonymous}
+                className={`h-10 ${isAnonymous ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
+              />
+              {isAnonymous && (
+                <p className='text-xs leading-relaxed text-slate-500'>
+                  {t('settings.anonymousNameHint')}{' '}
+                  <Link to='/login' state={{ returnTo: '/settings' }} className='font-semibold text-emerald-600 hover:text-emerald-700'>
+                    {t('login.signIn')}
+                  </Link>
+                </p>
+              )}
             </div>
             <div className='space-y-1'>
               <label className='text-sm font-medium text-slate-700'>{t('settings.email')}</label>
-              <Input value={auth.email || ''} disabled className='h-10 bg-slate-50 text-slate-400 cursor-not-allowed' />
+              <Input
+                value={isAnonymous ? t('settings.anonymousEmailPlaceholder') : (auth.email || '')}
+                disabled
+                className='h-10 bg-slate-50 text-slate-400 cursor-not-allowed'
+              />
             </div>
-            <Button type='submit' size='sm' disabled={saving}>{saving ? t('settings.saving') : t('settings.save')}</Button>
+            {!isAnonymous && (
+              <Button type='submit' size='sm' disabled={saving}>{saving ? t('settings.saving') : t('settings.save')}</Button>
+            )}
           </form>
         </CardContent>
       </Card>
