@@ -56,6 +56,7 @@ CREATE TABLE users (
   display_name       TEXT,
   role               user_role NOT NULL DEFAULT 'user',
   organization_name  TEXT,                             -- за role = 'organization'
+  instagram_handle   TEXT,                             -- @username без URL (за community/influencer)
   is_anonymous       BOOLEAN NOT NULL DEFAULT FALSE,
 
   -- Преференци за известувања (од SettingsPage)

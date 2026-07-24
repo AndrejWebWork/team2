@@ -1,7 +1,9 @@
 import { CalendarDays, ChevronLeft, Loader2, MapPin, Trash2, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { InstagramIcon } from '../components/InstagramIcon'
 import { useNavigate } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
+import { EventDatePicker } from '../components/EventDatePicker'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -9,7 +11,8 @@ import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
 import { createEventApi, deleteEventApi, fetchEventSignupsApi, leaveEventApi, signupEventApi } from '../lib/api'
-import { formatDisplayDate, isTodayOrFuture, maskDisplayDateInput, parseDisplayDate, todayIso } from '../lib/dates'
+import { formatDisplayDate, isTodayOrFuture, todayIso } from '../lib/dates'
+import { instagramProfileUrl, normalizeInstagramHandle } from '../lib/instagram'
 
 const STATUS_META = {
   open:     { key: 'event.open',    cls: 'bg-emerald-100 text-emerald-700' },
@@ -33,6 +36,23 @@ function TimeBadge({ kind }) {
   if (kind === 'today') return <span className='rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700'>{t('comm.today')}</span>
   if (kind === 'past') return <span className='rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-500'>{t('comm.passed')}</span>
   return null
+}
+
+function InstagramLink({ handle, className = '' }) {
+  const h = normalizeInstagramHandle(handle)
+  const url = instagramProfileUrl(h)
+  if (!url) return null
+  return (
+    <a
+      href={url}
+      target='_blank'
+      rel='noreferrer'
+      className={`inline-flex items-center gap-1 font-semibold text-pink-600 hover:text-pink-700 ${className}`}
+    >
+      <InstagramIcon className='h-3.5 w-3.5 shrink-0' />
+      @{h}
+    </a>
+  )
 }
 
 function SignUpModal({ event, onClose, onConfirm }) {
@@ -141,7 +161,12 @@ function EventDetailPage({ event, past, canManage, isOrganizer, organizerEmail, 
               <EventBadge status={event.status} />
             </div>
           </div>
-          <p className='mt-1 text-sm text-slate-500'>{t('comm.organizer')} <span className='font-medium text-slate-700'>{event.organizer}</span></p>
+          <div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
+            <p className='text-sm text-slate-500'>
+              {t('comm.organizer')} <span className='font-medium text-slate-700'>{event.organizer}</span>
+            </p>
+            {event.organizerInstagram && <InstagramLink handle={event.organizerInstagram} className='text-sm' />}
+          </div>
         </div>
 
         <div className='px-6 py-5 space-y-4'>
@@ -208,7 +233,7 @@ export function CommunityPage() {
   const { events, setEvents, auth, pushNotification, t } = useApp()
   const navigate = useNavigate()
   const [toast, setToast] = useState('')
-  const [newEvent, setNewEvent] = useState({ title: '', dateDisplay: '', location: '', description: '' })
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', location: '', description: '' })
   const [signUpEvent, setSignUpEvent] = useState(null)
   const [detailEvent, setDetailEvent] = useState(null)
   const [showPast, setShowPast] = useState(false)
@@ -291,9 +316,9 @@ export function CommunityPage() {
 
   async function createEvent(e) {
     e.preventDefault()
-    if (!newEvent.title || !newEvent.dateDisplay || !newEvent.location || !newEvent.description) return setToast(t('comm.fillAll'))
-    const iso = parseDisplayDate(newEvent.dateDisplay)
-    if (!iso) return setToast(t('comm.invalidDate'))
+    if (!newEvent.title || !newEvent.date || !newEvent.location || !newEvent.description) return setToast(t('comm.fillAll'))
+    const iso = newEvent.date
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return setToast(t('comm.invalidDate'))
     if (!isTodayOrFuture(iso)) return setToast(t('comm.pastDateNotAllowed'))
 
     const tempId = `local-${Date.now()}`
@@ -312,7 +337,7 @@ export function CommunityPage() {
       setEvents((prev) => prev.map((ev) => (
         ev.id === tempId ? { ...created, organizerEmail: auth.email || created.organizerEmail } : ev
       )))
-      setNewEvent({ title: '', dateDisplay: '', location: '', description: '' })
+      setNewEvent({ title: '', date: '', location: '', description: '' })
       setToast(t('comm.eventCreated'))
     } catch (err) {
       setEvents((prev) => prev.filter((ev) => ev.id !== tempId))
@@ -342,6 +367,9 @@ export function CommunityPage() {
               <span className='flex items-center gap-1.5 text-xs text-slate-500'><CalendarDays className='h-3.5 w-3.5' />{formatDisplayDate(event.date)}</span>
               <span className='flex items-center gap-1.5 text-xs text-slate-500'><MapPin className='h-3.5 w-3.5' />{event.location || t('comm.skopje')}</span>
               <span className='flex items-center gap-1.5 text-xs text-slate-500'><Users className='h-3.5 w-3.5' />{event.signupCount ?? 0} {t('comm.signedUpWord')}</span>
+              {event.organizerInstagram && (
+                <InstagramLink handle={event.organizerInstagram} className='text-xs' />
+              )}
             </div>
           </div>
 
@@ -426,12 +454,11 @@ export function CommunityPage() {
             <form onSubmit={createEvent} className='space-y-4'>
               <div className='grid gap-3 sm:grid-cols-2'>
                 <Input value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} placeholder={t('comm.eventTitlePlaceholder')} />
-                <Input
-                  value={newEvent.dateDisplay}
-                  onChange={(e) => setNewEvent({ ...newEvent, dateDisplay: maskDisplayDateInput(e.target.value) })}
-                  placeholder={t('comm.datePlaceholder')}
-                  inputMode='numeric'
-                  maxLength={10}
+                <EventDatePicker
+                  label={t('comm.date')}
+                  value={newEvent.date}
+                  min={today}
+                  onChange={(date) => setNewEvent({ ...newEvent, date })}
                 />
                 <Input value={newEvent.location} onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })} placeholder={t('comm.locationPlaceholder')} />
                 <Input value={auth.email || ''} disabled placeholder={t('comm.organizerPlaceholder')} />

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MapContainer, Marker, Popup } from 'react-leaflet'
 import { EmptyState } from '../components/EmptyState'
 import { MapLayers } from '../components/MapLayers'
+import { ReportShortcutButton } from '../components/ReportShortcutButton'
 import { StatusBadge } from '../components/StatusBadge'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
@@ -358,10 +359,7 @@ export function ContainersPage() {
           <CardDescription>{t('cont.reportCardSubtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className='text-sm text-slate-600'>
-            {t('cont.reportCardPre')}{' '}
-            <span className='font-semibold text-emerald-600'>{t('cont.homeWord')}</span> {t('cont.reportCardPost')}
-          </p>
+          <ReportShortcutButton reportType='container' className='w-full' />
         </CardContent>
       </Card>
 

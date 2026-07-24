@@ -254,11 +254,15 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
 export function AdminPanelPage() {
   const { auth, wasteReports, setWasteReports, smellAlerts, containers, setContainers, pushNotification, refreshData, t } = useApp()
   const [typeFilter, setTypeFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('pending')
   const [sortBy, setSortBy] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
   const [selected, setSelected] = useState(null)
   const [airSensors, setAirSensors] = useState([])
+
+  useEffect(() => {
+    refreshData()
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -325,7 +329,7 @@ export function AdminPanelPage() {
       const mapped = serverRow ? serverToWaste(serverRow) : null
       setWasteReports((prev) => prev.map((r) => {
         if (r.id !== report.id) return r
-        if (mapped) return { ...r, ...mapped, type: 'waste' }
+        if (mapped) return { ...r, ...mapped }
         return {
           ...r,
           status: newStatus,
@@ -346,27 +350,28 @@ export function AdminPanelPage() {
       }))
     }
 
-    // Известување за промена на статус (се зачувува за најавениот админ).
     pushNotification({
       title: t('admin.statusUpdatedTitle', { status: statusLabel }),
       body: t('admin.statusUpdatedBody', { loc: location, status: statusLabel }),
     })
 
-    // Update selected drawer
-    setSelected((s) => s ? { ...s, status: newStatus, resolvedAt: newStatus === 'resolved' ? new Date().toISOString() : s.resolvedAt } : null)
-    refreshData()
     return true
   }
 
+  const activeReports = useMemo(
+    () => allReports.filter((r) => r.status !== 'resolved'),
+    [allReports],
+  )
+
   const counts = useMemo(() => ({
-    all: allReports.length,
-    waste: allReports.filter((r) => r.type === 'waste').length,
-    smell: allReports.filter((r) => r.type === 'smell').length,
-    container: allReports.filter((r) => r.type === 'container').length,
-    pending: allReports.filter((r) => r.status === 'pending').length,
-    in_progress: allReports.filter((r) => r.status === 'in_progress').length,
+    all: activeReports.length,
+    waste: activeReports.filter((r) => r.type === 'waste').length,
+    smell: activeReports.filter((r) => r.type === 'smell').length,
+    container: activeReports.filter((r) => r.type === 'container').length,
+    pending: activeReports.filter((r) => r.status === 'pending').length,
+    in_progress: activeReports.filter((r) => r.status === 'in_progress').length,
     resolved: allReports.filter((r) => r.status === 'resolved').length,
-  }), [allReports])
+  }), [allReports, activeReports])
 
   return (
     <div className='space-y-4'>
@@ -412,7 +417,6 @@ export function AdminPanelPage() {
         ))}
         <div className='ml-auto flex gap-2'>
           {[
-            { key: 'all', label: t('admin.allStatuses') },
             { key: 'pending', label: t('admin.filterPending') },
             { key: 'in_progress', label: t('admin.filterInProgress') },
             { key: 'resolved', label: t('admin.filterResolved') },
@@ -503,7 +507,7 @@ export function AdminPanelPage() {
           </table>
         </div>
         <div className='border-t border-slate-100 px-4 py-2.5 text-xs text-slate-400'>
-          {t('admin.showing', { shown: filtered.length, total: allReports.length })}
+          {t('admin.showing', { shown: filtered.length, total: activeReports.length })}
         </div>
       </div>
 

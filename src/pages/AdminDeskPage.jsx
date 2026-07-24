@@ -5,7 +5,7 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
-import { updateReportStatus } from '../lib/api'
+import { updateReportStatus, serverToContainer, serverToWaste } from '../lib/api'
 import { fetchAllAirSensors, groupSmellsBySensor } from '../lib/smellSensor'
 function mkDate(iso) {
   if (!iso) return ''
@@ -172,7 +172,7 @@ function ContainerRow({ container, onReset }) {
 }
 
 export function AdminDeskPage() {
-  const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, pushNotification, refreshData, t } = useApp()
+  const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, pushNotification, t } = useApp()
   const [tab, setTab] = useState('waste')
   const [airSensors, setAirSensors] = useState([])
 
@@ -195,37 +195,48 @@ export function AdminDeskPage() {
   // Промената прво се потврдува на backend; при одбивање (пр. невалиден админ
   // токен) не се прикажува лажен успех. Поените ги доделува ИСКЛУЧИВО backend.
   async function updateWasteStatus(id, status) {
+    let serverRow = null
     if (typeof id === 'string' && id.includes('-')) {
       try {
-        await updateReportStatus(id, status)
+        serverRow = await updateReportStatus(id, status)
       } catch {
         const loc = wasteReports.find((r) => r.id === id)?.location || t('admin.unknownLocation')
         pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
         return
       }
     }
+    const mapped = serverRow ? serverToWaste(serverRow) : null
     setWasteReports((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, status, visibility: status === 'resolved' ? 'public' : r.visibility, resolvedAt: status === 'resolved' ? new Date().toISOString() : r.resolvedAt }
-          : r,
-      ),
+      prev.map((r) => {
+        if (r.id !== id) return r
+        if (mapped) return { ...r, ...mapped }
+        return {
+          ...r,
+          status,
+          visibility: status === 'resolved' ? 'public' : r.visibility,
+          resolvedAt: status === 'resolved' ? new Date().toISOString() : r.resolvedAt,
+        }
+      }),
     )
-    refreshData()
   }
 
   async function resetContainer(id) {
+    let serverRow = null
     if (typeof id === 'string' && id.includes('-')) {
       try {
-        await updateReportStatus(id, 'resolved')
+        serverRow = await updateReportStatus(id, 'resolved')
       } catch {
         const loc = containers.find((c) => c.id === id)?.area || t('admin.unknownLocation')
         pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
         return
       }
     }
-    setContainers((prev) => prev.map((c) => (c.id === id ? { ...c, issue: 'none', issueOpen: false } : c)))
-    refreshData()
+    const mapped = serverRow ? serverToContainer(serverRow) : null
+    setContainers((prev) => prev.map((c) => {
+      if (c.id !== id) return c
+      if (mapped) return mapped
+      return { ...c, issue: 'none', issueOpen: false }
+    }))
   }
 
   const stats = [

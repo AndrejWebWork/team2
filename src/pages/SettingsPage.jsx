@@ -17,7 +17,7 @@ const ROLE_COLORS = {
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { auth, setAuth, t, language, setLanguage } = useApp()
+  const { auth, setAuth, logout, t, language, setLanguage } = useApp()
   const roleLabel = (r) => t(`role.${r === 'organization' ? 'organization' : r === 'admin' ? 'admin' : 'user'}`)
 
   const [displayName, setDisplayName] = useState(auth.displayName || auth.email?.split('@')[0] || '')
@@ -81,9 +81,9 @@ export function SettingsPage() {
     }
   }
 
-  function logout() {
-    setAuth({ isAuthenticated: false, role: 'user', email: '', isAnonymous: true })
-    navigate('/auth-loading', { replace: true })
+  function handleLogout() {
+    logout()
+    navigate('/home', { replace: true })
   }
 
   async function deleteAccount(e) {
@@ -93,7 +93,7 @@ export function SettingsPage() {
     try {
       await deleteAccountApi({ email: auth.email, password: deletePassword })
       setToast(t('settings.accountDeleted'))
-      setTimeout(logout, 800)
+      setTimeout(handleLogout, 800)
     } catch (err) {
       setToast(err.message || t('settings.deleteFailed'))
       setDeleting(false)
@@ -247,7 +247,7 @@ export function SettingsPage() {
           <Button
             variant='outline'
             className='w-full justify-start gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300'
-            onClick={logout}
+            onClick={handleLogout}
           >
             <LogOut className='h-4 w-4' />
             {t('settings.logout')}

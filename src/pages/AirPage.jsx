@@ -1,14 +1,11 @@
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { CheckCircle2, Flame, Info, Loader2, MapPin, Wind, XCircle } from 'lucide-react'
+import { Flame, Info, Loader2, MapPin, Wind, XCircle } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet'
 import { MapLayers } from '../components/MapLayers'
-import { SubmitSuccessModal } from '../components/SubmitSuccessModal'
-import { Toast } from '../components/Toast'
-import { Button } from '../components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Textarea } from '../components/ui/textarea'
+import { ReportShortcutButton } from '../components/ReportShortcutButton'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
 import { fetchSkopjeSensors } from '../lib/waqi'
 import { fetchPulseSensors } from '../lib/api'
@@ -69,16 +66,8 @@ function makeAqiIcon(aqi) {
   })
 }
 
-function distanceKm(a, b) {
-  const toRad = (v) => (v * Math.PI) / 180
-  const R = 6371
-  const dLat = toRad(b.lat - a.lat)
-  const dLng = toRad(b.lng - a.lng)
-  const x = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
-}
-
-// Центрирај ја мапата само при првото добивање GPS — не при секое освежување на сензорите.
+import { findNearestAirSensor, haversineKm, resolveLocationLabel } from '../lib/geo'
+import { captureGeolocation, geoErrorMessage } from '../lib/geolocation'
 function RecenterMap({ lat, lng }) {
   const map = useMap()
   const centered = useRef(false)
@@ -178,17 +167,13 @@ function SensorDetail({ sensor, onClose, t }) {
 }
 
 export function AirPage() {
-  const { sensors, setSensors, smellAlerts, auth, submitReport, t } = useApp()
+  const { sensors, setSensors, smellAlerts, auth, t } = useApp()
   // Реалната GPS локација на корисникот. null додека не е добиена (или одбиена)
   // — никогаш не се користи измислена/фиксна локација како замена.
   const [userLocation, setUserLocation] = useState(null)
   const [sourceFilter, setSourceFilter] = useState('all')
   const [selectedSensor, setSelectedSensor] = useState(null)
   const [gps, setGps] = useState({ lat: null, lng: null, label: '', loading: true, error: '' })
-  const [smellDesc, setSmellDesc] = useState('')
-  const [intensity, setIntensity] = useState(3)
-  const [toast, setToast] = useState('')
-  const [submitted, setSubmitted] = useState(false)
   // Нереферентни (граѓански) сензори: WAQI граѓански + Pulse.eco во живо.
   // Само реални податоци — почнува празно и се полни од API при првото вчитување.
   const [pulse, setPulse] = useState([])
@@ -270,30 +255,34 @@ export function AirPage() {
       return
     }
     setGps((g) => ({ ...g, loading: true, error: '' }))
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    captureGeolocation()
+      .then(async (pos) => {
         const lat = pos.coords.latitude
         const lng = pos.coords.longitude
-        setGps({ lat, lng, label: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, loading: false, error: '' })
+        const label = await resolveLocationLabel(lat, lng)
+        setGps({ lat, lng, label, loading: false, error: '' })
         setUserLocation({ lat, lng })
-      },
-      (err) => setGps({ lat: null, lng: null, label: '', loading: false, error: err.code === 1 ? t('gps.deniedBrowser') : t('gps.failed') }),
-      { enableHighAccuracy: true, timeout: 10000 },
-    )
+      })
+      .catch((err) => {
+        const denied = err?.code === 1
+        setGps({
+          lat: null, lng: null, label: '', loading: false,
+          error: denied ? t('gps.deniedBrowser') : geoErrorMessage(err, t),
+        })
+      })
   }
 
   useEffect(() => { requestGPS() }, [])
 
-  // Најблизок сензор — САМО од реална GPS локација. Без локација нема
-  // пресметка (се прикажува „локацијата не е достапна" наместо лажна близина).
-  const nearest = useMemo(
-    () => (userLocation
-      ? [...sensors].sort((a, b) => distanceKm(userLocation, a) - distanceKm(userLocation, b))[0]
-      : null),
-    [sensors, userLocation],
-  )
-
   const allSensors = useMemo(() => [...sensors, ...pulse], [sensors, pulse])
+
+  // Најблизок сензор по воздушна линија (Haversine) — сите референтни + граѓански.
+  const nearestResult = useMemo(
+    () => (userLocation ? findNearestAirSensor(userLocation.lat, userLocation.lng, allSensors) : null),
+    [allSensors, userLocation],
+  )
+  const nearest = nearestResult?.sensor ?? null
+
   const visibleMinistrySensors = useMemo(
     () => (sourceFilter === 'all' || sourceFilter === 'ministry' ? sensors : []),
     [sensors, sourceFilter],
@@ -307,29 +296,6 @@ export function AirPage() {
     [pulse],
   )
   const visibleCount = visibleMinistrySensors.length + visiblePulseSensors.length
-
-  async function submitSmell(e) {
-    e.preventDefault()
-    if (gps.loading) return setToast(t('form.waitingLocation'))
-    if (gps.lat == null) return setToast(t('form.locationUnavailable'))
-    if (!smellDesc.trim()) return setToast(t('form.enterDescription'))
-    await submitReport({
-      type: 'smell',
-      location: gps.label,
-      lat: gps.lat,
-      lng: gps.lng,
-      description: smellDesc.trim(),
-      intensity,
-      severity: intensity >= 4 ? 'critical' : 'warning',
-      nearestSensorId: nearest?.id || null,
-      nearestSensorDistanceM: nearest && userLocation
-        ? Math.round(distanceKm(userLocation, nearest) * 1000)
-        : null,
-    })
-    setSmellDesc('')
-    setIntensity(3)
-    setSubmitted(true)
-  }
 
   return (
     <div className='space-y-6'>
@@ -386,14 +352,14 @@ export function AirPage() {
 
       {nearest && (() => {
         const c = aqiColor(nearest.aqi)
-        const dist = distanceKm(userLocation, nearest)
+        const distKm = nearestResult ? nearestResult.distanceM / 1000 : haversineKm(userLocation, nearest)
         return (
           <div className='rounded-2xl border p-5' style={{ background: c.bg, borderColor: c.border }}>
             <div className='flex items-start justify-between gap-4'>
               <div>
                 <p className='text-xs font-semibold uppercase tracking-wide' style={{ color: c.text }}>{t('air.nearestSensor')}</p>
                 <p className='mt-0.5 text-xl font-bold text-slate-900'>{sensorName(nearest, t)}</p>
-                <p className='text-sm text-slate-500'>{sensorName(nearest, t)} &middot; {dist < 1 ? `${(dist * 1000).toFixed(0)} m` : `${dist.toFixed(1)} km`} {t('air.fromYou')}</p>
+                <p className='text-sm text-slate-500'>{sensorName(nearest, t)} &middot; {distKm < 1 ? `${nearestResult?.distanceM ?? Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`} {t('air.fromYou')}</p>
               </div>
               <div className='text-right'>
                 <p className='text-5xl font-extrabold leading-none' style={{ color: c.text }}>{nearest.aqi}</p>
@@ -553,48 +519,16 @@ export function AirPage() {
         </CardContent>
       </Card>
 
-      {/* Smell report */}
-      <Card>
-        <CardHeader className='pb-2'>
+      {/* Smell report shortcut → Home with smell type pre-selected */}
+      <Card className='border-rose-100 bg-gradient-to-br from-white to-rose-50/40'>
+        <CardHeader>
           <CardTitle className='flex items-center gap-2 text-base'>
             <Flame className='h-4 w-4 text-rose-500' />{t('air.reportSmell')}
           </CardTitle>
+          <CardDescription>{t('air.reportSmellHint')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submitSmell} className='space-y-4'>
-            {gps.loading ? (
-              <div className='flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500'>
-                <Loader2 className='h-4 w-4 animate-spin text-slate-400' />{t('gps.requesting')}
-              </div>
-            ) : gps.error ? (
-              <div className='space-y-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3'>
-                <div className='flex items-start gap-2 text-sm text-rose-700'><XCircle className='mt-0.5 h-4 w-4 shrink-0' /><span>{gps.error}</span></div>
-                <button type='button' onClick={requestGPS} className='flex w-full items-center justify-center gap-2 rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50'>
-                  <MapPin className='h-4 w-4' />{t('gps.retry2')}
-                </button>
-              </div>
-            ) : (
-              <div className='flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700'>
-                <CheckCircle2 className='h-4 w-4 shrink-0' /><span className='font-medium'>{t('gps.captured')}</span>
-                <span className='ml-auto text-xs opacity-70'>{gps.label}</span>
-              </div>
-            )}
-            <div>
-              <p className='mb-2 text-sm font-medium text-slate-700'>{t('form.smellIntensity')}</p>
-              <div className='flex gap-2'>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button key={n} type='button' onClick={() => setIntensity(n)}
-                    className='flex flex-1 flex-col items-center gap-0.5 rounded-xl border px-2 py-2.5 text-xs font-semibold transition-all duration-150'
-                    style={{ borderColor: intensity >= n ? '#f97316' : '#e2e8f0', background: intensity >= n ? '#fff7ed' : '#f8fafc', color: intensity >= n ? '#ea580c' : '#94a3b8' }}>
-                    <Flame className='h-5 w-5' style={{ fill: intensity >= n ? '#fb923c' : 'none', color: intensity >= n ? '#ea580c' : '#cbd5e1' }} />
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <Textarea value={smellDesc} onChange={(e) => setSmellDesc(e.target.value)} placeholder={t('form.smellPlaceholder')} className='min-h-20' />
-            <Button type='submit' className='w-full' disabled={gps.loading}>{t('common.submitReport')}</Button>
-          </form>
+          <ReportShortcutButton reportType='smell' className='w-full' />
         </CardContent>
       </Card>
 
@@ -625,8 +559,6 @@ export function AirPage() {
         </section>
       )}
 
-      <Toast toast={toast} onClose={() => setToast('')} />
-      <SubmitSuccessModal open={submitted} onClose={() => setSubmitted(false)} />
     </div>
   )
 }

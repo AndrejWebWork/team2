@@ -8,12 +8,22 @@ export const usersRouter = Router()
 const LANGS = ['mk', 'en', 'sq']
 const EMAIL_RE = /^\S+@\S+\.\S+$/
 
+function normalizeInstagramHandle(raw) {
+  if (raw == null || raw === '') return null
+  let h = String(raw).trim()
+  if (!h) return null
+  h = h.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+  h = h.replace(/^@/, '').split(/[/?#]/)[0].trim()
+  return h || null
+}
+
 function publicCommunityUser(u) {
   return {
     id: u.id,
     email: u.email,
     displayName: u.display_name,
     organizationName: u.organization_name,
+    instagramHandle: u.instagram_handle || null,
     role: u.role,
     language: u.language,
     createdAt: u.created_at,
@@ -57,7 +67,7 @@ usersRouter.get('/', async (req, res, next) => {
 usersRouter.get('/community', requireAdmin, async (req, res, next) => {
   try {
     const { rows } = await query(
-      `SELECT id, email, display_name, organization_name, role, language, created_at
+      `SELECT id, email, display_name, organization_name, instagram_handle, role, language, created_at
          FROM users WHERE role = 'organization' ORDER BY created_at DESC`,
     )
     res.json(rows.map(publicCommunityUser))
@@ -67,11 +77,12 @@ usersRouter.get('/community', requireAdmin, async (req, res, next) => {
 // POST /api/users/community  { email, displayName, organizationName?, passwordHash?, language? }
 usersRouter.post('/community', requireAdmin, async (req, res, next) => {
   try {
-    const { email, displayName = null, organizationName = null, language = 'mk' } = req.body
+    const { email, displayName = null, organizationName = null, instagramHandle = null, language = 'mk' } = req.body
     const clientHash = extractClientPasswordHash(req.body)
     if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Внесете валидна е-пошта.' })
     const lang = LANGS.includes(language) ? language : 'mk'
     const name = (displayName && String(displayName).trim()) || String(email).split('@')[0]
+    const instagram = normalizeInstagramHandle(instagramHandle)
 
     const existing = await query('SELECT id FROM users WHERE email = $1', [email])
 
@@ -82,13 +93,14 @@ usersRouter.post('/community', requireAdmin, async (req, res, next) => {
            role = 'organization',
            display_name = $2,
            organization_name = $3,
+           instagram_handle = $4,
            is_anonymous = FALSE,
            notif_events = TRUE,
-           password_hash = COALESCE($4, password_hash),
+           password_hash = COALESCE($5, password_hash),
            updated_at = now()
          WHERE email = $1
-         RETURNING id, email, display_name, organization_name, role, language, created_at`,
-        [email, name, organizationName, passwordHash],
+         RETURNING id, email, display_name, organization_name, instagram_handle, role, language, created_at`,
+        [email, name, organizationName, instagram, passwordHash],
       )
       return res.json(publicCommunityUser(rows[0]))
     }
@@ -99,10 +111,10 @@ usersRouter.post('/community', requireAdmin, async (req, res, next) => {
     }
     const storedHash = await hashForStorage(clientHash)
     const { rows } = await query(
-      `INSERT INTO users (email, password_hash, display_name, organization_name, role, language, is_anonymous, notif_events)
-         VALUES ($1, $2, $3, $4, 'organization', $5, FALSE, TRUE)
-       RETURNING id, email, display_name, organization_name, role, language, created_at`,
-      [email, storedHash, name, organizationName, lang],
+      `INSERT INTO users (email, password_hash, display_name, organization_name, instagram_handle, role, language, is_anonymous, notif_events)
+         VALUES ($1, $2, $3, $4, $5, 'organization', $6, FALSE, TRUE)
+       RETURNING id, email, display_name, organization_name, instagram_handle, role, language, created_at`,
+      [email, storedHash, name, organizationName, instagram, lang],
     )
     res.status(201).json(publicCommunityUser(rows[0]))
   } catch (err) { next(err) }
@@ -113,7 +125,7 @@ usersRouter.delete('/community/:email', requireAdmin, async (req, res, next) => 
   try {
     const email = req.params.email
     const { rows } = await query(
-      `UPDATE users SET role = 'user', organization_name = NULL, updated_at = now()
+      `UPDATE users SET role = 'user', organization_name = NULL, instagram_handle = NULL, updated_at = now()
          WHERE email = $1 AND role = 'organization'
        RETURNING id`,
       [email],

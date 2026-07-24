@@ -1,6 +1,7 @@
 import { Camera, MapPin, UserRound } from 'lucide-react'
 import { useMemo } from 'react'
 import { EmptyState } from '../components/EmptyState'
+import { ReportShortcutButton } from '../components/ReportShortcutButton'
 import { StatusBadge } from '../components/StatusBadge'
 import { Toast } from '../components/Toast'
 import { Badge } from '../components/ui/badge'
@@ -20,19 +21,23 @@ export function WastePage() {
   const { wasteReports, setWasteReports, auth, awardPoints, t } = useApp()
 
   const isMine = (r) => isMyReport(r, auth, getDeviceId())
+  const myReports = useMemo(
+    () => (auth.role === 'admin' ? wasteReports : wasteReports.filter(isMine)),
+    [wasteReports, auth.role, auth.email, auth.userId, auth.isAnonymous],
+  )
 
   // Решените пријави се ЈАВНИ ПОСТОВИ — секој граѓанин ги гледа сите (од кого
   // било), како доказ дека пријавите се решаваат.
   const resolvedPosts = wasteReports.filter((r) => r.status === 'resolved')
   const activeReports = auth.role === 'admin'
     ? wasteReports.filter((r) => r.status !== 'resolved')
-    : wasteReports.filter((r) => r.status !== 'resolved' && isMine(r))
+    : myReports.filter((r) => r.status !== 'resolved')
 
   const stats = useMemo(() => ({
-    pending: wasteReports.filter((r) => r.status === 'pending').length,
-    inProgress: wasteReports.filter((r) => r.status === 'in_progress').length,
-    resolved: wasteReports.filter((r) => r.status === 'resolved').length,
-  }), [wasteReports])
+    pending: myReports.filter((r) => r.status === 'pending').length,
+    inProgress: myReports.filter((r) => r.status === 'in_progress').length,
+    resolved: myReports.filter((r) => r.status === 'resolved').length,
+  }), [myReports])
 
   function updateStatus(id, status) {
     // Пријавите од базата (UUID) се ажурираат и на backend (единствен извор).
@@ -159,6 +164,16 @@ export function WastePage() {
           </div>
         )}
       </section>
+
+      <Card className='border-amber-100 bg-gradient-to-br from-white to-amber-50/40'>
+        <CardHeader>
+          <CardTitle className='text-lg'>{t('waste.reportCardTitle')}</CardTitle>
+          <CardDescription>{t('waste.reportCardSubtitle')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ReportShortcutButton reportType='deponija' className='w-full' />
+        </CardContent>
+      </Card>
     </div>
   )
 }

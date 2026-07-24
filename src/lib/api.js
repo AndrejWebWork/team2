@@ -1,9 +1,19 @@
 // Клиент за EkoSkopje backend API-то (заедничко за веб + мобилни клиенти).
-// Ако VITE_API_URL не е зададено: во dev → локален backend; во продукциски
-// build (Vercel) → ист домен (релативни /api патеки).
+// Веб prod (Vercel): релативни /api патеки. Capacitor: мора апсолутен URL.
+import { Capacitor } from '@capacitor/core'
 import { hashPasswordForTransit } from './password'
 
-const API_URL = (import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:4000' : '')).replace(/\/$/, '')
+const PRODUCTION_API = 'https://team2-zeta.vercel.app'
+
+function resolveApiUrl() {
+  const fromEnv = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+  if (fromEnv) return fromEnv
+  if (import.meta.env.DEV) return 'http://localhost:4000'
+  if (Capacitor.isNativePlatform()) return PRODUCTION_API
+  return ''
+}
+
+const API_URL = resolveApiUrl()
 // Админ токен за заштитените операции (менување статус, community корисници).
 // Backend-от го враќа при успешна админ најава; се памети локално по сесија.
 // VITE_ADMIN_TOKEN останува како fallback за локален развој.
@@ -31,6 +41,11 @@ export function getStoredAdminToken() {
 // Го брише кешираниот ETag за условно GET — по мутации (пр. статус) да се врати свеж одговор.
 export function clearConditionalEtag(url) {
   etagStore.delete(url)
+}
+
+// По најава/одјава или рачно освежување — целосно ресетирање (различни URL-и по корисник).
+export function clearAllConditionalEtags() {
+  etagStore.clear()
 }
 
 export const apiBase = API_URL
@@ -357,11 +372,11 @@ export async function fetchCommunityUsersApi(signal) {
 }
 
 // Админ: додади/унапреди influencer/community корисник (улога 'organization').
-export async function addCommunityUserApi({ email, displayName, organizationName, password, language }, signal) {
+export async function addCommunityUserApi({ email, displayName, organizationName, instagramHandle, password, language }, signal) {
   const headers = { 'Content-Type': 'application/json' }
   const adminToken = getAdminToken()
   if (adminToken) headers['X-Admin-Token'] = adminToken
-  const payload = { email, displayName, organizationName, language }
+  const payload = { email, displayName, organizationName, instagramHandle, language }
   if (password) payload.passwordHash = await hashPasswordForTransit(password)
   const res = await fetch(`${API_URL}/api/users/community`, {
     method: 'POST', headers,

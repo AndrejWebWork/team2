@@ -24,6 +24,7 @@ function rowToEvent(r) {
     status: r.status,
     organizer: r.organizer_name,
     organizerEmail: r.organizer_email || null,
+    organizerInstagram: r.organizer_instagram || null,
     signupCount: Number(r.signup_count || 0),
     joined: Boolean(r.joined),
     createdAt: r.created_at,
@@ -66,6 +67,7 @@ eventsRouter.get('/', async (req, res, next) => {
         const { rows } = await query(
           `SELECT e.*,
              ou.email AS organizer_email,
+             ou.instagram_handle AS organizer_instagram,
              (SELECT COUNT(*) FROM event_signups s WHERE s.event_id = e.id) AS signup_count,
              EXISTS(
                SELECT 1 FROM event_signups s
@@ -111,8 +113,18 @@ eventsRouter.post('/', async (req, res, next) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [title, description, isoDate, location, seats, organizerId, organizerName || organizerEmail],
     )
+    let organizerInstagram = null
+    if (organizerId) {
+      const ig = await query('SELECT instagram_handle FROM users WHERE id = $1', [organizerId])
+      organizerInstagram = ig.rows[0]?.instagram_handle || null
+    }
     invalidateCache('events:')
-    res.status(201).json(rowToEvent({ ...rows[0], signup_count: 0, joined: false }))
+    res.status(201).json(rowToEvent({
+      ...rows[0],
+      signup_count: 0,
+      joined: false,
+      organizer_instagram: organizerInstagram,
+    }))
   } catch (err) { next(err) }
 })
 

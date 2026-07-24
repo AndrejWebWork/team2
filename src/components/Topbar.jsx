@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
 
-export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnonymous, currentUserPoints, t }) {
+export function Topbar({ role, unreadCount, logout, email, displayName, isAnonymous, currentUserPoints, t }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [openMenu, setOpenMenu] = useState(false)
@@ -39,8 +39,8 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
     }
   }
 
-  function logout() {
-    setAuth({ isAuthenticated: true, role: 'user', email: '', isAnonymous: true })
+  function handleLogout() {
+    logout()
     navigate('/home')
     setOpenMenu(false)
   }
@@ -111,7 +111,7 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
 
             {/* Login/Logout — desktop only */}
             {!isAnonymous ? (
-              <Button variant='outline' size='sm' onClick={logout} className='hidden border-slate-200 text-sm text-slate-600 lg:flex'>
+              <Button variant='outline' size='sm' onClick={handleLogout} className='hidden border-slate-200 text-sm text-slate-600 lg:flex'>
                 <LogOut className='h-4 w-4' />{t('topbar.logout')}
               </Button>
             ) : (
@@ -181,7 +181,7 @@ export function Topbar({ role, unreadCount, setAuth, email, displayName, isAnony
                 </button>
               ) : (
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-rose-600 transition-colors hover:bg-rose-50'
                 >
                   <LogOut className='h-5 w-5 shrink-0' />{t('topbar.logout')}

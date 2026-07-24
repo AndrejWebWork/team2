@@ -5,7 +5,7 @@ import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 
 export function Layout() {
-  const { auth, unreadCount, setAuth, currentUserPoints, t } = useApp()
+  const { auth, unreadCount, logout, currentUserPoints, t } = useApp()
   const location = useLocation()
 
   // Админ страниците (панел, статистика, community корисници) користат целосна
@@ -24,7 +24,7 @@ export function Layout() {
         <Topbar
           role={auth.role}
           unreadCount={unreadCount}
-          setAuth={setAuth}
+          logout={logout}
           email={auth.email}
           displayName={auth.displayName}
           isAnonymous={auth.isAnonymous}

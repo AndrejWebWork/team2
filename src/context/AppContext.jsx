@@ -1,7 +1,8 @@
 import { Capacitor } from '@capacitor/core'
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   NOT_MODIFIED,
+  clearAllConditionalEtags,
   createEventApi,
   createNotificationApi,
   deleteEventApi,
@@ -28,7 +29,8 @@ import {
 } from '../lib/api'
 import { getDeviceId } from '../lib/device'
 import { isMyReport, reportsIdentity } from '../lib/reportOwnership'
-import { resolveMunicipality } from '../lib/geo'
+import { resolveLocationInfo, findNearestContainerPoint } from '../lib/geo'
+import { fetchAllAirSensors, findNearestSensor } from '../lib/smellSensor'
 import { registerPushNotifications, scheduleLocalNotification } from '../lib/notifications'
 import { DEFAULT_LANGUAGE, isSupportedLanguage, translate } from '../i18n/translations'
 
@@ -63,7 +65,8 @@ function readStoredAuth() {
   }
 }
 // Колку често се освежуваат податоците од backend (reports, events, leaderboard).
-const POLL_INTERVAL_MS = 60000
+const POLL_INTERVAL_MS = 15000
+const ADMIN_POLL_INTERVAL_MS = 10000
 // Случаен растур (jitter) за да не удрат сите клиенти истовремено (spikes).
 const POLL_JITTER_MS = 5000
 // Стабилен идентитет на уредот за анонимни корисници (кеш по уред).
@@ -134,9 +137,9 @@ export function AppProvider({ children }) {
   // Сите податоци се РЕАЛНИ: сензорите доаѓаат во живо од WAQI (во AirPage),
   // а пријавите од backend-от. Нема измислени (mock) почетни податоци.
   const [sensors, setSensors] = useState([])
-  const [smellAlerts, setSmellAlerts] = useState(() => readCachedReports(reportsIdentity(readStoredAuth(), DEVICE_ID))?.smell || [])
-  const [wasteReports, setWasteReports] = useState(() => readCachedReports(reportsIdentity(readStoredAuth(), DEVICE_ID))?.waste || [])
-  const [containers, setContainers] = useState(() => readCachedReports(reportsIdentity(readStoredAuth(), DEVICE_ID))?.containers || [])
+  const [smellAlerts, setSmellAlerts] = useState([])
+  const [wasteReports, setWasteReports] = useState([])
+  const [containers, setContainers] = useState([])
   const [events, setEvents] = useState([])
   const [notifications, setNotifications] = useState(() => readCachedNotifications(DEVICE_ID))
   const [pointsLedger, setPointsLedger] = useState({})
@@ -149,25 +152,69 @@ export function AppProvider({ children }) {
   const [refreshKey, setRefreshKey] = useState(0)
   const wasteSnapRef = useRef(wasteReports)
   const containersSnapRef = useRef(containers)
+  const smellSnapRef = useRef(smellAlerts)
   const notifiedResolvedRef = useRef(new Set())
 
   const email = auth.email || null
   const reportsIdentityKey = reportsIdentity(auth, DEVICE_ID)
 
-  // При промена на корисник (најава/одјава): вчитај го неговиот кеш и освежи од сервер.
-  const authSessionRef = useRef(false)
+  function persistReportsCache(waste, containers, smell) {
+    wasteSnapRef.current = waste
+    containersSnapRef.current = containers
+    smellSnapRef.current = smell
+    writeCachedReports(reportsIdentityKey, { waste, containers, smell })
+  }
+
+  // Веднаш ажурирај локална состојба од еден server report (POST/PATCH) — без refresh.
+  function mergeReportFromServer(row) {
+    if (!row?.id || !row?.type) return
+    if (row.type === 'waste') {
+      const mapped = serverToWaste(row)
+      setWasteReports((prev) => {
+        const next = prev.some((r) => r.id === mapped.id)
+          ? prev.map((r) => (r.id === mapped.id ? { ...r, ...mapped } : r))
+          : [mapped, ...prev]
+        persistReportsCache(next, containersSnapRef.current, smellSnapRef.current)
+        return next
+      })
+    } else if (row.type === 'container') {
+      const mapped = serverToContainer(row)
+      setContainers((prev) => {
+        const next = prev.some((r) => r.id === mapped.id)
+          ? prev.map((r) => (r.id === mapped.id ? mapped : r))
+          : [mapped, ...prev]
+        persistReportsCache(wasteSnapRef.current, next, smellSnapRef.current)
+        return next
+      })
+    } else if (row.type === 'smell') {
+      const mapped = serverToSmell(row)
+      setSmellAlerts((prev) => {
+        const next = prev.some((r) => r.id === mapped.id)
+          ? prev.map((r) => (r.id === mapped.id ? { ...r, ...mapped } : r))
+          : [mapped, ...prev]
+        persistReportsCache(wasteSnapRef.current, containersSnapRef.current, next)
+        return next
+      })
+    }
+  }
+
+  // При промена на корисник (најава/одјава): исчисти ја претходната состојба и повлечи свежи
+  // податоци од базата — не прикажувај кеш од претходна сесија.
   useEffect(() => {
-    const cached = readCachedReports(reportsIdentityKey)
-    setWasteReports(cached?.waste || [])
-    setContainers(cached?.containers || [])
-    setSmellAlerts(cached?.smell || [])
-    wasteSnapRef.current = cached?.waste || []
-    containersSnapRef.current = cached?.containers || []
+    setWasteReports([])
+    setContainers([])
+    setSmellAlerts([])
+    setEvents([])
+    setServerLeaderboard([])
+    wasteSnapRef.current = []
+    containersSnapRef.current = []
+    smellSnapRef.current = []
     notifiedResolvedRef.current = new Set()
-    if (!auth.email) setNotifications(readCachedNotifications(reportsIdentityKey))
-    if (authSessionRef.current) refreshData()
-    else authSessionRef.current = true
-  }, [reportsIdentityKey, auth.email])
+    if (auth.email && !auth.isAnonymous) setNotifications([])
+    else setNotifications(readCachedNotifications(reportsIdentityKey))
+    clearAllConditionalEtags()
+    setRefreshKey((k) => k + 1)
+  }, [reportsIdentityKey])
 
   // Сите податоци се РЕАЛНИ и во живо:
   //  • backend достапен → единствен извор; се освежуваат на ~POLL_INTERVAL_MS
@@ -256,6 +303,7 @@ export function AppProvider({ children }) {
           detectAnonymousResolved(wasteSnapRef.current, waste, containersSnapRef.current, containers)
           wasteSnapRef.current = waste
           containersSnapRef.current = containers
+          smellSnapRef.current = smell
           setWasteReports(waste)
           setContainers(containers)
           setSmellAlerts(smell)
@@ -277,9 +325,11 @@ export function AppProvider({ children }) {
       }
     }
 
+    const pollMs = auth.role === 'admin' ? ADMIN_POLL_INTERVAL_MS : POLL_INTERVAL_MS
+
     const scheduleNext = () => {
       if (cancelled) return
-      timer = setTimeout(tick, POLL_INTERVAL_MS + Math.random() * POLL_JITTER_MS)
+      timer = setTimeout(tick, pollMs + Math.random() * POLL_JITTER_MS)
     }
     async function tick() {
       // Не троши барања додека табот е скриен — освежуваме кога ќе се врати.
@@ -287,21 +337,32 @@ export function AppProvider({ children }) {
       scheduleNext()
     }
     const onVisibility = () => { if (!document.hidden) sync(false) }
+    const onFocus = () => { if (!document.hidden) sync(false) }
 
     sync(true).finally(scheduleNext)
     document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('focus', onFocus)
     return () => {
       cancelled = true
       controller.abort()
       if (timer) clearTimeout(timer)
       document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('focus', onFocus)
     }
   }, [reportsIdentityKey, refreshKey, language, auth.email, auth.role, auth.isAnonymous])
 
   // Веднаш повлечи свежи податоци од backend (по запис што менува состојба).
   function refreshData() {
+    clearAllConditionalEtags()
     setRefreshKey((k) => k + 1)
   }
+
+  const logout = useCallback(() => {
+    setStoredAdminToken('')
+    setPointsLedger({})
+    setPointsEvents([])
+    setAuth(ANON_AUTH)
+  }, [])
 
   // Анонимните известувања се чуваат локално по уред (за да преживеат освежување).
   useEffect(() => {
@@ -466,21 +527,44 @@ export function AppProvider({ children }) {
   // Пријава (миризба/депонија/контејнер) → backend (слики како BYTEA во база).
   // Успех → веднаш освежи од сервер; офлајн → оптимистички локален запис + кеш.
   async function submitReport(payload) {
-    // Општина: ако формата не ја дала, одреди ја од координатите (Nominatim).
-    // Не блокира долго (timeout 6s) и при неуспех пријавата оди без општина.
+    let location = payload.location || ''
     let municipality = payload.municipality || ''
-    if (!municipality && payload.lat != null && payload.lng != null) {
-      municipality = await resolveMunicipality(payload.lat, payload.lng)
+    if (payload.lat != null && payload.lng != null && (!location || !municipality)) {
+      const info = await resolveLocationInfo(payload.lat, payload.lng)
+      if (!location) location = info.label
+      if (!municipality) municipality = info.municipality
     }
+
+    let nearestPointId = payload.nearestPointId || payload.nearestSensorId || null
+    let nearestPointType = payload.nearestPointType || (payload.nearestSensorId ? 'air_sensor' : null)
+    let nearestDistanceM = payload.nearestDistanceM ?? payload.nearestSensorDistanceM ?? null
+
+    if (payload.type === 'smell' && payload.lat != null && payload.lng != null) {
+      try {
+        const sensors = await fetchAllAirSensors()
+        const found = findNearestSensor(payload.lat, payload.lng, sensors)
+        if (found) {
+          nearestPointId = found.sensor.id
+          nearestPointType = 'air_sensor'
+          nearestDistanceM = found.distanceM
+        }
+      } catch { /* без најблизок сензор */ }
+    } else if (payload.type === 'container' && payload.lat != null && payload.lng != null) {
+      const found = findNearestContainerPoint(payload.lat, payload.lng)
+      if (found) {
+        nearestPointId = found.id
+        nearestPointType = found.type
+        nearestDistanceM = found.distanceM
+      }
+    }
+
     const backendPayload = {
       type: payload.type,
       reporterId: auth.isAnonymous ? null : (auth.userId || undefined),
-      // Уредот секогаш се праќа: за анонимни тоа е ЕДИНСТВЕНАТА врска со
-      // „моите пријави" на овој уред (истиот ID што се памети во локалниот кеш).
       deviceId: DEVICE_ID,
       reporterEmail: auth.email || null,
       reporterName: auth.email || null,
-      location: payload.location || '',
+      location,
       municipality,
       lat: payload.lat,
       lng: payload.lng,
@@ -491,12 +575,13 @@ export function AppProvider({ children }) {
       containerIssue: payload.containerIssue ?? null,
       fill: payload.fill ?? null,
       dataUrls: payload.dataUrls || [],
-      nearestPointId: payload.nearestSensorId || payload.nearestPointId || null,
-      nearestPointType: payload.nearestSensorId ? 'air_sensor' : (payload.nearestPointType || null),
-      nearestDistanceM: payload.nearestSensorDistanceM ?? payload.nearestDistanceM ?? null,
+      nearestPointId,
+      nearestPointType,
+      nearestDistanceM,
     }
     try {
-      await persistReportWithPhotos(backendPayload)
+      const created = await persistReportWithPhotos(backendPayload)
+      mergeReportFromServer(created)
       refreshData()
       // Потврда по успешна пријава: in-app + телефонска нотификација (како депонија).
       if (payload.type === 'waste') {
@@ -532,8 +617,8 @@ export function AppProvider({ children }) {
   // Промена на статус/решавање на пријава (админ/надлежен) → PATCH кон backend.
   async function changeReportStatus(id, status, extra = {}) {
     try {
-      await updateReportStatus(id, status, extra)
-      refreshData()
+      const row = await updateReportStatus(id, status, extra)
+      mergeReportFromServer(row)
       return { ok: true }
     } catch {
       return { ok: false }
@@ -638,6 +723,7 @@ export function AppProvider({ children }) {
       setLanguage,
       t,
       refreshData,
+      logout,
       submitReport,
       changeReportStatus,
       login,
