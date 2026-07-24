@@ -1,5 +1,5 @@
 import { Camera, MapPin, UserRound } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { ReportShortcutButton } from '../components/ReportShortcutButton'
 import { ResolvedReportsPager } from '../components/ResolvedReportsPager'
@@ -19,8 +19,16 @@ function mkDate(iso, noDate) {
 }
 
 export function WastePage() {
-  const { wasteReports, setWasteReports, auth, awardPoints, t } = useApp()
+  const { wasteReports, setWasteReports, auth, awardPoints, refreshReports, t } = useApp()
   const [statusSuccess, setStatusSuccess] = useState(null)
+
+  useEffect(() => {
+    refreshReports()
+    const timer = setInterval(() => {
+      if (!document.hidden) refreshReports()
+    }, 8000)
+    return () => clearInterval(timer)
+  }, [refreshReports])
 
   const isMine = (r) => isMyReport(r, auth, getDeviceId())
   const myReports = useMemo(

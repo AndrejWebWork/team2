@@ -4,6 +4,7 @@ import {
   NOT_MODIFIED,
   clearAllConditionalEtags,
   clearEventsEtags,
+  clearReportsEtag,
   createEventApi,
   createNotificationApi,
   deleteEventApi,
@@ -432,6 +433,26 @@ export function AppProvider({ children }) {
     }
   }, [email, reportsIdentityKey])
 
+  const refreshReports = useCallback(async () => {
+    clearReportsEtag()
+    try {
+      const rows = await fetchReports()
+      if (rows === NOT_MODIFIED) return
+      const waste = rows.filter((r) => r.type === 'waste').map(serverToWaste)
+      const containers = rows.filter((r) => r.type === 'container').map(serverToContainer)
+      const smell = rows.filter((r) => r.type === 'smell').map(serverToSmell)
+      wasteSnapRef.current = waste
+      containersSnapRef.current = containers
+      smellSnapRef.current = smell
+      setWasteReports(waste)
+      setContainers(containers)
+      setSmellAlerts(smell)
+      writeCachedReports(reportsIdentityKey, { waste, containers, smell })
+    } catch {
+      /* тивко — polling ќе проба повторно */
+    }
+  }, [reportsIdentityKey])
+
   const logout = useCallback(() => {
     setStoredAdminToken('')
     setPointsLedger({})
@@ -705,6 +726,7 @@ export function AppProvider({ children }) {
     try {
       const row = await updateReportStatus(id, status, extra)
       mergeReportFromServer(row)
+      refreshReports()
       return { ok: true }
     } catch {
       return { ok: false }
@@ -811,6 +833,7 @@ export function AppProvider({ children }) {
       t,
       refreshData,
       refreshEvents,
+      refreshReports,
       logout,
       submitReport,
       changeReportStatus,
@@ -821,7 +844,7 @@ export function AppProvider({ children }) {
       leaveEvent,
       deleteEvent,
     }),
-    [auth, sensors, smellAlerts, wasteReports, containers, events, notifications, unreadCount, pointsLedger, currentUserId, currentUserPoints, leaderboardMonthly, apiOnline, language, t, refreshEvents],
+    [auth, sensors, smellAlerts, wasteReports, containers, events, notifications, unreadCount, pointsLedger, currentUserId, currentUserPoints, leaderboardMonthly, apiOnline, language, t, refreshEvents, refreshReports],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

@@ -133,6 +133,10 @@ export async function fetchReports(signal) {
   return conditionalGet(`${API_URL}/api/reports`, signal, 'Вчитувањето на пријавите не успеа.')
 }
 
+export function clearReportsEtag() {
+  clearConditionalEtag(`${API_URL}/api/reports`)
+}
+
 export async function updateReportStatus(id, status, extra = {}, signal) {
   const headers = { 'Content-Type': 'application/json' }
   const adminToken = getAdminToken()
