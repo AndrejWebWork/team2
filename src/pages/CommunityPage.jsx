@@ -242,7 +242,7 @@ function FormField({ label, htmlFor, children, className = '' }) {
 }
 
 export function CommunityPage() {
-  const { events, setEvents, auth, pushNotification, t } = useApp()
+  const { events, setEvents, auth, pushNotification, refreshEvents, t } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const [toast, setToast] = useState('')
@@ -250,6 +250,13 @@ export function CommunityPage() {
   const [signUpEvent, setSignUpEvent] = useState(null)
   const [detailEvent, setDetailEvent] = useState(null)
   const [showPast, setShowPast] = useState(false)
+
+  // На Community страницата настаните се освежуваат побрзо (8s) — не чекаат 15s poll.
+  useEffect(() => {
+    refreshEvents()
+    const timer = setInterval(refreshEvents, 8000)
+    return () => clearInterval(timer)
+  }, [refreshEvents])
 
   const today = todayStr()
   // Претстојни (денес и понатаму) наспроти изминати акции.
@@ -305,6 +312,7 @@ export function CommunityPage() {
       pushNotification({ title: t('comm.signupConfirmed'), body: t('comm.signedUpFor', { title: target.title }) })
       setToast(t('comm.signupSuccess', { title: target.title }))
       setSignUpEvent(null)
+      refreshEvents()
     } catch (err) {
       const msg = err.message === 'ORGANIZER_CANNOT_SIGNUP' ? t('comm.organizerCannotSignup') : (err.message || t('comm.signupFailed'))
       setToast(msg)
@@ -313,8 +321,12 @@ export function CommunityPage() {
   }
 
   function leaveEvent(id) {
-    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, joined: false } : e)))
-    if (auth.email) leaveEventApi(id, auth.email).catch(() => {})
+    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, joined: false, signupCount: Math.max(0, (e.signupCount ?? 1) - 1) } : e)))
+    if (auth.email) {
+      leaveEventApi(id, auth.email)
+        .then(() => refreshEvents())
+        .catch(() => {})
+    }
     setToast(t('comm.leftEvent'))
   }
 
@@ -322,7 +334,11 @@ export function CommunityPage() {
     if (!window.confirm(t('comm.confirmCancelEvent'))) return
     setEvents((prev) => prev.filter((e) => e.id !== event.id))
     // Оптимистичките (уште неснимени) настани имаат `local-` id → нема што да се брише на сервер.
-    if (!String(event.id).startsWith('local-')) deleteEventApi(event.id, auth.email).catch(() => {})
+    if (!String(event.id).startsWith('local-')) {
+      deleteEventApi(event.id, auth.email)
+        .then(() => refreshEvents())
+        .catch(() => {})
+    }
     setDetailEvent(null)
     setToast(t('comm.eventCancelled'))
   }
@@ -352,6 +368,7 @@ export function CommunityPage() {
       )))
       setNewEvent({ title: '', date: '', location: '', description: '' })
       setToast(t('comm.eventCreated'))
+      refreshEvents()
     } catch (err) {
       setEvents((prev) => prev.filter((ev) => ev.id !== tempId))
       setToast(err.message || t('comm.eventCreateFailed'))

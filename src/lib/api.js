@@ -174,9 +174,19 @@ export async function persistReportWithPhotos({ dataUrls = [], ...payload }, sig
 
 // ---- Настани ----
 
-export async function fetchEvents(email, signal) {
+export function eventsApiUrl(email) {
   const q = email ? `?email=${encodeURIComponent(email)}` : ''
-  return conditionalGet(`${API_URL}/api/events${q}`, signal, 'Вчитувањето на настаните не успеа.')
+  return `${API_URL}/api/events${q}`
+}
+
+// По мутација на настан — ресетирај ETag за анонимни и најавени клиенти.
+export function clearEventsEtags(email) {
+  clearConditionalEtag(eventsApiUrl(null))
+  if (email) clearConditionalEtag(eventsApiUrl(email))
+}
+
+export async function fetchEvents(email, signal) {
+  return conditionalGet(eventsApiUrl(email), signal, 'Вчитувањето на настаните не успеа.')
 }
 
 export async function createEventApi(payload, signal) {
@@ -186,6 +196,7 @@ export async function createEventApi(payload, signal) {
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Креирањето на настанот не успеа.')
+  clearEventsEtags(payload.organizerEmail)
   return data
 }
 
@@ -196,6 +207,7 @@ export async function signupEventApi(id, payload, signal) {
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Пријавувањето не успеа.')
+  clearEventsEtags(payload.email)
   return data
 }
 
@@ -204,6 +216,7 @@ export async function leaveEventApi(id, email, signal) {
     method: 'DELETE', signal,
   })
   if (!res.ok) throw new Error('Откажувањето не успеа.')
+  clearEventsEtags(email)
   return res.json()
 }
 
@@ -226,6 +239,7 @@ export async function deleteEventApi(id, email, signal) {
     signal,
   })
   if (!res.ok) throw new Error('Откажувањето на настанот не успеа.')
+  clearEventsEtags(email)
   return res.json()
 }
 

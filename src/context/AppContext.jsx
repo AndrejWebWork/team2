@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   NOT_MODIFIED,
   clearAllConditionalEtags,
+  clearEventsEtags,
   createEventApi,
   createNotificationApi,
   deleteEventApi,
@@ -39,6 +40,7 @@ const AppContext = createContext(null)
 const LANG_STORAGE_KEY = 'ekoskopje.language'
 const AUTH_STORAGE_KEY = 'ekoskopje.auth'
 const REPORTS_CACHE_PREFIX = 'ekoskopje.reports.cache.'
+const EVENTS_CACHE_PREFIX = 'ekoskopje.events.cache.'
 
 const ANON_AUTH = { isAuthenticated: true, role: 'user', email: '', displayName: '', userId: '', isAnonymous: true }
 
@@ -132,6 +134,28 @@ function writeCachedReports(identity, { waste, containers, smell }) {
   }
 }
 
+function readCachedEvents(identity) {
+  try {
+    const raw = localStorage.getItem(`${EVENTS_CACHE_PREFIX}${identity}`)
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    return Array.isArray(data?.events) ? data.events : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedEvents(identity, list) {
+  try {
+    localStorage.setItem(
+      `${EVENTS_CACHE_PREFIX}${identity}`,
+      JSON.stringify({ events: list, cachedAt: new Date().toISOString() }),
+    )
+  } catch {
+    /* localStorage полн/недостапен — тивко игнорирај */
+  }
+}
+
 export function AppProvider({ children }) {
   const [auth, setAuth] = useState(readStoredAuth)
   // Сите податоци се РЕАЛНИ: сензорите доаѓаат во живо од WAQI (во AirPage),
@@ -204,7 +228,7 @@ export function AppProvider({ children }) {
     setWasteReports([])
     setContainers([])
     setSmellAlerts([])
-    setEvents([])
+    setEvents(readCachedEvents(reportsIdentityKey) || [])
     setServerLeaderboard([])
     wasteSnapRef.current = []
     containersSnapRef.current = []
@@ -235,10 +259,13 @@ export function AppProvider({ children }) {
 
     const loadFromCache = () => {
       const cached = readCachedReports(reportsIdentityKey)
-      if (!cached) return
-      setWasteReports(cached.waste)
-      setContainers(cached.containers)
-      setSmellAlerts(cached.smell)
+      if (cached) {
+        setWasteReports(cached.waste)
+        setContainers(cached.containers)
+        setSmellAlerts(cached.smell)
+      }
+      const cachedEvents = readCachedEvents(reportsIdentityKey)
+      if (cachedEvents) setEvents(cachedEvents)
     }
 
     let syncInFlight = false
@@ -309,7 +336,10 @@ export function AppProvider({ children }) {
           setSmellAlerts(smell)
           writeCachedReports(reportsIdentityKey, { waste, containers, smell })
         }
-        if (evts !== NOT_MODIFIED) setEvents(evts)
+        if (evts !== NOT_MODIFIED) {
+          setEvents(evts)
+          writeCachedEvents(reportsIdentityKey, evts)
+        }
         if (board !== NOT_MODIFIED) setServerLeaderboard(board)
         // Известувања: за регистриран корисник backend е извор; анонимен = локално.
         if (email) {
@@ -356,6 +386,20 @@ export function AppProvider({ children }) {
     clearAllConditionalEtags()
     setRefreshKey((k) => k + 1)
   }
+
+  // Само настани — побрз refresh без да ги повторува reports/leaderboard.
+  const refreshEvents = useCallback(async () => {
+    clearEventsEtags(email || null)
+    try {
+      const evts = await fetchEvents(email || null)
+      if (evts !== NOT_MODIFIED) {
+        setEvents(evts)
+        writeCachedEvents(reportsIdentityKey, evts)
+      }
+    } catch {
+      /* тивко — polling ќе проба повторно */
+    }
+  }, [email, reportsIdentityKey])
 
   const logout = useCallback(() => {
     setStoredAdminToken('')
@@ -660,20 +704,20 @@ export function AppProvider({ children }) {
 
   async function createEvent(payload) {
     await createEventApi({ ...payload, organizerEmail: email, organizerName: payload.organizerName || email })
-    refreshData()
+    refreshEvents()
   }
   async function joinEvent(id, payload = {}) {
     await signupEventApi(id, { email, ...payload })
-    refreshData()
+    refreshEvents()
   }
   async function leaveEvent(id) {
     if (!email) return
     await leaveEventApi(id, email)
-    refreshData()
+    refreshEvents()
   }
   async function deleteEvent(id) {
     await deleteEventApi(id, email)
-    refreshData()
+    refreshEvents()
   }
 
   // Лидерборд: регистрираните корисници доаѓаат од backend; анонимниот уред се
@@ -723,6 +767,7 @@ export function AppProvider({ children }) {
       setLanguage,
       t,
       refreshData,
+      refreshEvents,
       logout,
       submitReport,
       changeReportStatus,
@@ -733,7 +778,7 @@ export function AppProvider({ children }) {
       leaveEvent,
       deleteEvent,
     }),
-    [auth, sensors, smellAlerts, wasteReports, containers, events, notifications, unreadCount, pointsLedger, currentUserId, currentUserPoints, leaderboardMonthly, apiOnline, language, t],
+    [auth, sensors, smellAlerts, wasteReports, containers, events, notifications, unreadCount, pointsLedger, currentUserId, currentUserPoints, leaderboardMonthly, apiOnline, language, t, refreshEvents],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

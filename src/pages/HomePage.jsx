@@ -129,7 +129,6 @@ function SmellForm({ submitReport, onDone, loc, t }) {
     setBusy(false)
     setDescription('')
     setIntensity(3)
-    setToast(t('form.smellSent'))
     onDone()
   }
 
@@ -191,7 +190,6 @@ function DeponijForm({ submitReport, onDone, loc, t }) {
     setBusy(false)
     setDescription('')
     setPhotos([])
-    setToast(t('deponija.sent'))
     onDone()
   }
 
@@ -237,7 +235,6 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
     setContainerKind('mesan')
     setIssueType('full')
     setPhotos([])
-    setToast(t('container.sent'))
     onDone()
   }
 

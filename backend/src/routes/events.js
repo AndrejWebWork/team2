@@ -1,13 +1,13 @@
 import { Router } from 'express'
 import { config } from '../config.js'
 import { query } from '../db.js'
-import { invalidateCache, serveCachedJson } from '../lib/responseCache.js'
+import { invalidateCache, serveCachedJson, serveFreshJson } from '../lib/responseCache.js'
 import { resolveUserId } from '../services/users.js'
 
 export const eventsRouter = Router()
 
-// Настаните ретко се менуваат → кеш 10s. Клучот вклучува email заради „joined“.
-const EVENTS_TTL_MS = 60000
+// Клучот вклучува email заради „joined“. На Vercel секогаш свежо од база (поглед reports GET).
+const EVENTS_TTL_MS = 15000
 
 // Претвора ред + број пријавени во облик што го користи frontend-от.
 function rowToEvent(r) {
@@ -60,27 +60,32 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 eventsRouter.get('/', async (req, res, next) => {
   try {
     const email = req.query.email || null
+    const producer = async () => {
+      const { rows } = await query(
+        `SELECT e.*,
+           ou.email AS organizer_email,
+           ou.instagram_handle AS organizer_instagram,
+           (SELECT COUNT(*) FROM event_signups s WHERE s.event_id = e.id) AS signup_count,
+           EXISTS(
+             SELECT 1 FROM event_signups s
+             JOIN users u ON u.id = s.user_id
+             WHERE s.event_id = e.id AND u.email = $1
+           ) AS joined
+         FROM events e
+         LEFT JOIN users ou ON ou.id = e.organizer_id
+         ORDER BY e.event_date ASC`,
+        [email],
+      )
+      return rows.map(rowToEvent)
+    }
+    if (process.env.VERCEL) {
+      await serveFreshJson(req, res, producer)
+      return
+    }
     await serveCachedJson(req, res, {
       key: `events:${email || 'anon'}`,
       ttlMs: EVENTS_TTL_MS,
-      producer: async () => {
-        const { rows } = await query(
-          `SELECT e.*,
-             ou.email AS organizer_email,
-             ou.instagram_handle AS organizer_instagram,
-             (SELECT COUNT(*) FROM event_signups s WHERE s.event_id = e.id) AS signup_count,
-             EXISTS(
-               SELECT 1 FROM event_signups s
-               JOIN users u ON u.id = s.user_id
-               WHERE s.event_id = e.id AND u.email = $1
-             ) AS joined
-           FROM events e
-           LEFT JOIN users ou ON ou.id = e.organizer_id
-           ORDER BY e.event_date ASC`,
-          [email],
-        )
-        return rows.map(rowToEvent)
-      },
+      producer,
     })
   } catch (err) { next(err) }
 })
