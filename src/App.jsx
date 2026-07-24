@@ -1,4 +1,5 @@
-﻿import { Navigate, Route, Routes } from 'react-router-dom'
+﻿import { useLayoutEffect } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { CookieConsent } from './components/CookieConsent'
 import { Layout } from './components/Layout'
 import { useApp } from './context/AppContext'
@@ -20,6 +21,14 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { WastePage } from './pages/WastePage'
 
+function ScrollToTop() {
+  const { pathname, search } = useLocation()
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname, search])
+  return null
+}
+
 function ProtectedLayout() {
   const { auth } = useApp()
   if (!auth.isAuthenticated) return <Navigate to='/auth-loading' replace />
@@ -29,6 +38,7 @@ function ProtectedLayout() {
 export default function App() {
   return (
     <>
+      <ScrollToTop />
       <Routes>
         <Route path='/' element={<Navigate to='/home' replace />} />
         <Route path='/auth-loading' element={<AuthLoadingPage />} />
