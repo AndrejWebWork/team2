@@ -56,7 +56,6 @@ export function buildReportClipboardContent(report, t, extras = {}) {
   const location = report.location || report.area || t('admin.unknownLocation')
   const municipality = report.municipality || t('admin.municipalityUnknown')
   const reportedBy = report.reportedBy || report.createdBy || t('common.anonymous')
-  const institution = t(`institution.${report.institutionId || 'drugo'}`)
   const photos = reportPhotos(report)
 
   const mapLink = report.lat != null
@@ -119,7 +118,6 @@ ${row(t('admin.openMap'), mapLink)}
 ${row(t('table.status'), escapeHtml(statusLabel))}
 ${row(t('admin.reportedBy'), escapeHtml(reportedBy))}
 ${row(t('admin.date'), mkDate(report.createdAt))}
-${row(t('admin.routedTo'), escapeHtml(institution))}
 ${extraHtml}
 </table>
 <p style="margin:16px 0 0;font-size:11px;color:#94a3b8">ID: ${escapeHtml(report.id || '—')}</p>
@@ -135,7 +133,6 @@ ${extraHtml}
     plainRow(t('table.status'), statusLabel),
     plainRow(t('admin.reportedBy'), reportedBy),
     plainRow(t('admin.date'), mkDate(report.createdAt)),
-    plainRow(t('admin.routedTo'), institution),
     extraPlain,
     `ID: ${report.id || '—'}`,
   ].join('\n').trim()

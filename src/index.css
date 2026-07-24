@@ -155,6 +155,22 @@ select:focus {
   animation: consent-card-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Централен modal (потврда пријава, статус) — само scale, без поместување. */
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-in {
+  animation: modal-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Странична фиока (детали на пријава) — влегување од десно кон лево. */
 @keyframes drawer-in-right {
   from { transform: translateX(100%); }

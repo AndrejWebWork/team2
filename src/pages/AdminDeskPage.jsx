@@ -35,7 +35,6 @@ function LocationMeta({ lat, lng, municipality }) {
   )
 }
 
-const institutionLabelKey = (id) => `institution.${id || 'drugo'}`
 const containerKindLabelKey = (id) => `containerKind.${id || 'mesan'}`
 
 const TABS = [
@@ -74,7 +73,6 @@ function WasteRow({ report, onStatus }) {
         <p className='text-sm text-slate-600 line-clamp-2'>{report.description}</p>
         <p className='text-xs text-slate-400'>{report.reportedBy || t('common.anonymous')} · {mkDate(report.createdAt)}</p>
         <LocationMeta lat={report.lat} lng={report.lng} municipality={report.municipality} />
-        <p className='text-xs font-medium text-sky-600'>→ {t(institutionLabelKey(report.institutionId))}</p>
         {report.status !== 'resolved' && (
           <div className='flex gap-2 pt-1'>
             <Button size='sm' variant='outline' onClick={() => onStatus(report.id, 'in_progress')}>{t('desk.inProgressBtn')}</Button>
@@ -112,7 +110,6 @@ function SmellRow({ alert, nested = false }) {
         <p className='text-sm text-slate-600'>{alert.message}</p>
         <p className='text-xs text-slate-400'>{alert.createdBy || t('common.anonymous')} · {mkDate(alert.createdAt)}</p>
         <LocationMeta lat={alert.lat} lng={alert.lng} municipality={alert.municipality} />
-        <p className='text-xs font-medium text-sky-600'>→ {t(institutionLabelKey(alert.institutionId))}</p>
       </div>
     </div>
   )
@@ -167,7 +164,6 @@ function ContainerRow({ container, onReset }) {
         {container.description && <p className='text-sm text-slate-500'>{container.description}</p>}
         <p className='text-xs text-slate-400'>{container.reportedBy || t('common.anonymous')} · {mkDate(container.createdAt)}</p>
         <LocationMeta lat={container.lat} lng={container.lng} municipality={container.municipality} />
-        <p className='text-xs font-medium text-sky-600'>→ {t(institutionLabelKey(container.institutionId))}</p>
         {container.issueOpen && (
           <div className='pt-1'>
             <Button size='sm' onClick={() => onReset(container.id)}><CheckCircle2 className='h-3.5 w-3.5' />{t('desk.markResolved')}</Button>

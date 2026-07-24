@@ -41,7 +41,6 @@ function TypePill({ type }) {
   return <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${m.color}`}><m.Icon className='h-3 w-3' />{t(m.key)}</span>
 }
 
-const institutionLabelKey = (id) => `institution.${id || 'drugo'}`
 const containerKindLabelKey = (id) => `containerKind.${id || 'mesan'}`
 const ADMIN_PAGE_SIZE = 8
 
@@ -210,10 +209,6 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
               <div>
                 <p className='text-xs font-semibold uppercase tracking-wide text-slate-400'>{t('admin.date')}</p>
                 <p className='mt-0.5 text-slate-700'>{mkDate(report.createdAt)}</p>
-              </div>
-              <div className='col-span-2'>
-                <p className='text-xs font-semibold uppercase tracking-wide text-slate-400'>{t('admin.routedTo')}</p>
-                <p className='mt-0.5 font-medium text-sky-600'>{t(institutionLabelKey(report.institutionId))}</p>
               </div>
               {report.resolvedAt && (
                 <div className='col-span-2'>
