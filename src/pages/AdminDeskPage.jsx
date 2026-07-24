@@ -1,6 +1,7 @@
 import { AlertTriangle, Camera, CheckCircle2, Flame, MapPin, Recycle, Siren, Trash2, Wind } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { StatusUpdateSuccessModal } from '../components/StatusUpdateSuccessModal'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -42,6 +43,12 @@ const TABS = [
   { key: 'smell', labelKey: 'desk.tabsSmell' },
   { key: 'containers', labelKey: 'desk.tabsContainers' },
 ]
+
+const STATUS_META = {
+  pending: 'status.pending',
+  in_progress: 'status.in_progress',
+  resolved: 'status.resolved',
+}
 
 function SectionEmpty({ text }) {
   return <p className='py-8 text-center text-sm text-slate-400'>{text}</p>
@@ -175,6 +182,7 @@ export function AdminDeskPage() {
   const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, pushNotification, t } = useApp()
   const [tab, setTab] = useState('waste')
   const [airSensors, setAirSensors] = useState([])
+  const [statusSuccess, setStatusSuccess] = useState(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -206,6 +214,8 @@ export function AdminDeskPage() {
       }
     }
     const mapped = serverRow ? serverToWaste(serverRow) : null
+    const loc = wasteReports.find((r) => r.id === id)?.location || t('admin.unknownLocation')
+    const statusLabel = t(STATUS_META[status] || STATUS_META.pending)
     setWasteReports((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r
@@ -218,6 +228,10 @@ export function AdminDeskPage() {
         }
       }),
     )
+    setStatusSuccess({
+      title: t('admin.statusUpdatedTitle', { status: statusLabel }),
+      body: t('admin.statusUpdatedBody', { loc, status: statusLabel }),
+    })
   }
 
   async function resetContainer(id) {
@@ -232,11 +246,17 @@ export function AdminDeskPage() {
       }
     }
     const mapped = serverRow ? serverToContainer(serverRow) : null
+    const loc = containers.find((c) => c.id === id)?.area || t('admin.unknownLocation')
+    const statusLabel = t('status.resolved')
     setContainers((prev) => prev.map((c) => {
       if (c.id !== id) return c
       if (mapped) return mapped
       return { ...c, issue: 'none', issueOpen: false }
     }))
+    setStatusSuccess({
+      title: t('admin.statusUpdatedTitle', { status: statusLabel }),
+      body: t('admin.statusUpdatedBody', { loc, status: statusLabel }),
+    })
   }
 
   const stats = [
@@ -314,6 +334,13 @@ export function AdminDeskPage() {
           )}
         </CardContent>
       </Card>
+
+      <StatusUpdateSuccessModal
+        open={!!statusSuccess}
+        title={statusSuccess?.title}
+        body={statusSuccess?.body}
+        onClose={() => setStatusSuccess(null)}
+      />
     </div>
   )
 }

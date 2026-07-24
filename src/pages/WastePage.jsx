@@ -1,10 +1,10 @@
 import { Camera, MapPin, UserRound } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { ReportShortcutButton } from '../components/ReportShortcutButton'
 import { ResolvedReportsPager } from '../components/ResolvedReportsPager'
+import { StatusUpdateSuccessModal } from '../components/StatusUpdateSuccessModal'
 import { StatusBadge } from '../components/StatusBadge'
-import { Toast } from '../components/Toast'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -20,6 +20,7 @@ function mkDate(iso, noDate) {
 
 export function WastePage() {
   const { wasteReports, setWasteReports, auth, awardPoints, t } = useApp()
+  const [statusSuccess, setStatusSuccess] = useState(null)
 
   const isMine = (r) => isMyReport(r, auth, getDeviceId())
   const myReports = useMemo(
@@ -40,16 +41,20 @@ export function WastePage() {
     resolved: myReports.filter((r) => r.status === 'resolved').length,
   }), [myReports])
 
-  function updateStatus(id, status) {
-    // Пријавите од базата (UUID) се ажурираат и на backend (единствен извор).
+  async function updateStatus(id, status) {
     if (typeof id === 'string' && id.includes('-')) {
-      updateReportStatus(id, status).catch(() => {})
+      try {
+        await updateReportStatus(id, status)
+      } catch {
+        return
+      }
     }
+    const report = wasteReports.find((r) => r.id === id)
+    const loc = report?.location || t('admin.unknownLocation')
+    const statusLabel = t(`status.${status}`)
     setWasteReports((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r
-        // +2 поени при решен проблем (вкупно 3 со пријавата) — само за
-        // регистрирани корисници (анонимните немаат поени).
         if (status === 'resolved' && r.status !== 'resolved' && !r.resolvedRewardGiven) {
           if (r.reportedById && r.reportedById.includes('@')) awardPoints(r.reportedById, 2)
         }
@@ -62,6 +67,12 @@ export function WastePage() {
         }
       }),
     )
+    if (auth.role === 'admin') {
+      setStatusSuccess({
+        title: t('admin.statusUpdatedTitle', { status: statusLabel }),
+        body: t('admin.statusUpdatedBody', { loc, status: statusLabel }),
+      })
+    }
   }
 
   return (
@@ -171,6 +182,13 @@ export function WastePage() {
           <ReportShortcutButton reportType='deponija' className='w-full' />
         </CardContent>
       </Card>
+
+      <StatusUpdateSuccessModal
+        open={!!statusSuccess}
+        title={statusSuccess?.title}
+        body={statusSuccess?.body}
+        onClose={() => setStatusSuccess(null)}
+      />
     </div>
   )
 }

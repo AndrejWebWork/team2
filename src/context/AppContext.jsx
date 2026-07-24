@@ -517,7 +517,7 @@ export function AppProvider({ children }) {
     } else if (p.type === 'container') {
       setContainers((prev) => [{
         id: `C-local-${Date.now()}`, area: p.location, lat: p.lat, lng: p.lng,
-        fill: p.fill ?? 90, issue: p.containerIssue || 'full', description: p.description || '',
+        fill: p.fill ?? null, issue: p.containerIssue || 'full', description: p.description || '',
         photo: (p.dataUrls && p.dataUrls[0]) || '', issueOpen: true,
         reportedBy, reportedById: currentUserId, reportedByDevice: DEVICE_ID, createdAt: now,
       }, ...prev])

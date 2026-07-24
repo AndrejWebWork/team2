@@ -1,12 +1,15 @@
-import { AlertTriangle, ArrowUpDown, Biohazard, Camera, ChevronRight, Flame, MapPin, Recycle, Siren, Trash2, Wind, X } from 'lucide-react'
+import { AlertTriangle, ArrowUpDown, Biohazard, Camera, ChevronRight, Copy, Flame, MapPin, Recycle, Siren, Trash2, Wind, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Navigate } from 'react-router-dom'
 import { PaginationControls } from '../components/PaginationControls'
+import { StatusUpdateSuccessModal } from '../components/StatusUpdateSuccessModal'
+import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { usePagination } from '../hooks/usePagination'
 import { useApp } from '../context/AppContext'
 import { updateReportStatus, serverToContainer, serverToWaste } from '../lib/api'
+import { copyReportToClipboard } from '../lib/reportClipboard'
 import { buildSmellClusterCounts, fetchAllAirSensors, resolveSmellSensor, smellUrgencyWithCluster } from '../lib/smellSensor'
 function mkDate(iso) {
   if (!iso) return '—'
@@ -53,9 +56,10 @@ function urgencyScore(r, clusterCounts, sensors) {
   return 0
 }
 
-function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorName }) {
+function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorName, onCopyFeedback }) {
   const { t } = useApp()
   const [pendingStatus, setPendingStatus] = useState(report.status)
+  const [copying, setCopying] = useState(false)
   const changed = pendingStatus !== report.status
 
   useEffect(() => {
@@ -81,7 +85,27 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
             <TypePill type={report.type} />
             <StatusPill status={report.status} />
           </div>
-          <button onClick={onClose} className='rounded-lg p-1.5 text-slate-400 hover:bg-slate-100'><X className='h-5 w-5' /></button>
+          <div className='flex items-center gap-1'>
+            <Button
+              size='sm'
+              variant='outline'
+              disabled={copying}
+              onClick={async () => {
+                setCopying(true)
+                try {
+                  await copyReportToClipboard(report, t, { clusterCount, sensorName })
+                  onCopyFeedback(t('admin.copyReportSuccess'))
+                } catch {
+                  onCopyFeedback(t('admin.copyReportFailed'))
+                } finally {
+                  setCopying(false)
+                }
+              }}
+            >
+              <Copy className='h-3.5 w-3.5' />{t('admin.copyReport')}
+            </Button>
+            <button onClick={onClose} className='rounded-lg p-1.5 text-slate-400 hover:bg-slate-100'><X className='h-5 w-5' /></button>
+          </div>
         </div>
 
         {/* Content */}
@@ -262,6 +286,8 @@ export function AdminPanelPage() {
   const [sortDir, setSortDir] = useState('desc')
   const [selected, setSelected] = useState(null)
   const [airSensors, setAirSensors] = useState([])
+  const [statusSuccess, setStatusSuccess] = useState(null)
+  const [copyToast, setCopyToast] = useState('')
 
   useEffect(() => {
     refreshData()
@@ -364,7 +390,7 @@ export function AdminPanelPage() {
       }))
     }
 
-    pushNotification({
+    setStatusSuccess({
       title: t('admin.statusUpdatedTitle', { status: statusLabel }),
       body: t('admin.statusUpdatedBody', { loc: location, status: statusLabel }),
     })
@@ -544,6 +570,7 @@ export function AdminPanelPage() {
           report={selected}
           onClose={() => setSelected(null)}
           onUpdateStatus={updateStatus}
+          onCopyFeedback={setCopyToast}
           clusterCount={
             selected.type === 'smell'
               ? (smellClusterCounts.get(
@@ -558,6 +585,14 @@ export function AdminPanelPage() {
           }
         />
       )}
+
+      <StatusUpdateSuccessModal
+        open={!!statusSuccess}
+        title={statusSuccess?.title}
+        body={statusSuccess?.body}
+        onClose={() => setStatusSuccess(null)}
+      />
+      <Toast toast={copyToast} onClose={() => setCopyToast('')} />
     </div>
   )
 }
