@@ -2,6 +2,7 @@ import { Camera, MapPin, UserRound } from 'lucide-react'
 import { useMemo } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { ReportShortcutButton } from '../components/ReportShortcutButton'
+import { ResolvedReportsPager } from '../components/ResolvedReportsPager'
 import { StatusBadge } from '../components/StatusBadge'
 import { Toast } from '../components/Toast'
 import { Badge } from '../components/ui/badge'
@@ -127,43 +128,39 @@ export function WastePage() {
         )}
       </section>
 
-      <section className='space-y-3 pb-2'>
-        <div className='flex items-center justify-between'>
-          <h2 className='text-lg font-semibold text-slate-900'>{t('waste.resolvedTitle')}</h2>
-          <p className='text-xs text-slate-500'>{resolvedPosts.length} {t('waste.posts')}</p>
-        </div>
-        {resolvedPosts.length === 0 ? (
-          <EmptyState title={t('waste.noResolved')} description={t('waste.noResolvedDesc')} />
-        ) : (
-          <div className='grid gap-4 md:grid-cols-2'>
-            {resolvedPosts.map((report) => (
-              <article key={report.id} className='overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md'>
-                <div className='relative h-52 bg-slate-100'>
-                  {report.photo ? (
-                    <img src={report.photo} alt={report.location} className='h-full w-full object-cover' />
-                  ) : (
-                    <div className='flex h-full items-center justify-center text-slate-400'><Camera className='h-10 w-10' /></div>
-                  )}
-                  <div className='absolute left-3 top-3 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white'>{t('waste.resolvedTag')}</div>
-                </div>
-                <div className='space-y-2 p-4'>
-                  <p className='flex items-center gap-1.5 font-semibold text-slate-900'>
-                    <MapPin className='h-4 w-4 text-emerald-600' />{report.location}
-                  </p>
-                  {report.lat != null && (
-                    <p className='text-xs text-slate-400'>GPS: {Number(report.lat).toFixed(5)}, {Number(report.lng).toFixed(5)}</p>
-                  )}
-                  <p className='text-sm text-slate-600'>{report.description}</p>
-                  <div className='flex flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between'>
-                    <p className='inline-flex items-center gap-1'><UserRound className='h-3.5 w-3.5' />{t('waste.reportedBy')} {report.reportedBy || t('common.anonymousCitizen')}</p>
-                    <p>{mkDate(report.resolvedAt || report.createdAt, t('waste.noDate'))}</p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+      <ResolvedReportsPager
+        title={t('waste.resolvedTitle')}
+        items={resolvedPosts}
+        countLabel={t('waste.posts')}
+        emptyTitle={t('waste.noResolved')}
+        emptyDescription={t('waste.noResolvedDesc')}
+        t={t}
+        renderItem={(report) => (
+          <article key={report.id} className='overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md'>
+            <div className='relative h-52 bg-slate-100'>
+              {report.photo ? (
+                <img src={report.photo} alt={report.location} className='h-full w-full object-cover' />
+              ) : (
+                <div className='flex h-full items-center justify-center text-slate-400'><Camera className='h-10 w-10' /></div>
+              )}
+              <div className='absolute left-3 top-3 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white'>{t('waste.resolvedTag')}</div>
+            </div>
+            <div className='space-y-2 p-4'>
+              <p className='flex items-center gap-1.5 font-semibold text-slate-900'>
+                <MapPin className='h-4 w-4 text-emerald-600' />{report.location}
+              </p>
+              {report.lat != null && (
+                <p className='text-xs text-slate-400'>GPS: {Number(report.lat).toFixed(5)}, {Number(report.lng).toFixed(5)}</p>
+              )}
+              <p className='text-sm text-slate-600'>{report.description}</p>
+              <div className='flex flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between'>
+                <p className='inline-flex items-center gap-1'><UserRound className='h-3.5 w-3.5' />{t('waste.reportedBy')} {report.reportedBy || t('common.anonymousCitizen')}</p>
+                <p>{mkDate(report.resolvedAt || report.createdAt, t('waste.noDate'))}</p>
+              </div>
+            </div>
+          </article>
         )}
-      </section>
+      />
 
       <Card className='border-amber-100 bg-gradient-to-br from-white to-amber-50/40'>
         <CardHeader>

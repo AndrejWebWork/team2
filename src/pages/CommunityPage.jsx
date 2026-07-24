@@ -1,7 +1,7 @@
 import { CalendarDays, ChevronLeft, Loader2, MapPin, Trash2, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { InstagramIcon } from '../components/InstagramIcon'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { EventDatePicker } from '../components/EventDatePicker'
 import { Toast } from '../components/Toast'
@@ -11,6 +11,7 @@ import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
 import { createEventApi, deleteEventApi, fetchEventSignupsApi, leaveEventApi, signupEventApi } from '../lib/api'
+import { loginNavState } from '../lib/authNav'
 import { formatDisplayDate, isTodayOrFuture, todayIso } from '../lib/dates'
 import { instagramProfileUrl, normalizeInstagramHandle } from '../lib/instagram'
 
@@ -232,6 +233,7 @@ function EventDetailPage({ event, past, canManage, isOrganizer, organizerEmail, 
 export function CommunityPage() {
   const { events, setEvents, auth, pushNotification, t } = useApp()
   const navigate = useNavigate()
+  const location = useLocation()
   const [toast, setToast] = useState('')
   const [newEvent, setNewEvent] = useState({ title: '', date: '', location: '', description: '' })
   const [signUpEvent, setSignUpEvent] = useState(null)
@@ -258,7 +260,7 @@ export function CommunityPage() {
   }
 
   function requireRegistered() {
-    if (auth.isAnonymous) { navigate('/login', { state: { allowLogin: true } }); return false }
+    if (auth.isAnonymous) { navigate('/login', { state: loginNavState(location.pathname) }); return false }
     return true
   }
 

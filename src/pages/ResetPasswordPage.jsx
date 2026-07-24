@@ -1,15 +1,17 @@
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
 import { resetPasswordApi } from '../lib/api'
+import { loginNavState } from '../lib/authNav'
 import { LOGO_SRC } from '../lib/brand'
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const { t } = useApp()
   const token = useMemo(() => searchParams.get('token') || '', [searchParams])
@@ -40,7 +42,7 @@ export function ResetPasswordPage() {
     <div className='relative min-h-screen bg-gradient-to-br from-emerald-50 via-white to-sky-50 flex items-center justify-center p-4'>
       <button
         type='button'
-        onClick={() => navigate('/login', { state: { allowLogin: true } })}
+        onClick={() => navigate('/login', { state: loginNavState(location.state?.returnTo) })}
         aria-label={t('common.back')}
         className='absolute left-4 z-20 flex h-10 items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 pl-3 pr-4 text-sm font-semibold text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white hover:text-slate-900'
         style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
@@ -62,7 +64,7 @@ export function ResetPasswordPage() {
             <p className='mt-3 text-sm leading-relaxed text-slate-600'>{t('reset.doneBody')}</p>
             <Button
               className='mt-8 h-11 w-full'
-              onClick={() => navigate('/login', { state: { allowLogin: true } })}
+              onClick={() => navigate('/login', { state: loginNavState(location.state?.returnTo) })}
             >
               {t('forgot.backToLogin')}
             </Button>
@@ -73,6 +75,7 @@ export function ResetPasswordPage() {
             <p className='mt-3 text-sm leading-relaxed text-slate-600'>{t('reset.invalidBody')}</p>
             <Link
               to='/forgot-password'
+              state={{ returnTo: location.state?.returnTo }}
               className='mt-8 inline-flex h-11 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-base font-semibold text-slate-700 hover:bg-slate-50'
             >
               {t('login.forgotPassword')}

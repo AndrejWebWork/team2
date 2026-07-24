@@ -2,7 +2,9 @@ import { AlertTriangle, ArrowUpDown, Biohazard, Camera, ChevronRight, Flame, Map
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Navigate } from 'react-router-dom'
+import { PaginationControls } from '../components/PaginationControls'
 import { Button } from '../components/ui/button'
+import { usePagination } from '../hooks/usePagination'
 import { useApp } from '../context/AppContext'
 import { updateReportStatus, serverToContainer, serverToWaste } from '../lib/api'
 import { buildSmellClusterCounts, fetchAllAirSensors, resolveSmellSensor, smellUrgencyWithCluster } from '../lib/smellSensor'
@@ -38,6 +40,7 @@ function TypePill({ type }) {
 
 const institutionLabelKey = (id) => `institution.${id || 'drugo'}`
 const containerKindLabelKey = (id) => `containerKind.${id || 'mesan'}`
+const ADMIN_PAGE_SIZE = 8
 
 function urgencyScore(r, clusterCounts, sensors) {
   if (r.type === 'smell') {
@@ -299,6 +302,17 @@ export function AdminPanelPage() {
     })
   }, [allReports, typeFilter, statusFilter, sortBy, sortDir, smellClusterCounts, airSensors])
 
+  const paginationKey = `${typeFilter}-${statusFilter}-${sortBy}-${sortDir}`
+  const {
+    visible: pagedReports,
+    currentPage,
+    totalPages,
+    total: filteredTotal,
+    setPage,
+    from,
+    to,
+  } = usePagination(filtered, ADMIN_PAGE_SIZE, paginationKey)
+
   function toggleSort(col) {
     if (sortBy === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc')
     else { setSortBy(col); setSortDir('desc') }
@@ -432,6 +446,18 @@ export function AdminPanelPage() {
         </div>
       </div>
 
+      <div className='flex justify-end'>
+        <PaginationControls
+          total={filteredTotal}
+          countLabel={t('admin.reportsCount')}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPrev={() => setPage((p) => Math.max(0, p - 1))}
+          onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          t={t}
+        />
+      </div>
+
       {/* Table */}
       <div className='overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm'>
         <div className='overflow-x-auto'>
@@ -460,10 +486,10 @@ export function AdminPanelPage() {
               </tr>
             </thead>
             <tbody className='divide-y divide-slate-100'>
-              {filtered.length === 0 && (
+              {filteredTotal === 0 && (
                 <tr><td colSpan={7} className='px-4 py-10 text-center text-sm text-slate-400'>{t('admin.noReports')}</td></tr>
               )}
-              {filtered.map((r) => {
+              {pagedReports.map((r) => {
                 const { sensorId, sensorName } = r.type === 'smell' && airSensors.length
                   ? resolveSmellSensor(r, airSensors)
                   : { sensorId: r.nearestSensorId || '_unknown', sensorName: null }
@@ -507,7 +533,9 @@ export function AdminPanelPage() {
           </table>
         </div>
         <div className='border-t border-slate-100 px-4 py-2.5 text-xs text-slate-400'>
-          {t('admin.showing', { shown: filtered.length, total: activeReports.length })}
+          {filteredTotal === 0
+            ? t('admin.noReports')
+            : t('admin.showingRange', { from, to, total: filteredTotal })}
         </div>
       </div>
 

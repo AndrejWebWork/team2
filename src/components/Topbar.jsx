@@ -2,6 +2,7 @@ import { Bell, Gift, LogIn, LogOut, ScrollText, Settings, UserCircle2, X } from 
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
+import { loginNavState } from '../lib/authNav'
 
 export function Topbar({ role, unreadCount, logout, email, displayName, isAnonymous, currentUserPoints, t }) {
   const navigate = useNavigate()
@@ -118,7 +119,7 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => navigate('/login', { state: { allowLogin: true } })}
+                onClick={() => navigate('/login', { state: loginNavState(location.pathname) })}
                 className='hidden border-emerald-200 text-sm text-emerald-700 hover:bg-emerald-50 lg:flex'
               >
                 <LogIn className='h-4 w-4' />{t('topbar.login')}
@@ -174,7 +175,7 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
 
               {isAnonymous ? (
                 <button
-                  onClick={() => { navigate('/login', { state: { allowLogin: true } }); setOpenMenu(false) }}
+                  onClick={() => { navigate('/login', { state: loginNavState(location.pathname) }); setOpenMenu(false) }}
                   className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50'
                 >
                   <LogIn className='h-5 w-5 shrink-0' />{t('topbar.login')}

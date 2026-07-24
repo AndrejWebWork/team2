@@ -5,6 +5,7 @@ import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { BRAND_SRC, LOGO_SRC } from '../lib/brand'
+import { loginNavState, resolveAuthReturnTo } from '../lib/authNav'
 import { useApp } from '../context/AppContext'
 
 function destForRole(role) {
@@ -30,8 +31,7 @@ export function LoginPage() {
   }, [location.state, navigate])
 
   function goBack() {
-    if (window.history.length > 1) navigate(-1)
-    else navigate('/air')
+    navigate(resolveAuthReturnTo(location.state?.returnTo), { replace: true })
   }
 
   async function onSubmit(e) {
@@ -167,6 +167,7 @@ export function LoginPage() {
                 <div className='flex justify-end'>
                   <Link
                     to='/forgot-password'
+                    state={{ returnTo: location.state?.returnTo }}
                     className='text-sm font-medium text-emerald-600 hover:text-emerald-700'
                   >
                     {t('login.forgotPassword')}

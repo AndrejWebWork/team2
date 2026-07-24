@@ -1,15 +1,17 @@
 import { ArrowLeft, Loader2, Mail } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
 import { forgotPasswordApi } from '../lib/api'
+import { loginNavState } from '../lib/authNav'
 import { LOGO_SRC } from '../lib/brand'
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useApp()
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
@@ -37,7 +39,7 @@ export function ForgotPasswordPage() {
     <div className='relative min-h-screen bg-gradient-to-br from-emerald-50 via-white to-sky-50 flex items-center justify-center p-4'>
       <button
         type='button'
-        onClick={() => navigate('/login', { state: { allowLogin: true } })}
+        onClick={() => navigate('/login', { state: loginNavState(location.state?.returnTo) })}
         aria-label={t('common.back')}
         className='absolute left-4 z-20 flex h-10 items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 pl-3 pr-4 text-sm font-semibold text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white hover:text-slate-900'
         style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
@@ -62,7 +64,7 @@ export function ForgotPasswordPage() {
             <p className='mt-3 text-sm leading-relaxed text-slate-600'>{t('forgot.sentBody')}</p>
             <Button
               className='mt-8 h-11 w-full'
-              onClick={() => navigate('/login', { state: { allowLogin: true } })}
+              onClick={() => navigate('/login', { state: loginNavState(location.state?.returnTo) })}
             >
               {t('forgot.backToLogin')}
             </Button>
