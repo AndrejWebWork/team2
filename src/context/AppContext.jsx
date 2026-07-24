@@ -6,6 +6,7 @@ import {
   clearEventsEtags,
   clearReportsEtag,
   createEventApi,
+  createAirAlertNotificationApi,
   createNotificationApi,
   deleteEventApi,
   deleteNotificationApi,
@@ -34,6 +35,8 @@ import { getDeviceId } from '../lib/device'
 import { isMyReport, reportsIdentity } from '../lib/reportOwnership'
 import { resolveLocationInfo, findNearestContainerPoint } from '../lib/geo'
 import { fetchAllAirSensors, findNearestSensor } from '../lib/smellSensor'
+import { AIR_CHECK_MS, nextAirAlertState, pickAirAlertSensor } from '../lib/airAlerts'
+import { captureGeolocation } from '../lib/geolocation'
 import { registerPushNotifications, scheduleLocalNotification } from '../lib/notifications'
 import { DEFAULT_LANGUAGE, isSupportedLanguage, translate } from '../i18n/translations'
 
@@ -125,6 +128,22 @@ function filterHiddenNotifications(list, identity) {
   return list.filter((n) => !hidden.has(String(n.id)))
 }
 
+function prefsCacheKey(identity) {
+  return `ekoskopje.prefs.${identity}`
+}
+function readPrefs(identity) {
+  try {
+    return JSON.parse(localStorage.getItem(prefsCacheKey(identity))) || {}
+  } catch {
+    return {}
+  }
+}
+function writePrefs(identity, patch) {
+  try {
+    localStorage.setItem(prefsCacheKey(identity), JSON.stringify({ ...readPrefs(identity), ...patch }))
+  } catch { /* ignore */ }
+}
+
 function readStoredLanguage() {
   try {
     const stored = localStorage.getItem(LANG_STORAGE_KEY)
@@ -196,6 +215,7 @@ export function AppProvider({ children }) {
   const [containers, setContainers] = useState([])
   const [events, setEvents] = useState([])
   const [notifications, setNotifications] = useState(() => readCachedNotifications(DEVICE_ID))
+  const [notifAir, setNotifAirState] = useState(true)
   const [pointsLedger, setPointsLedger] = useState({})
   const [pointsEvents, setPointsEvents] = useState([])
   const [serverLeaderboard, setServerLeaderboard] = useState([])
@@ -208,6 +228,8 @@ export function AppProvider({ children }) {
   const containersSnapRef = useRef(containers)
   const smellSnapRef = useRef(smellAlerts)
   const notifiedResolvedRef = useRef(new Set())
+  const airAlertStateRef = useRef(new Map())
+  const airLocationRef = useRef(null)
 
   const email = auth.email || null
   const reportsIdentityKey = reportsIdentity(auth, DEVICE_ID)
@@ -264,6 +286,10 @@ export function AppProvider({ children }) {
     containersSnapRef.current = []
     smellSnapRef.current = []
     notifiedResolvedRef.current = new Set()
+    airAlertStateRef.current = new Map()
+    const prefs = readPrefs(reportsIdentityKey)
+    if (prefs.notifAir != null) setNotifAirState(Boolean(prefs.notifAir))
+    else setNotifAirState(true)
     if (auth.email && !auth.isAnonymous) setNotifications([])
     else setNotifications(readCachedNotifications(reportsIdentityKey))
     clearAllConditionalEtags()
@@ -534,6 +560,10 @@ export function AppProvider({ children }) {
         if (user?.id) {
           setAuth((prev) => (prev.userId === user.id ? prev : { ...prev, userId: user.id }))
         }
+        if (user?.notif_air != null) {
+          setNotifAirState(Boolean(user.notif_air))
+          writePrefs(reportsIdentityKey, { notifAir: Boolean(user.notif_air) })
+        }
       } catch {
         /* корисникот сè уште не постои во база — останува локалниот избор */
       }
@@ -553,6 +583,12 @@ export function AppProvider({ children }) {
 
   const t = useMemo(() => (key, vars) => translate(language, key, vars), [language])
 
+  const setNotifAir = useCallback((value) => {
+    const next = Boolean(value)
+    setNotifAirState(next)
+    writePrefs(reportsIdentityKey, { notifAir: next })
+  }, [reportsIdentityKey])
+
   const unreadCount = notifications.filter((n) => !n.read).length
   const currentUserId = auth.email || DEVICE_ID
 
@@ -564,6 +600,20 @@ export function AppProvider({ children }) {
     setPointsEvents((prev) => [...prev, { userId: target, points: amount, createdAt: new Date().toISOString() }])
   }
 
+  // In-app известување без телефонски banner/push (пр. AQI аларм).
+  function pushInAppNotification({ title, body }) {
+    const optimistic = {
+      id: `local-${Date.now()}`,
+      title,
+      body,
+      group: translate(language, 'group.today'),
+      read: false,
+      createdAt: new Date().toISOString(),
+    }
+    setNotifications((prev) => [optimistic, ...prev])
+    if (email) createAirAlertNotificationApi({ email, title, body }).catch(() => {})
+  }
+
   // Ново известување: оптимистички локално + (ако сме најавени) во базата +
   // телефонска локална нотификација (не за админ — таму не е потребно).
   function pushNotification({ title, body }) {
@@ -572,6 +622,62 @@ export function AppProvider({ children }) {
     if (email) createNotificationApi({ title, body, email }).catch(() => {})
     if (auth.role !== 'admin') scheduleLocalNotification({ title, body })
   }
+
+  // AQI > 100 → in-app известување (само ако notif_air е вклучено; без FCM/push).
+  useEffect(() => {
+    if (auth.role === 'admin' || !notifAir) return undefined
+
+    let cancelled = false
+    let timer = null
+    const controller = new AbortController()
+
+    async function ensureLocation() {
+      if (airLocationRef.current) return airLocationRef.current
+      try {
+        const pos = await captureGeolocation()
+        airLocationRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      } catch { /* без GPS — fallback на референтен сензор */ }
+      return airLocationRef.current
+    }
+
+    async function checkAir() {
+      try {
+        const sensors = await fetchAllAirSensors(controller.signal)
+        if (cancelled || !sensors.length) return
+        const loc = await ensureLocation()
+        const sensor = pickAirAlertSensor(sensors, loc?.lat, loc?.lng)
+        if (!sensor?.id || sensor.aqi == null) return
+
+        const prev = airAlertStateRef.current.get(sensor.id) || 'ok'
+        const { notify, nextState } = nextAirAlertState(prev, sensor.aqi)
+        airAlertStateRef.current.set(sensor.id, nextState)
+        if (!notify) return
+
+        const name = sensor.name || sensor.area || sensor.id
+        pushInAppNotification({
+          title: translate(language, 'notif.airAlertTitle'),
+          body: translate(language, 'notif.airAlertBody', { name, aqi: sensor.aqi }),
+        })
+      } catch { /* WAQI офлајн — проба повторно на следниот tick */ }
+    }
+
+    const schedule = () => { timer = setTimeout(tick, AIR_CHECK_MS) }
+    async function tick() {
+      if (!document.hidden) await checkAir()
+      schedule()
+    }
+    const onVisibility = () => { if (!document.hidden) checkAir() }
+
+    checkAir()
+    schedule()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      cancelled = true
+      controller.abort()
+      if (timer) clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [auth.role, notifAir, email, language, reportsIdentityKey])
 
   function markNotificationRead(id) {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
@@ -830,6 +936,8 @@ export function AppProvider({ children }) {
       deviceId: DEVICE_ID,
       language,
       setLanguage,
+      notifAir,
+      setNotifAir,
       t,
       refreshData,
       refreshEvents,
@@ -844,7 +952,7 @@ export function AppProvider({ children }) {
       leaveEvent,
       deleteEvent,
     }),
-    [auth, sensors, smellAlerts, wasteReports, containers, events, notifications, unreadCount, pointsLedger, currentUserId, currentUserPoints, leaderboardMonthly, apiOnline, language, t, refreshEvents, refreshReports],
+    [auth, sensors, smellAlerts, wasteReports, containers, events, notifications, unreadCount, pointsLedger, currentUserId, currentUserPoints, leaderboardMonthly, apiOnline, language, notifAir, t, refreshEvents, refreshReports],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

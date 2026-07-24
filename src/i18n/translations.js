@@ -245,6 +245,8 @@ const dict = {
       allClear: 'Се е чисто', noNotifications: 'Се уште нема известувања.', read: 'Прочитано', delete: 'Избриши известување',
       reportResolvedTitle: 'Пријавата е решена',
       reportResolvedBody: 'Твојата пријава ({loc}) е означена како решена. Ти благодариме!',
+      airAlertTitle: 'Висок AQI — предупредување',
+      airAlertBody: 'AQI {aqi} кај {name} — препорачуваме да избегнувате долго домување на отворено.',
     },
     group: { today: 'Денес', earlier: 'Порано' },
     login: {
@@ -589,6 +591,8 @@ const dict = {
       allClear: 'All clear', noNotifications: 'No notifications yet.', read: 'Read', delete: 'Delete notification',
       reportResolvedTitle: 'Your report was resolved',
       reportResolvedBody: 'Your report ({loc}) has been marked as resolved. Thank you!',
+      airAlertTitle: 'High AQI alert',
+      airAlertBody: 'AQI {aqi} at {name} — consider limiting prolonged outdoor exposure.',
     },
     group: { today: 'Today', earlier: 'Earlier' },
     login: {
@@ -933,6 +937,8 @@ const dict = {
       allClear: 'Gjithçka e pastër', noNotifications: 'Ende nuk ka njoftime.', read: 'E lexuar', delete: 'Fshi njoftimin',
       reportResolvedTitle: 'Raporti u zgjidh',
       reportResolvedBody: 'Raporti juaj ({loc}) u shënua si i zgjidhur. Faleminderit!',
+      airAlertTitle: 'AQI i lartë — paralajmërim',
+      airAlertBody: 'AQI {aqi} te {name} — kufizoni qëndrimin e gjatë në ambient të hapur.',
     },
     group: { today: 'Sot', earlier: 'Më parë' },
     login: {

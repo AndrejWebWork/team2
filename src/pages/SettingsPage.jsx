@@ -17,7 +17,7 @@ const ROLE_COLORS = {
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { auth, setAuth, logout, t, language, setLanguage } = useApp()
+  const { auth, setAuth, logout, t, language, setLanguage, notifAir, setNotifAir } = useApp()
   const roleLabel = (r) => t(`role.${r === 'organization' ? 'organization' : r === 'admin' ? 'admin' : 'user'}`)
   const isAnonymous = auth.isAnonymous || !auth.email
   const anonymousLabel = t('settings.anonymous')
@@ -25,7 +25,6 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = useState(
     isAnonymous ? anonymousLabel : (auth.displayName || auth.email?.split('@')[0] || ''),
   )
-  const [notifAir, setNotifAir] = useState(true)
   const [notifWaste, setNotifWaste] = useState(true)
   const [notifEvents, setNotifEvents] = useState(false)
   const [toast, setToast] = useState('')
@@ -47,7 +46,6 @@ export function SettingsPage() {
       .then((user) => {
         if (cancelled || !user) return
         if (user.display_name) setDisplayName(user.display_name)
-        if (user.notif_air != null) setNotifAir(user.notif_air)
         if (user.notif_waste != null) setNotifWaste(user.notif_waste)
         if (user.notif_events != null) setNotifEvents(user.notif_events)
       })

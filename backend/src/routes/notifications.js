@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { query } from '../db.js'
+import { invalidateCache } from '../lib/responseCache.js'
 import { resolveUserId } from '../services/users.js'
 
 export const notificationsRouter = Router()
@@ -31,6 +32,26 @@ notificationsRouter.get('/', async (req, res, next) => {
       [email],
     )
     res.json(rows.map(rowToNotification))
+  } catch (err) { next(err) }
+})
+
+// POST /api/notifications/air-alert  { email, title, body }
+// In-app само (без FCM). Backend го почитува users.notif_air.
+notificationsRouter.post('/air-alert', async (req, res, next) => {
+  try {
+    const { email, title, body = null } = req.body
+    if (!email) return res.status(400).json({ error: 'Недостасува email.' })
+    if (!title) return res.status(400).json({ error: 'Недостасува наслов.' })
+    const userId = await resolveUserId(email)
+    if (!userId) return res.status(404).json({ error: 'Корисникот не постои.' })
+    const { rows: users } = await query('SELECT notif_air FROM users WHERE id = $1', [userId])
+    if (!users[0]?.notif_air) return res.json({ ok: true, skipped: true, reason: 'notif_air_disabled' })
+    const { rows } = await query(
+      `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3) RETURNING *`,
+      [userId, title, body],
+    )
+    invalidateCache('notifications:')
+    res.status(201).json(rowToNotification(rows[0]))
   } catch (err) { next(err) }
 })
 

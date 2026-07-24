@@ -265,6 +265,16 @@ export async function createNotificationApi(payload, signal) {
   return res.json()
 }
 
+export async function createAirAlertNotificationApi({ email, title, body }, signal) {
+  const res = await fetch(`${API_URL}/api/notifications/air-alert`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, title, body }), signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Креирањето на известувањето не успеа.')
+  return data
+}
+
 export async function markNotificationReadApi(id, signal) {
   const res = await fetch(`${API_URL}/api/notifications/${id}/read`, { method: 'PATCH', signal })
   if (!res.ok) throw new Error('Означувањето не успеа.')
