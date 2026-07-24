@@ -1,12 +1,24 @@
+import crypto from 'node:crypto'
 import { Router } from 'express'
 import { config } from '../config.js'
 import { query } from '../db.js'
 import { extractClientPasswordHash, hashForStorage, verifyClientPassword } from '../lib/clientPassword.js'
+import { isEmailConfigured, sendPasswordResetEmail } from '../lib/brevo.js'
 
 export const authRouter = Router()
 
 const LANGS = ['mk', 'en', 'sq']
 const EMAIL_RE = /^\S+@\S+\.\S+$/
+const RESET_TTL_MS = 60 * 60 * 1000
+const RESET_OK_MSG = 'Ако постои сметка со оваа е-пошта, ќе добиете линк за ресетирање.'
+
+function hashResetToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex')
+}
+
+function generateResetToken() {
+  return crypto.randomBytes(32).toString('hex')
+}
 
 function publicUser(u) {
   return {
@@ -74,6 +86,78 @@ authRouter.post('/login', async (req, res, next) => {
     const payload = publicUser(user)
     if (user.role === 'admin' && config.adminToken) payload.adminToken = config.adminToken
     res.json(payload)
+  } catch (err) { next(err) }
+})
+
+// POST /api/auth/forgot-password  { email }
+authRouter.post('/forgot-password', async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase()
+    if (!email || !EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: 'Внесете валидна е-пошта.' })
+    }
+    if (!isEmailConfigured()) {
+      return res.status(503).json({ error: 'Email сервисот не е конфигуриран. Обратете се до администраторот.' })
+    }
+
+    const { rows } = await query(
+      `SELECT id, email, language, password_hash FROM users WHERE email = $1`,
+      [email],
+    )
+    const user = rows[0]
+    if (user?.password_hash) {
+      const token = generateResetToken()
+      const tokenHash = hashResetToken(token)
+      const expiresAt = new Date(Date.now() + RESET_TTL_MS)
+
+      await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id])
+      await query(
+        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+        [user.id, tokenHash, expiresAt],
+      )
+
+      const resetUrl = `${config.appPublicUrl}/reset-password?token=${encodeURIComponent(token)}`
+      await sendPasswordResetEmail({
+        to: user.email,
+        resetUrl,
+        language: user.language || 'mk',
+      })
+    }
+
+    res.json({ ok: true, message: RESET_OK_MSG })
+  } catch (err) { next(err) }
+})
+
+// POST /api/auth/reset-password  { token, passwordHash }
+authRouter.post('/reset-password', async (req, res, next) => {
+  try {
+    const token = String(req.body?.token || '').trim()
+    const passwordHash = extractClientPasswordHash(req.body)
+    if (!token || token.length < 32) {
+      return res.status(400).json({ error: 'Невалиден или истечен линк за ресетирање.' })
+    }
+    if (!passwordHash) {
+      return res.status(400).json({ error: 'Невалиден формат на лозинката. Ажурирајте ја апликацијата и обидете се повторно.' })
+    }
+
+    const tokenHash = hashResetToken(token)
+    const { rows } = await query(
+      `SELECT prt.id, prt.user_id, u.email
+       FROM password_reset_tokens prt
+       JOIN users u ON u.id = prt.user_id
+       WHERE prt.token_hash = $1 AND prt.expires_at > now()`,
+      [tokenHash],
+    )
+    const row = rows[0]
+    if (!row) {
+      return res.status(400).json({ error: 'Невалиден или истечен линк за ресетирање.' })
+    }
+
+    const storedHash = await hashForStorage(passwordHash)
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [storedHash, row.user_id])
+    await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [row.user_id])
+
+    res.json({ ok: true, message: 'Лозинката е успешно променета. Сега можете да се најавите.' })
   } catch (err) { next(err) }
 })
 

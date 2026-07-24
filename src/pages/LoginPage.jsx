@@ -1,6 +1,6 @@
 import { ArrowLeft, Eye, EyeOff, Leaf, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -163,6 +163,16 @@ export function LoginPage() {
                   {showPass ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
                 </button>
               </div>
+              {mode === 'login' && (
+                <div className='flex justify-end'>
+                  <Link
+                    to='/forgot-password'
+                    className='text-sm font-medium text-emerald-600 hover:text-emerald-700'
+                  >
+                    {t('login.forgotPassword')}
+                  </Link>
+                </div>
+              )}
             </div>
             <Button type='submit' disabled={busy} className='h-11 w-full text-base font-semibold mt-2'>
               {busy && <Loader2 className='h-4 w-4 animate-spin' />}

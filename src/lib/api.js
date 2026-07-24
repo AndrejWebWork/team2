@@ -434,6 +434,29 @@ export async function deleteAccountApi({ email, password }, signal) {
   return data
 }
 
+// Заборавена лозинка — праќа reset линк на email (Brevo).
+export async function forgotPasswordApi({ email }, signal) {
+  const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }), signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Барањето не успеа.')
+  return data
+}
+
+// Нова лозинка преку token од email линкот.
+export async function resetPasswordApi({ token, password }, signal) {
+  const passwordHash = await hashPasswordForTransit(password)
+  const res = await fetch(`${API_URL}/api/auth/reset-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, passwordHash }), signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Ресетирањето не успеа.')
+  return data
+}
+
 // ---- Корисник / јазик ----
 
 // Го зема профилот на корисникот (вкл. избран јазик) по email.

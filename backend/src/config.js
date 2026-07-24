@@ -27,4 +27,11 @@ export const config = {
   fcmServiceAccount: (process.env.FCM_SERVICE_ACCOUNT || '').trim(),
   // Таен клуч за Vercel Cron (Authorization: Bearer …). Празно = без проверка (локално).
   cronSecret: (process.env.CRON_SECRET || '').trim(),
+  // Brevo (Sendinblue) transactional email — forgot password. Бесплатен tier: ~300 emails/ден.
+  // API key од Brevo → SMTP & API → API keys. Sender мора да е верификуван во Brevo.
+  brevoApiKey: (process.env.BREVO_API_KEY || '').trim(),
+  brevoSenderEmail: (process.env.BREVO_SENDER_EMAIL || '').trim(),
+  brevoSenderName: (process.env.BREVO_SENDER_NAME || 'EkoSkopje').trim(),
+  // Јавна адреса на frontend-от (за reset линк). Во prod: https://team2-zeta.vercel.app
+  appPublicUrl: (process.env.APP_PUBLIC_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:5173').replace(/\/$/, ''),
 }
