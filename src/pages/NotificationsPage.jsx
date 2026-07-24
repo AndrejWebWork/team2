@@ -35,15 +35,17 @@ export function NotificationsPage() {
               <Card key={n.id} className='stagger-item' style={{ '--i': i }}><CardContent className='p-4'>
                 <div className='flex items-start gap-3'>
                   <div className='min-w-0 flex-1'>
-                    <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-                      <p className='font-medium text-slate-800'>{n.title}</p>
+                    <p className='font-medium text-slate-800'>{n.title}</p>
+                    <p className='mt-1 whitespace-pre-wrap text-sm text-slate-600'>{n.body}</p>
+                    <div className='mt-3 flex justify-end'>
                       {!n.read ? (
-                        <Button variant='ghost' size='sm' onClick={() => markOne(n.id)}>{t('notif.read')}</Button>
+                        <Button variant='ghost' size='sm' className='h-8 px-2 text-xs text-slate-500' onClick={() => markOne(n.id)}>
+                          {t('notif.markRead')}
+                        </Button>
                       ) : (
-                        <span className='text-xs text-slate-400'>{t('notif.read')}</span>
+                        <span className='px-2 text-xs text-slate-400'>{t('notif.read')}</span>
                       )}
                     </div>
-                    <p className='mt-1 text-sm text-slate-600'>{n.body}</p>
                   </div>
                   <button
                     type='button'

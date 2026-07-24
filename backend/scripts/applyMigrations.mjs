@@ -55,5 +55,14 @@ if (await colType('events', 'cover_photo_url')) {
   console.log('006 events already applied')
 }
 
+// 011 — event_time + reminder_message
+if (!(await colType('events', 'event_time'))) {
+  console.log('Applying 011_event_time_reminder_message.sql ...')
+  await client.query(readFileSync(join(root, 'db/migrations/011_event_time_reminder_message.sql'), 'utf8'))
+  console.log('  done')
+} else {
+  console.log('011 already applied')
+}
+
 await client.end()
 console.log('All migrations up to date.')

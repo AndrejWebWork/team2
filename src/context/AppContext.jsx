@@ -884,6 +884,7 @@ export function AppProvider({ children }) {
     if (!email) return
     await leaveEventApi(id, email)
     refreshEvents()
+    refreshData()
   }
   async function deleteEvent(id) {
     await deleteEventApi(id, email)

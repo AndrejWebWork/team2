@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { config } from '../config.js'
 import { query } from '../db.js'
+import { sendPushToUser } from '../lib/fcm.js'
 import { invalidateCache, serveCachedJson, serveFreshJson } from '../lib/responseCache.js'
 import { resolveUserId } from '../services/users.js'
 import { tickEventRemindersOnTraffic } from '../services/eventReminders.js'
@@ -9,6 +10,26 @@ export const eventsRouter = Router()
 
 // Клучот вклучува email заради „joined“. На Vercel секогаш свежо од база (поглед reports GET).
 const EVENTS_TTL_MS = 15000
+
+function formatEventTime(raw) {
+  if (raw == null || raw === '') return null
+  if (typeof raw === 'string') return raw.slice(0, 5)
+  if (raw instanceof Date) {
+    const h = String(raw.getUTCHours()).padStart(2, '0')
+    const m = String(raw.getUTCMinutes()).padStart(2, '0')
+    return `${h}:${m}`
+  }
+  return null
+}
+
+function normalizeEventTime(raw) {
+  if (raw == null || raw === '') return null
+  const s = String(raw).trim()
+  if (!/^\d{1,2}:\d{2}$/.test(s)) return null
+  const [h, m] = s.split(':').map(Number)
+  if (h > 23 || m > 59) return null
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
 
 // Претвора ред + број пријавени во облик што го користи frontend-от.
 function rowToEvent(r) {
@@ -20,12 +41,14 @@ function rowToEvent(r) {
     title: r.title,
     description: r.description,
     date,
+    time: formatEventTime(r.event_time),
     location: r.location,
     seats: r.seats,
     status: r.status,
     organizer: r.organizer_name,
     organizerEmail: r.organizer_email || null,
     organizerInstagram: r.organizer_instagram || null,
+    reminderMessage: r.reminder_message || '',
     signupCount: Number(r.signup_count || 0),
     joined: Boolean(r.joined),
     createdAt: r.created_at,
@@ -96,8 +119,9 @@ eventsRouter.get('/', async (req, res, next) => {
 eventsRouter.post('/', async (req, res, next) => {
   try {
     const {
-      title, description = null, date, location = null,
+      title, description = null, date, time = null, location = null,
       seats = 0, organizerEmail = null, organizerName = null,
+      reminderMessage = null,
     } = req.body
     if (!title || !date) return res.status(400).json({ error: 'Недостасува наслов или датум.' })
     if (organizerEmail) {
@@ -114,11 +138,16 @@ eventsRouter.post('/', async (req, res, next) => {
     if (isoDate < todayIso()) {
       return res.status(400).json({ error: 'Не може да се креира настан со датум во минатото.' })
     }
+    const eventTime = normalizeEventTime(time)
+    if (time && !eventTime) {
+      return res.status(400).json({ error: 'Невалиден час (користи HH:MM).' })
+    }
+    const reminder = reminderMessage != null ? String(reminderMessage).trim().slice(0, 500) : null
     const organizerId = await resolveUserId(organizerEmail, organizerName)
     const { rows } = await query(
-      `INSERT INTO events (title, description, event_date, location, seats, organizer_id, organizer_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [title, description, isoDate, location, seats, organizerId, organizerName || organizerEmail],
+      `INSERT INTO events (title, description, event_date, event_time, location, seats, organizer_id, organizer_name, reminder_message)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [title, description, isoDate, eventTime, location, seats, organizerId, organizerName || organizerEmail, reminder || null],
     )
     let organizerInstagram = null
     if (organizerId) {
@@ -252,17 +281,95 @@ eventsRouter.post('/:id/signup', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// POST /api/events/:id/remind  → организаторот праќа рачен потсетник (in-app + FCM push)
+eventsRouter.post('/:id/remind', async (req, res, next) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ error: 'Невалиден настан.' })
+    }
+    const email = req.body?.email || null
+    const adminToken = req.get('x-admin-token') || ''
+    const access = await assertOrganizerOrAdmin(req.params.id, email, adminToken)
+    if (!access.ok) return res.status(access.status).json({ error: access.error })
+
+    const { rows: eventRows } = await query(
+      `SELECT id, title, location, event_date, event_time, reminder_message
+         FROM events WHERE id = $1`,
+      [req.params.id],
+    )
+    if (!eventRows[0]) return res.status(404).json({ error: 'Настанот не постои.' })
+    const event = eventRows[0]
+
+    const fromBody = req.body?.message != null ? String(req.body.message).trim() : ''
+    const stored = event.reminder_message ? String(event.reminder_message).trim() : ''
+    const message = (fromBody || stored || '').slice(0, 500)
+    if (!message) {
+      return res.status(400).json({ error: 'Напишете порака за потсетникот.' })
+    }
+
+    // Зачувај ја последната порака за следни потсетници.
+    if (fromBody && fromBody !== stored) {
+      await query(`UPDATE events SET reminder_message = $1 WHERE id = $2`, [message, event.id])
+    }
+
+    const timeLabel = formatEventTime(event.event_time)
+    const dateLabel = event.event_date instanceof Date
+      ? event.event_date.toISOString().slice(0, 10)
+      : String(event.event_date || '').slice(0, 10)
+    const when = timeLabel ? `${dateLabel} · ${timeLabel}` : dateLabel
+    const title = `Потсетник: ${event.title}`
+    const body = `${message}\n\n${when}${event.location ? ` — ${event.location}` : ''}`
+
+    const { rows: signups } = await query(
+      `SELECT DISTINCT s.user_id
+         FROM event_signups s
+        WHERE s.event_id = $1 AND s.user_id IS NOT NULL`,
+      [event.id],
+    )
+    if (signups.length === 0) {
+      return res.status(400).json({ error: 'Нема пријавени учесници за потсетник.' })
+    }
+
+    let sent = 0
+    for (const row of signups) {
+      await query(
+        `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
+        [row.user_id, title, body],
+      ).catch(() => {})
+      sendPushToUser(row.user_id, { title, body }).catch(() => {})
+      sent += 1
+    }
+
+    invalidateCache('notifications:')
+    invalidateCache('events:')
+    res.json({ ok: true, sent })
+  } catch (err) { next(err) }
+})
+
 // DELETE /api/events/:id/signup?email=  → откажување
 eventsRouter.delete('/:id/signup', async (req, res, next) => {
   try {
     const email = req.query.email
     if (!email) return res.status(400).json({ error: 'Недостасува email.' })
-    await query(
+    const userId = await resolveUserId(email)
+    const { rowCount: signupRemoved } = await query(
       `DELETE FROM event_signups s
          USING users u
        WHERE s.user_id = u.id AND s.event_id = $1 AND u.email = $2`,
       [req.params.id, email],
     )
+    // Врати го поенот доделен при пријава (event_joined) — само ако навистина се откажа.
+    if (signupRemoved > 0 && userId) {
+      const reason = `event_joined:${req.params.id}`
+      const { rowCount: pointsRemoved } = await query(
+        `DELETE FROM points_events WHERE user_id = $1 AND reason = $2`,
+        [userId, reason],
+      )
+      if (pointsRemoved > 0) {
+        await query(`UPDATE users SET points = GREATEST(0, points - 1) WHERE id = $1`, [userId])
+        invalidateCache('leaderboard:')
+      }
+    }
     invalidateCache('events:')
     res.json({ ok: true })
   } catch (err) { next(err) }

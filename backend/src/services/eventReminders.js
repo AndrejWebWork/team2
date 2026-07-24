@@ -56,7 +56,7 @@ export async function sendEventReminders24h({ force = false } = {}) {
 
   const tomorrow = skopjeTomorrowIso(now)
   const { rows: events } = await query(
-    `SELECT id, title, location, event_date
+    `SELECT id, title, location, event_date, event_time, reminder_message
        FROM events
       WHERE event_date = $1::date
         AND reminder_24h_sent_at IS NULL`,
@@ -66,9 +66,15 @@ export async function sendEventReminders24h({ force = false } = {}) {
   let sent = 0
   for (const event of events) {
     const dateLabel = formatEventDate(event.event_date)
+    const timeRaw = event.event_time
+    const timeLabel = timeRaw == null ? '' : String(timeRaw).slice(0, 5)
     const loc = event.location || 'Скопје'
     const title = 'Потсетник: настан за 24 часа'
-    const body = `Утре (${dateLabel}) следи „${event.title}" — ${loc}. Ви благодариме што учествувате!`
+    const when = timeLabel ? `${dateLabel} во ${timeLabel}` : dateLabel
+    const custom = event.reminder_message ? String(event.reminder_message).trim() : ''
+    const body = custom
+      ? `${custom}\n\nУтре (${when}) следи „${event.title}" — ${loc}.`
+      : `Утре (${when}) следи „${event.title}" — ${loc}. Ви благодариме што учествувате!`
 
     const { rows: signups } = await query(
       `SELECT s.user_id, u.notif_events

@@ -215,11 +215,13 @@ CREATE TABLE events (
   title              TEXT NOT NULL,
   description        TEXT,
   event_date         DATE NOT NULL,
+  event_time         TIME,                            -- час на одржување (опционално)
   location           TEXT,
   seats              INTEGER NOT NULL DEFAULT 0,
   status             TEXT NOT NULL DEFAULT 'open',   -- 'open' | 'few_left' | 'closed'
   organizer_id       UUID REFERENCES users(id) ON DELETE SET NULL,
   organizer_name     TEXT,
+  reminder_message   TEXT,                            -- порака за рачен потсетник од организаторот
   cover_photo        BYTEA,                           -- една слика по настан (бинарно во база)
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()

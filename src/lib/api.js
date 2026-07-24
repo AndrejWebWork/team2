@@ -234,6 +234,23 @@ export async function fetchEventSignupsApi(eventId, email, signal) {
   return data
 }
 
+// Организатор праќа рачен потсетник до сите пријавени (in-app + push).
+export async function sendEventReminderApi(id, { email, message }, signal) {
+  const headers = { 'Content-Type': 'application/json' }
+  const adminToken = getAdminToken()
+  if (adminToken) headers['X-Admin-Token'] = adminToken
+  const res = await fetch(`${API_URL}/api/events/${id}/remind`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ email, message }),
+    signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Испраќањето на потсетникот не успеа.')
+  clearEventsEtags(email)
+  return data
+}
+
 // Откажување/бришење на цел настан (организатор или админ) — исчезнува за сите.
 export async function deleteEventApi(id, email, signal) {
   const qs = email ? `?email=${encodeURIComponent(email)}` : ''
