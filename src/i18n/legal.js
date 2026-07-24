@@ -2,7 +2,7 @@
 // Покриваат веб, Android (Google Play), iOS (App Store), дозволи на уредот,
 // push известувања, бришење сметка и store transparency (Data safety / App Privacy).
 
-export const LEGAL_UPDATED = '2026-07-21'
+export const LEGAL_UPDATED = '2026-07-24'
 export const LEGAL_OPERATOR = 'Град Скопје'
 export const LEGAL_CONTACT = 'kontakt@skopje.gov.mk'
 export const LEGAL_APP_ID = 'mk.gov.skopje.ekoskopje'
@@ -47,6 +47,7 @@ export const legalContent = {
           'За прием и обработка на пријави за диви депонии, контејнери и загадување, и нивно проследување до надлежните служби.',
           'За прикажување на квалитетот на воздухот и релевантни известувања.',
           'За доделување поени и водење на ранг-листа, како и за анонимна статистика заради подобрување на услугата.',
+          'За ресетирање на лозинка: кога вие самите побарате „Заборавена лозинка“, на вашата регистрирана е-пошта се испраќа сервисен (transactional) email со временски линк — не за маркетинг или реклами.',
           'Правна основа: ваша согласност и извршување задача од јавен интерес од страна на Град Скопје.',
         ] },
         { h: 'Фотографии и локација', p: [
@@ -62,14 +63,16 @@ export const legalContent = {
         { h: 'Споделување со трети страни и обработувачи', p: [
           'Податоците од пријавите може да се проследат до надлежни комунални и инспекциски служби заради постапување.',
           'За испорака на push известувања користиме обработувачи: Google LLC (Firebase Cloud Messaging — Android) и Apple Inc. (Apple Push Notification service — iOS). Овие даватели обработуваат податоци исклучиво по наши инструкции и не за рекламни цели.',
+          'За испорака на сервисни emails за ресетирање на лозинка користиме Brevo (Sendinblue SAS, ЕУ) — transactional email API. Brevo прима само вашата е-пошта и содржина на пораката (линк за reset), само кога вие го побарате reset-от; не се користи за newsletter или маркетинг.',
           'Не продаваме, не изнајмувааме и не споделуваме лични податоци за маркетинг или рекламно таргетирање на трети страни.',
         ] },
         { h: 'Без реклами и следење', p: [
           'EkoSkopje не прикажува реклами и не користи идентификатори за следење низ апликации или веб-страници од други компании (нема персонализирани реклами, нема App Tracking Transparency за маркетинг).',
           'Google Firebase се користи исклучиво за техничко работење и испорака на push известувања, не за рекламни мрежи.',
+          'Emails за ресетирање на лозинка се сервисни (transactional) пораки — не промоционални — и се праќаат само по ваше барање.',
         ] },
         { h: 'Google Play и App Store — транспарентност', p: [
-          'За објавување во Google Play (Data safety) и Apple App Store (App Privacy): собираме лични податоци (е-пошта, име — по избор), приближна локација (GPS при пријава), фотографии (по избор), идентификатор на уред и FCM/APNs токен за известувања; податоците не се продаваат; преносот е шифриран (HTTPS); корисникот може да ја избрише сметката во апликацијата (Поставки → Сметка → Избриши сметка).',
+          'За објавување во Google Play (Data safety) и Apple App Store (App Privacy): собираме лични податоци (е-пошта, име — по избор), приближна локација (GPS при пријава), фотографии (по избор), идентификатор на уред и FCM/APNs токен за известувања; е-поштата се користи и за сервисно ресетирање на лозинка (transactional email, не маркетинг); податоците не се продаваат; преносот е шифриран (HTTPS); корисникот може да ја избрише сметката во апликацијата (Поставки → Сметка → Избриши сметка).',
           'Оваа политика е јавно достапна преку менито Поставки → Правни информации → Политика за приватност и на истата URL-адреса на веб-версијата на апликацијата (за внесување во store-формуларите).',
         ] },
         { h: 'Деца', p: [
@@ -115,6 +118,10 @@ export const legalContent = {
         ] },
         { h: 'Улога „заедница/организација“', p: [
           'Одредени верификувани корисници (организации, заедници) може да објавуваат акции и настани. Тие се одговорни за содржината што ја објавуваат и за нејзината точност.',
+        ] },
+        { h: 'Сметка и ресетирање на лозинка', p: [
+          'Регистрираните корисници можат преку „Заборавена лозинка?“ да побараат email со временски линк за нова лозинка. Линкот важи ограничено време (1 час) и може да се користи само еднаш.',
+          'Корисникот е одговорен за безбедноста на својата email сметка и не смее да го споделува reset линкот со други.',
         ] },
         { h: 'Одрекување одговорност', p: [
           'Податоците за квалитет на воздухот доаѓаат од надворешни извори (WAQI, pulse.eco) и се прикажуваат информативно. Град Скопје не гарантира нивна апсолутна точност или достапност.',
@@ -184,6 +191,7 @@ export const legalContent = {
           'To receive and process reports of illegal dumping, containers and pollution, and forward them to the responsible services.',
           'To display air quality and relevant notifications.',
           'To award points and maintain a leaderboard, and for anonymous statistics to improve the service.',
+          'For password reset: when you request “Forgot password”, we send a service (transactional) email to your registered address with a time-limited link — not for marketing or advertising.',
           'Legal basis: your consent and performance of a task in the public interest by the City of Skopje.',
         ] },
         { h: 'Photos and location', p: [
@@ -199,14 +207,16 @@ export const legalContent = {
         { h: 'Sharing with third parties and processors', p: [
           'Report data may be forwarded to responsible municipal and inspection services for action.',
           'For push notification delivery we use processors: Google LLC (Firebase Cloud Messaging — Android) and Apple Inc. (Apple Push Notification service — iOS). These providers process data only on our instructions and not for advertising.',
+          'For password-reset service emails we use Brevo (Sendinblue SAS, EU) — a transactional email API. Brevo receives only your email address and message content (reset link), only when you request a reset; it is not used for newsletters or marketing.',
           'We do not sell, rent or share personal data with third parties for marketing or ad targeting.',
         ] },
         { h: 'No ads or tracking', p: [
           'EkoSkopje shows no ads and does not use cross-app or cross-site tracking identifiers for marketing (no personalized ads, no App Tracking Transparency for marketing).',
           'Google Firebase is used only for technical operation and push delivery, not ad networks.',
+          'Password-reset emails are service (transactional) messages — not promotional — and are sent only at your request.',
         ] },
         { h: 'Google Play and App Store — transparency', p: [
-          'For Google Play (Data safety) and Apple App Store (App Privacy): we collect personal data (email, name — optional), approximate location (GPS on report), photos (optional), device identifier and FCM/APNs token; data is not sold; transmission is encrypted (HTTPS); users can delete their account in-app (Settings → Account → Delete account).',
+          'For Google Play (Data safety) and Apple App Store (App Privacy): we collect personal data (email, name — optional), approximate location (GPS on report), photos (optional), device identifier and FCM/APNs token; email is also used for service password reset (transactional email, not marketing); data is not sold; transmission is encrypted (HTTPS); users can delete their account in-app (Settings → Account → Delete account).',
           'This policy is publicly available via Settings → Legal information → Privacy Policy and at the same URL on the app web version (for store forms).',
         ] },
         { h: 'Children', p: [
@@ -252,6 +262,10 @@ export const legalContent = {
         ] },
         { h: 'Community/organisation role', p: [
           'Certain verified users (organisations, communities) may publish actions and events. They are responsible for the content they publish and its accuracy.',
+        ] },
+        { h: 'Account and password reset', p: [
+          'Registered users can request a password reset via “Forgot password?”, which sends an email with a time-limited link. The link expires after a limited time (1 hour) and can be used only once.',
+          'You are responsible for the security of your email account and must not share the reset link with others.',
         ] },
         { h: 'Disclaimer', p: [
           'Air quality data comes from external sources (WAQI, pulse.eco) and is shown for information. The City of Skopje does not guarantee its absolute accuracy or availability.',
@@ -320,6 +334,7 @@ export const legalContent = {
           'Për të pranuar e përpunuar raportime për deponi ilegale, kontejnerë dhe ndotje, dhe për t’i përcjellë te shërbimet përgjegjëse.',
           'Për të shfaqur cilësinë e ajrit dhe njoftime relevante.',
           'Për të dhënë pikë dhe për të mbajtur renditjen, si dhe për statistika anonime për përmirësimin e shërbimit.',
+          'Për rivendosje fjalëkalimi: kur kërkoni „Harrove fjalëkalimin?“, dërgojmë email shërbimi (transactional) në adresën tuaj të regjistruar me lidhje me afat — jo për marketing ose reklama.',
           'Baza ligjore: pëlqimi juaj dhe kryerja e një detyre me interes publik nga Qyteti i Shkupit.',
         ] },
         { h: 'Fotografitë dhe vendndodhja', p: [
@@ -335,14 +350,16 @@ export const legalContent = {
         { h: 'Ndarja me palë të treta dhe përpunuesit', p: [
           'Të dhënat e raporteve mund t’u përcillen shërbimeve komunale dhe inspektuese përgjegjëse për veprim.',
           'Për dërgimin e njoftimeve push përdorim përpunues: Google LLC (Firebase Cloud Messaging — Android) dhe Apple Inc. (Apple Push Notification service — iOS). Këta ofrues i përpunojnë të dhënat vetëm sipas udhëzimeve tona dhe jo për reklama.',
+          'Për email-e shërbimi për rivendosje fjalëkalimi përdorim Brevo (Sendinblue SAS, BE) — API transactional email. Brevo merr vetëm email-in tuaj dhe përmbajtjen e mesazhit (lidhje reset), vetëm kur e kërkoni ju; nuk përdoret për newsletter ose marketing.',
           'Nuk shesim, nuk japim me qira dhe nuk ndajmë të dhëna personale për marketing ose reklama të synuara.',
         ] },
         { h: 'Pa reklama dhe pa ndjekje', p: [
           'EkoSkopje nuk shfaq reklama dhe nuk përdor identifikues ndjekjeje ndër-aplikacionesh për marketing.',
           'Google Firebase përdoret vetëm për funksionim teknik dhe njoftime push, jo për rrjete reklamash.',
+          'Email-et për rivendosje fjalëkalimi janë mesazhe shërbimi (transactional) — jo promocionale — dhe dërgohen vetëm me kërkesën tuaj.',
         ] },
         { h: 'Google Play dhe App Store — transparencë', p: [
-          'Për Google Play (Data safety) dhe Apple App Store (App Privacy): mbledhim të dhëna personale (email, emër — opsional), vendndodhje të përafërt (GPS në raport), foto (opsionale), identifikues pajisjeje dhe token FCM/APNs; të dhënat nuk shiten; transmetimi është i enkriptuar (HTTPS); përdoruesi mund të fshijë llogarinë në aplikacion (Cilësimet → Llogaria → Fshi llogarinë).',
+          'Për Google Play (Data safety) dhe Apple App Store (App Privacy): mbledhim të dhëna personale (email, emër — opsional), vendndodhje të përafërt (GPS në raport), foto (opsionale), identifikues pajisjeje dhe token FCM/APNs; email-i përdoret gjithashtu për rivendosje fjalëkalimi shërbimi (transactional, jo marketing); të dhënat nuk shiten; transmetimi është i enkriptuar (HTTPS); përdoruesi mund të fshijë llogarinë në aplikacion (Cilësimet → Llogaria → Fshi llogarinë).',
           'Kjo politikë është publike përmes Cilësimet → Informacione ligjore → Politika e privatësisë dhe në të njëjtën URL të versionit web.',
         ] },
         { h: 'Fëmijët', p: [
@@ -388,6 +405,10 @@ export const legalContent = {
         ] },
         { h: 'Roli “komunitet/organizatë”', p: [
           'Disa përdorues të verifikuar (organizata, komunitete) mund të publikojnë aksione dhe evente. Ata janë përgjegjës për përmbajtjen që publikojnë dhe saktësinë e saj.',
+        ] },
+        { h: 'Llogaria dhe rivendosja e fjalëkalimit', p: [
+          'Përdoruesit e regjistruar mund të kërkojnë rivendosje fjalëkalimi përmes „Harrove fjalëkalimin?“ — dërgohet email me lidhje me afat. Lidhja skadon pas një kohe të kufizuar (1 orë) dhe mund të përdoret vetëm një herë.',
+          'Përdoruesi është përgjegjës për sigurinë e llogarisë së email-it dhe nuk duhet ta ndajë lidhjen e reset-it me të tjerët.',
         ] },
         { h: 'Kufizimi i përgjegjësisë', p: [
           'Të dhënat për cilësinë e ajrit vijnë nga burime të jashtme (WAQI, pulse.eco) dhe shfaqen për informim. Qyteti i Shkupit nuk garanton saktësinë ose disponueshmërinë absolute të tyre.',
