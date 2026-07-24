@@ -12,8 +12,8 @@ function requireCronAuth(req, res, next) {
   return res.status(401).json({ error: 'Unauthorized' })
 }
 
-// GET /api/cron/event-reminders — Vercel Cron (на секој час; праќа во 10:00 CET/CEST)
-// Query ?force=1 за тест (локално или со CRON_SECRET).
+// GET /api/cron/event-reminders — рачно или бесплатен надворешен cron (Acton crontab,
+// cron-job.org, GitHub Actions). Query ?force=1 за тест. Vercel Cron е платен — не се користи.
 cronRouter.get('/event-reminders', requireCronAuth, async (req, res, next) => {
   try {
     const force = req.query.force === '1'

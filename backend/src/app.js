@@ -3,6 +3,7 @@ import cors from 'cors'
 import express from 'express'
 import { config } from './config.js'
 import { pool } from './db.js'
+import { tickEventRemindersOnTraffic } from './services/eventReminders.js'
 import { airRouter } from './routes/air.js'
 import { authRouter } from './routes/auth.js'
 import { containersRouter } from './routes/containers.js'
@@ -94,6 +95,7 @@ app.use('/uploads', express.static(config.uploadDir, {
 app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1')
+    void tickEventRemindersOnTraffic()
     res.json({ ok: true, db: 'up' })
   } catch {
     res.status(503).json({ ok: false, db: 'down' })

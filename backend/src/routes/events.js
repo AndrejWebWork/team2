@@ -3,6 +3,7 @@ import { config } from '../config.js'
 import { query } from '../db.js'
 import { invalidateCache, serveCachedJson, serveFreshJson } from '../lib/responseCache.js'
 import { resolveUserId } from '../services/users.js'
+import { tickEventRemindersOnTraffic } from '../services/eventReminders.js'
 
 export const eventsRouter = Router()
 
@@ -59,6 +60,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // GET /api/events?email=  → сите настани (јавни) + дали тековниот корисник е пријавен
 eventsRouter.get('/', async (req, res, next) => {
   try {
+    void tickEventRemindersOnTraffic()
     const email = req.query.email || null
     const producer = async () => {
       const { rows } = await query(
@@ -224,6 +226,10 @@ eventsRouter.post('/:id/signup', async (req, res, next) => {
        ON CONFLICT (event_id, user_id) DO NOTHING`,
       [req.params.id, userId, fullName || email, email, note],
     )
+    // Автоматски вклучи потсетници за настани при пријава (24ч push/in-app).
+    if (userId) {
+      await query(`UPDATE users SET notif_events = TRUE WHERE id = $1`, [userId])
+    }
     // +1 поен за еко-акција (учество на настан) — еднаш по (корисник, настан),
     // само при првото пријавување (одјава/повторна пријава не дуплира).
     if (inserted.rowCount > 0 && userId) {

@@ -94,3 +94,20 @@ export async function sendEventReminders24h({ force = false } = {}) {
 
   return { ok: true, skipped: false, tomorrow, sent, events: events.length }
 }
+
+/** Бесплатна алтернатива на Vercel Cron: при сообраќај околу 10:00 по Скопје
+ *  (health ping, листа настани). Advisory lock спречува дупликати на serverless. */
+export function tickEventRemindersOnTraffic() {
+  const { hour } = skopjeParts()
+  if (hour !== REMINDER_HOUR) return Promise.resolve(null)
+
+  return (async () => {
+    const { rows } = await query('SELECT pg_try_advisory_lock(8240024) AS ok')
+    if (!rows[0]?.ok) return null
+    try {
+      return await sendEventReminders24h()
+    } finally {
+      await query('SELECT pg_advisory_unlock(8240024)').catch(() => {})
+    }
+  })().catch(() => null)
+}
