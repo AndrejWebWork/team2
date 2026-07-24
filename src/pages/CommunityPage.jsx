@@ -230,6 +230,17 @@ function EventDetailPage({ event, past, canManage, isOrganizer, organizerEmail, 
   )
 }
 
+function FormField({ label, htmlFor, children, className = '' }) {
+  return (
+    <div className={className}>
+      <label htmlFor={htmlFor} className='mb-1.5 block text-sm font-medium text-slate-700'>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
 export function CommunityPage() {
   const { events, setEvents, auth, pushNotification, t } = useApp()
   const navigate = useNavigate()
@@ -454,19 +465,56 @@ export function CommunityPage() {
           <CardHeader className='pb-3'><CardTitle>{t('comm.createEvent')}</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={createEvent} className='space-y-4'>
-              <div className='grid gap-3 sm:grid-cols-2'>
-                <Input value={newEvent.title} onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })} placeholder={t('comm.eventTitlePlaceholder')} />
-                <EventDatePicker
-                  label={t('comm.date')}
-                  value={newEvent.date}
-                  min={today}
-                  onChange={(date) => setNewEvent({ ...newEvent, date })}
-                />
-                <Input value={newEvent.location} onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })} placeholder={t('comm.locationPlaceholder')} />
-                <Input value={auth.email || ''} disabled placeholder={t('comm.organizerPlaceholder')} />
+              <div className='grid gap-4 sm:grid-cols-2'>
+                <FormField label={t('comm.eventTitlePlaceholder')} htmlFor='event-title' className='sm:col-span-2'>
+                  <Input
+                    id='event-title'
+                    value={newEvent.title}
+                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                    placeholder={t('comm.eventTitlePlaceholder')}
+                    className='h-11'
+                    required
+                  />
+                </FormField>
+                <FormField label={t('comm.date')} htmlFor='event-date' className='sm:col-span-2'>
+                  <EventDatePicker
+                    id='event-date'
+                    size='lg'
+                    value={newEvent.date}
+                    min={today}
+                    onChange={(date) => setNewEvent({ ...newEvent, date })}
+                  />
+                </FormField>
+                <FormField label={t('comm.location')} htmlFor='event-location'>
+                  <Input
+                    id='event-location'
+                    value={newEvent.location}
+                    onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                    placeholder={t('comm.locationPlaceholder')}
+                    className='h-11'
+                    required
+                  />
+                </FormField>
+                <FormField label={t('comm.organizer')} htmlFor='event-organizer'>
+                  <Input
+                    id='event-organizer'
+                    value={auth.email || ''}
+                    disabled
+                    placeholder={t('comm.organizerPlaceholder')}
+                    className='h-11 bg-slate-50 text-slate-500'
+                  />
+                </FormField>
               </div>
-              <Textarea value={newEvent.description} onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })} placeholder={t('comm.descPlaceholder')} className='min-h-24' />
-              <Button className='w-full sm:w-auto'>{t('comm.create')}</Button>
+              <FormField label={t('comm.descriptionLabel')} htmlFor='event-description'>
+                <Textarea
+                  id='event-description'
+                  value={newEvent.description}
+                  onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                  placeholder={t('comm.descPlaceholder')}
+                  className='min-h-28'
+                />
+              </FormField>
+              <Button type='submit' className='w-full sm:w-auto'>{t('comm.create')}</Button>
             </form>
           </CardContent>
         </Card>

@@ -198,6 +198,35 @@ select:focus {
   animation: success-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* Подобрен native date picker за форма на настан (influencer). */
+.event-date-input {
+  letter-spacing: 0.01em;
+}
+
+.event-date-input::-webkit-datetime-edit {
+  padding: 0.1rem 0;
+}
+
+.event-date-input::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+.event-date-input::-webkit-datetime-edit-text,
+.event-date-input::-webkit-datetime-edit-month-field,
+.event-date-input::-webkit-datetime-edit-day-field,
+.event-date-input::-webkit-datetime-edit-year-field {
+  padding: 0.15rem 0.2rem;
+  border-radius: 0.375rem;
+}
+
+.event-date-input::-webkit-datetime-edit-month-field:focus,
+.event-date-input::-webkit-datetime-edit-day-field:focus,
+.event-date-input::-webkit-datetime-edit-year-field:focus {
+  background: rgba(16, 185, 129, 0.12);
+  color: #065f46;
+  outline: none;
+}
+
 /* Значка за известувања — потскок кога пристигнува ново/се менува бројот. */
 @keyframes badge-pop {
   0% { transform: scale(0); }
