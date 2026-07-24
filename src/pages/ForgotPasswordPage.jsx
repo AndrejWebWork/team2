@@ -25,7 +25,9 @@ export function ForgotPasswordPage() {
       await forgotPasswordApi({ email: normalized })
       setSent(true)
     } catch (err) {
-      setToast(err?.message || t('forgot.failed'))
+      if (err?.status === 404) setToast(t('forgot.notFound'))
+      else if (err?.status === 400) setToast(t('forgot.noPassword'))
+      else setToast(err?.message || t('forgot.failed'))
     } finally {
       setBusy(false)
     }

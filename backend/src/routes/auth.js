@@ -10,7 +10,7 @@ export const authRouter = Router()
 const LANGS = ['mk', 'en', 'sq']
 const EMAIL_RE = /^\S+@\S+\.\S+$/
 const RESET_TTL_MS = 60 * 60 * 1000
-const RESET_OK_MSG = 'Ако постои сметка со оваа е-пошта, ќе добиете линк за ресетирање.'
+const RESET_OK_MSG = 'Испративме линк за ресетирање на вашата е-пошта.'
 
 function hashResetToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex')
@@ -101,28 +101,35 @@ authRouter.post('/forgot-password', async (req, res, next) => {
     }
 
     const { rows } = await query(
-      `SELECT id, email, language, password_hash FROM users WHERE email = $1`,
+      `SELECT id, email, language, password_hash
+       FROM users
+       WHERE email = $1 AND is_anonymous = FALSE`,
       [email],
     )
     const user = rows[0]
-    if (user?.password_hash) {
-      const token = generateResetToken()
-      const tokenHash = hashResetToken(token)
-      const expiresAt = new Date(Date.now() + RESET_TTL_MS)
-
-      await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id])
-      await query(
-        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
-        [user.id, tokenHash, expiresAt],
-      )
-
-      const resetUrl = `${config.appPublicUrl}/reset-password?token=${encodeURIComponent(token)}`
-      await sendPasswordResetEmail({
-        to: user.email,
-        resetUrl,
-        language: user.language || 'mk',
-      })
+    if (!user) {
+      return res.status(404).json({ error: 'Нема регистрирана сметка со оваа е-пошта.' })
     }
+    if (!user.password_hash) {
+      return res.status(400).json({ error: 'Оваа сметка не користи лозинка.' })
+    }
+
+    const token = generateResetToken()
+    const tokenHash = hashResetToken(token)
+    const expiresAt = new Date(Date.now() + RESET_TTL_MS)
+
+    await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [user.id])
+    await query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+      [user.id, tokenHash, expiresAt],
+    )
+
+    const resetUrl = `${config.appPublicUrl}/reset-password?token=${encodeURIComponent(token)}`
+    await sendPasswordResetEmail({
+      to: user.email,
+      resetUrl,
+      language: user.language || 'mk',
+    })
 
     res.json({ ok: true, message: RESET_OK_MSG })
   } catch (err) { next(err) }

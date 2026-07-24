@@ -441,7 +441,11 @@ export async function forgotPasswordApi({ email }, signal) {
     body: JSON.stringify({ email }), signal,
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || 'Барањето не успеа.')
+  if (!res.ok) {
+    const err = new Error(data.error || 'Барањето не успеа.')
+    err.status = res.status
+    throw err
+  }
   return data
 }
 
