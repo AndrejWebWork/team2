@@ -7,6 +7,7 @@ import {
   createEventApi,
   createNotificationApi,
   deleteEventApi,
+  deleteNotificationApi,
   fetchEvents,
   fetchLeaderboard,
   fetchNotifications,
@@ -93,6 +94,34 @@ function writeCachedNotifications(identity, list) {
   } catch {
     /* localStorage полн/недостапен — тивко игнорирај */
   }
+}
+
+function hiddenNotifCacheKey(identity) {
+  return `ekoskopje.notifications.hidden.${identity}`
+}
+function readHiddenNotificationIds(identity) {
+  try {
+    const raw = localStorage.getItem(hiddenNotifCacheKey(identity))
+    const data = raw ? JSON.parse(raw) : null
+    return Array.isArray(data) ? data.map(String) : []
+  } catch {
+    return []
+  }
+}
+function addHiddenNotificationId(identity, id) {
+  try {
+    const prev = readHiddenNotificationIds(identity)
+    const key = String(id)
+    if (prev.includes(key)) return
+    localStorage.setItem(hiddenNotifCacheKey(identity), JSON.stringify([key, ...prev].slice(0, 200)))
+  } catch {
+    /* localStorage полн/недостапен — тивко игнорирај */
+  }
+}
+function filterHiddenNotifications(list, identity) {
+  const hidden = new Set(readHiddenNotificationIds(identity))
+  if (hidden.size === 0) return list
+  return list.filter((n) => !hidden.has(String(n.id)))
 }
 
 function readStoredLanguage() {
@@ -344,7 +373,9 @@ export function AppProvider({ children }) {
         // Известувања: за регистриран корисник backend е извор; анонимен = локално.
         if (email) {
           const notifs = await fetchNotifications(email, controller.signal)
-          if (!cancelled && notifs !== NOT_MODIFIED) setNotifications(notifs)
+          if (!cancelled && notifs !== NOT_MODIFIED) {
+            setNotifications(filterHiddenNotifications(notifs, reportsIdentityKey))
+          }
         }
       } catch {
         if (cancelled) return
@@ -533,6 +564,17 @@ export function AppProvider({ children }) {
   function markAllNotifications() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
     if (email) markAllNotificationsReadApi(email).then(() => refreshData()).catch(() => {})
+  }
+
+  function deleteNotification(id) {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    if (email && typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)) {
+      deleteNotificationApi(id, email)
+        .then((data) => {
+          if (!data.removed) addHiddenNotificationId(reportsIdentityKey, id)
+        })
+        .catch(() => addHiddenNotificationId(reportsIdentityKey, id))
+    }
   }
 
   // ---- Записи кон backend (единствен извор на вистина) ----
@@ -755,6 +797,7 @@ export function AppProvider({ children }) {
       pushNotification,
       markNotificationRead,
       markAllNotifications,
+      deleteNotification,
       unreadCount,
       pointsLedger,
       currentUserId,

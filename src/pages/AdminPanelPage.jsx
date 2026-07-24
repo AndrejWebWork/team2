@@ -8,7 +8,6 @@ import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { usePagination } from '../hooks/usePagination'
 import { useApp } from '../context/AppContext'
-import { updateReportStatus, serverToContainer, serverToWaste } from '../lib/api'
 import { copyReportToClipboard } from '../lib/reportClipboard'
 import { buildSmellClusterCounts, fetchAllAirSensors, resolveSmellSensor, smellUrgencyWithCluster } from '../lib/smellSensor'
 function mkDate(iso) {
@@ -44,6 +43,15 @@ function TypePill({ type }) {
 const containerKindLabelKey = (id) => `containerKind.${id || 'mesan'}`
 const ADMIN_PAGE_SIZE = 8
 
+function isServerReportId(id) {
+  return typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)
+}
+
+function containerStatus(c) {
+  if (c.status) return c.status
+  return c.issueOpen ? 'pending' : 'resolved'
+}
+
 function urgencyScore(r, clusterCounts, sensors) {
   if (r.type === 'smell') {
     const { sensorId } = sensors?.length ? resolveSmellSensor(r, sensors) : { sensorId: r.nearestSensorId || '_unknown' }
@@ -51,7 +59,7 @@ function urgencyScore(r, clusterCounts, sensors) {
     return smellUrgencyWithCluster(r, count)
   }
   if (r.type === 'waste') return r.status === 'pending' ? 15 : r.status === 'in_progress' ? 8 : 0
-  if (r.type === 'container') return r.issueOpen ? 10 : 0
+  if (r.type === 'container') return r.status === 'in_progress' ? 8 : r.issueOpen ? 10 : 0
   return 0
 }
 
@@ -274,7 +282,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
 }
 
 export function AdminPanelPage() {
-  const { auth, wasteReports, setWasteReports, smellAlerts, containers, setContainers, pushNotification, refreshData, t } = useApp()
+  const { auth, wasteReports, setWasteReports, smellAlerts, containers, setContainers, pushNotification, changeReportStatus, refreshData, t } = useApp()
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('pending')
   const [sortBy, setSortBy] = useState('date')
@@ -305,9 +313,20 @@ export function AdminPanelPage() {
   const allReports = useMemo(() => {
     const waste = wasteReports.map((r) => ({ ...r, type: 'waste', status: r.status || 'pending' }))
     const smell = smellAlerts.map((r) => ({ ...r, type: 'smell', status: 'pending', location: r.location || '—' }))
-    const cont = containers.map((c) => ({ ...c, type: 'container', status: c.issueOpen ? 'pending' : 'resolved', location: c.area, createdAt: c.createdAt || '' }))
+    const cont = containers.map((c) => ({
+      ...c,
+      type: 'container',
+      status: containerStatus(c),
+      location: c.area,
+      createdAt: c.createdAt || '',
+    }))
     return [...waste, ...smell, ...cont]
   }, [wasteReports, smellAlerts, containers])
+
+  const liveSelected = useMemo(() => {
+    if (!selected) return null
+    return allReports.find((r) => r.id === selected.id && r.type === selected.type) || selected
+  }, [selected, allReports])
 
   const filtered = useMemo(() => {
     let list = allReports
@@ -343,28 +362,18 @@ export function AdminPanelPage() {
     const statusLabel = STATUS_META[newStatus] ? t(STATUS_META[newStatus].key) : newStatus
     const location = report.location || report.area || t('admin.unknownLocation')
 
-    // Ако пријавата доаѓа од базата (UUID id), прво ажурирај на backend.
-    // При неуспех (пр. невалиден админ токен) НЕ прикажувај лажен успех.
-    let serverRow = null
-    if (typeof report.id === 'string' && report.id.includes('-')) {
-      try {
-        serverRow = await updateReportStatus(report.id, newStatus)
-      } catch (err) {
+    if (isServerReportId(report.id)) {
+      const result = await changeReportStatus(report.id, newStatus)
+      if (!result.ok) {
         pushNotification({
           title: t('admin.statusUpdateFailedTitle'),
-          body: err?.message || t('admin.statusUpdateFailedBody', { loc: location }),
+          body: t('admin.statusUpdateFailedBody', { loc: location }),
         })
         return false
       }
-    }
-
-    // Поените ги доделува ИСКЛУЧИВО backend-от при решавање (+2, еднаш по
-    // пријава) — тука се ажурира локалниот приказ од одговорот на PATCH.
-    if (report.type === 'waste') {
-      const mapped = serverRow ? serverToWaste(serverRow) : null
+    } else if (report.type === 'waste') {
       setWasteReports((prev) => prev.map((r) => {
         if (r.id !== report.id) return r
-        if (mapped) return { ...r, ...mapped }
         return {
           ...r,
           status: newStatus,
@@ -373,18 +382,18 @@ export function AdminPanelPage() {
         }
       }))
     } else if (report.type === 'container') {
-      const mapped = serverRow ? serverToContainer(serverRow) : null
       setContainers((prev) => prev.map((c) => {
         if (c.id !== report.id) return c
-        if (mapped) return mapped
         return {
           ...c,
+          status: newStatus,
           issueOpen: newStatus !== 'resolved',
           issue: newStatus === 'resolved' ? 'none' : c.issue,
         }
       }))
     }
 
+    setStatusFilter(newStatus)
     setStatusSuccess({
       title: t('admin.statusUpdatedTitle', { status: statusLabel }),
       body: t('admin.statusUpdatedBody', { loc: location, status: statusLabel }),
@@ -418,8 +427,8 @@ export function AdminPanelPage() {
       {/* Statistics row */}
       <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
         {[
-          { label: t('admin.statActiveDumps'), value: counts.waste - allReports.filter(r => r.type === 'waste' && r.status === 'resolved').length, icon: Trash2, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-          { label: t('admin.statFullContainers'), value: allReports.filter(r => r.type === 'container' && r.issueOpen).length, icon: Recycle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+          { label: t('admin.statActiveDumps'), value: counts.waste, icon: Trash2, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+          { label: t('admin.statFullContainers'), value: counts.container, icon: Recycle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
           { label: t('admin.statResolved'), value: counts.resolved, icon: Siren, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200' },
           { label: t('admin.statUnresolved'), value: counts.pending + counts.in_progress, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
         ].map((s) => (
@@ -428,7 +437,7 @@ export function AdminPanelPage() {
               <p className='text-xs font-medium text-slate-500'>{s.label}</p>
               <s.icon className={`h-4 w-4 ${s.color}`} />
             </div>
-            <p className={`mt-2 text-3xl font-bold ${s.color}`}>{s.value}</p>
+            <p className={`mt-2 text-3xl font-bold ${s.color}`}>{Math.max(0, s.value)}</p>
           </div>
         ))}
       </div>
@@ -560,22 +569,22 @@ export function AdminPanelPage() {
         </div>
       </div>
 
-      {selected && (
+      {liveSelected && (
         <ReportDrawer
-          report={selected}
+          report={liveSelected}
           onClose={() => setSelected(null)}
           onUpdateStatus={updateStatus}
           onCopyFeedback={setCopyToast}
           clusterCount={
-            selected.type === 'smell'
+            liveSelected.type === 'smell'
               ? (smellClusterCounts.get(
-                  resolveSmellSensor(selected, airSensors).sensorId,
+                  resolveSmellSensor(liveSelected, airSensors).sensorId,
                 ) || 1)
               : 1
           }
           sensorName={
-            selected.type === 'smell'
-              ? resolveSmellSensor(selected, airSensors).sensorName
+            liveSelected.type === 'smell'
+              ? resolveSmellSensor(liveSelected, airSensors).sensorName
               : null
           }
         />

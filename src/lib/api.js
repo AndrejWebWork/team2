@@ -276,6 +276,14 @@ export async function markAllNotificationsReadApi(email, signal) {
   return res.json()
 }
 
+export async function deleteNotificationApi(id, email, signal) {
+  const q = email ? `?email=${encodeURIComponent(email)}` : ''
+  const res = await fetch(`${API_URL}/api/notifications/${id}${q}`, { method: 'DELETE', signal })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Бришењето на известувањето не успеа.')
+  return data
+}
+
 // ---- Лидерборд ----
 
 export async function fetchLeaderboard(signal) {
@@ -537,6 +545,7 @@ export function serverToWaste(r) {
 }
 
 export function serverToContainer(r) {
+  const status = r.status || 'pending'
   return {
     id: r.id,
     area: r.location_label,
@@ -549,7 +558,8 @@ export function serverToContainer(r) {
     kind: r.container_kind_id || 'mesan',
     description: r.description,
     institutionId: r.institution_id,
-    issueOpen: r.status !== 'resolved',
+    status,
+    issueOpen: status !== 'resolved',
     reportedBy: r.reporter_name,
     reportedById: r.reporter_id,
     reportedByDevice: r.reporter_device_id || null,

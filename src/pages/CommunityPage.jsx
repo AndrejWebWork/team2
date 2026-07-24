@@ -2,6 +2,7 @@ import { CalendarDays, ChevronLeft, Loader2, MapPin, Trash2, Users, X } from 'lu
 import { useEffect, useState } from 'react'
 import { InstagramIcon } from '../components/InstagramIcon'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { CenteredOverlay } from '../components/CenteredOverlay'
 import { EmptyState } from '../components/EmptyState'
 import { EventDatePicker } from '../components/EventDatePicker'
 import { Toast } from '../components/Toast'
@@ -72,27 +73,37 @@ function SignUpModal({ event, onClose, onConfirm }) {
   }
 
   return (
-    <div className='fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center'>
-      <div className='w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl'>
-        <div className='mb-5 flex items-start justify-between'>
-          <div>
-            <h3 className='text-lg font-bold text-slate-900'>{t('comm.signupTitle')}</h3>
-            <p className='mt-0.5 text-sm text-slate-500'>{event.title}</p>
-          </div>
-          <button onClick={onClose} className='rounded-lg p-1.5 text-slate-400 hover:bg-slate-100'><X className='h-4 w-4' /></button>
+    <CenteredOverlay
+      open
+      onClose={onClose}
+      labelledBy='signup-modal-title'
+      panelClassName='text-left'
+    >
+      <div className='mb-5 flex items-start justify-between gap-3'>
+        <div className='min-w-0'>
+          <h3 id='signup-modal-title' className='text-lg font-bold text-slate-900'>{t('comm.signupTitle')}</h3>
+          <p className='mt-0.5 text-sm text-slate-500'>{event.title}</p>
         </div>
-        <form onSubmit={submit} className='space-y-3'>
-          <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('comm.namePlaceholder')} />
-          <Input type='email' value={form.email} disabled placeholder={t('comm.emailPlaceholder')} />
-          <Textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={t('comm.notePlaceholder')} className='min-h-16' />
-          {error && <p className='text-sm text-rose-600'>{error}</p>}
-          <div className='flex gap-2 pt-1'>
-            <Button type='button' variant='outline' className='flex-1' onClick={onClose}>{t('comm.cancel')}</Button>
-            <Button type='submit' className='flex-1'>{t('comm.confirmSignup')}</Button>
-          </div>
-        </form>
+        <button
+          type='button'
+          aria-label={t('common.close')}
+          onClick={onClose}
+          className='shrink-0 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100'
+        >
+          <X className='h-4 w-4' />
+        </button>
       </div>
-    </div>
+      <form onSubmit={submit} className='space-y-3'>
+        <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('comm.namePlaceholder')} />
+        <Input type='email' value={form.email} disabled placeholder={t('comm.emailPlaceholder')} />
+        <Textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={t('comm.notePlaceholder')} className='min-h-16' />
+        {error && <p className='text-sm text-rose-600'>{error}</p>}
+        <div className='flex gap-2 pt-1'>
+          <Button type='button' variant='outline' className='flex-1' onClick={onClose}>{t('comm.cancel')}</Button>
+          <Button type='submit' className='flex-1'>{t('comm.confirmSignup')}</Button>
+        </div>
+      </form>
+    </CenteredOverlay>
   )
 }
 

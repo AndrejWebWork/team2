@@ -73,3 +73,19 @@ notificationsRouter.patch('/read-all', async (req, res, next) => {
     res.json({ ok: true })
   } catch (err) { next(err) }
 })
+
+// DELETE /api/notifications/:id?email=  → брише лично известување; broadcast се отстранува само локално
+notificationsRouter.delete('/:id', async (req, res, next) => {
+  try {
+    const email = req.query.email || null
+    if (!email) return res.status(400).json({ error: 'Недостасува email.' })
+    const { rows } = await query(
+      `DELETE FROM notifications n
+       USING users u
+       WHERE n.id = $1 AND n.user_id = u.id AND u.email = $2
+       RETURNING n.id`,
+      [req.params.id, email],
+    )
+    res.json({ ok: true, removed: rows.length > 0 })
+  } catch (err) { next(err) }
+})

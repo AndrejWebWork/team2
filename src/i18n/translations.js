@@ -242,7 +242,7 @@ const dict = {
     },
     notif: {
       title: 'Известувања', markAll: 'Означи ги сите како прочитани', unread: 'Непрочитани:',
-      allClear: 'Се е чисто', noNotifications: 'Се уште нема известувања.', read: 'Прочитано',
+      allClear: 'Се е чисто', noNotifications: 'Се уште нема известувања.', read: 'Прочитано', delete: 'Избриши известување',
       reportResolvedTitle: 'Пријавата е решена',
       reportResolvedBody: 'Твојата пријава ({loc}) е означена како решена. Ти благодариме!',
     },
@@ -586,7 +586,7 @@ const dict = {
     },
     notif: {
       title: 'Notifications', markAll: 'Mark all as read', unread: 'Unread:',
-      allClear: 'All clear', noNotifications: 'No notifications yet.', read: 'Read',
+      allClear: 'All clear', noNotifications: 'No notifications yet.', read: 'Read', delete: 'Delete notification',
       reportResolvedTitle: 'Your report was resolved',
       reportResolvedBody: 'Your report ({loc}) has been marked as resolved. Thank you!',
     },
@@ -930,7 +930,7 @@ const dict = {
     },
     notif: {
       title: 'Njoftime', markAll: 'Shëno të gjitha si të lexuara', unread: 'Të palexuara:',
-      allClear: 'Gjithçka e pastër', noNotifications: 'Ende nuk ka njoftime.', read: 'E lexuar',
+      allClear: 'Gjithçka e pastër', noNotifications: 'Ende nuk ka njoftime.', read: 'E lexuar', delete: 'Fshi njoftimin',
       reportResolvedTitle: 'Raporti u zgjidh',
       reportResolvedBody: 'Raporti juaj ({loc}) u shënua si i zgjidhur. Faleminderit!',
     },

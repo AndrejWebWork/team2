@@ -1,10 +1,11 @@
-﻿import { EmptyState } from '../components/EmptyState'
+﻿import { Trash2 } from 'lucide-react'
+import { EmptyState } from '../components/EmptyState'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
 
 export function NotificationsPage() {
-  const { notifications, unreadCount, markNotificationRead, markAllNotifications, t } = useApp()
+  const { notifications, unreadCount, markNotificationRead, markAllNotifications, deleteNotification, t } = useApp()
 
   const groups = notifications.reduce((acc, n) => {
     acc[n.group] = [...(acc[n.group] || []), n]
@@ -32,11 +33,27 @@ export function NotificationsPage() {
             <h2 className='text-xs uppercase tracking-[0.2em] text-slate-500'>{groupLabel(group)}</h2>
             {groups[group].map((n, i) => (
               <Card key={n.id} className='stagger-item' style={{ '--i': i }}><CardContent className='p-4'>
-                <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-                  <p className='font-medium text-slate-800'>{n.title}</p>
-                  {!n.read ? <Button variant='ghost' size='sm' onClick={() => markOne(n.id)}>{t('notif.read')}</Button> : <span className='text-xs text-slate-400'>{t('notif.read')}</span>}
+                <div className='flex items-start gap-3'>
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+                      <p className='font-medium text-slate-800'>{n.title}</p>
+                      {!n.read ? (
+                        <Button variant='ghost' size='sm' onClick={() => markOne(n.id)}>{t('notif.read')}</Button>
+                      ) : (
+                        <span className='text-xs text-slate-400'>{t('notif.read')}</span>
+                      )}
+                    </div>
+                    <p className='mt-1 text-sm text-slate-600'>{n.body}</p>
+                  </div>
+                  <button
+                    type='button'
+                    onClick={() => deleteNotification(n.id)}
+                    aria-label={t('notif.delete')}
+                    className='shrink-0 rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600'
+                  >
+                    <Trash2 className='h-4 w-4' />
+                  </button>
                 </div>
-                <p className='text-sm text-slate-600'>{n.body}</p>
               </CardContent></Card>
             ))}
           </section>

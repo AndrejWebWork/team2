@@ -277,7 +277,7 @@ export function AdminDeskPage() {
               <div className={`mb-3 inline-flex rounded-lg p-2 ${accent.split(' ')[0]}`}>
                 <Icon className={`h-4 w-4 ${accent.split(' ')[1]}`} />
               </div>
-              <p className='text-2xl font-bold text-slate-900'>{value}</p>
+              <p className='text-2xl font-bold text-slate-900'>{Math.max(0, value)}</p>
               <p className='mt-0.5 text-xs text-slate-500'>{label}</p>
             </CardContent>
           </Card>
