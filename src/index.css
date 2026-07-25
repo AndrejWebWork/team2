@@ -44,6 +44,16 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.2);
 }
 
+/* iOS WKWebView: font < 16px → авто-зум при фокус што често останува.
+   Присили ≥16px на сите форма контроли (телефон + tablet). */
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 .page-enter {
   animation: fade-up 0.3s ease-out both;
 }

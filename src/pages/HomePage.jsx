@@ -1,4 +1,4 @@
-import { BarChart3, Camera, Flame, MapPin, Plus, Recycle, Trash2, Wind, X } from 'lucide-react'
+import { BarChart3, Camera, Flame, MapPin, Plus, Recycle, SwitchCamera, Trash2, Wind, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { GPSStatus } from '../components/GPSStatus'
@@ -15,33 +15,93 @@ import { isValidReportType } from '../lib/reportTypes'
 
 const MAX_PHOTOS = 6
 
+function stopStream(stream) {
+  stream?.getTracks?.().forEach((tr) => {
+    try { tr.stop() } catch { /* ignore */ }
+  })
+}
+
 function PhotoCapture({ photos, setPhotos, required, t }) {
   const videoRef = useRef(null)
+  const streamRef = useRef(null)
   const [cameraOpen, setCameraOpen] = useState(false)
-  const [stream, setStream] = useState(null)
+  const [facingMode, setFacingMode] = useState('environment')
+  const [flipping, setFlipping] = useState(false)
   const [toast, setToast] = useState('')
+
+  async function startCamera(mode) {
+    stopStream(streamRef.current)
+    streamRef.current = null
+    const constraints = {
+      audio: false,
+      video: {
+        facingMode: { ideal: mode },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    }
+    let s
+    try {
+      s = await navigator.mediaDevices.getUserMedia(constraints)
+    } catch {
+      // Fallback без ideal (постари iOS / Android WebView).
+      s = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: mode },
+      })
+    }
+    streamRef.current = s
+    setFacingMode(mode)
+    setCameraOpen(true)
+    // iOS WKWebView: srcObject мора после mount + muted + playsInline.
+    requestAnimationFrame(() => {
+      const video = videoRef.current
+      if (!video) return
+      video.srcObject = s
+      video.muted = true
+      video.setAttribute('playsinline', 'true')
+      video.play?.().catch(() => {})
+    })
+  }
 
   async function openCamera() {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-      setStream(s)
-      setCameraOpen(true)
-      setTimeout(() => { if (videoRef.current) videoRef.current.srcObject = s }, 100)
+      await startCamera('environment')
     } catch {
-      setToast(t('photo.cameraFail'))
+      try {
+        await startCamera('user')
+      } catch {
+        setToast(t('photo.cameraFail'))
+      }
     }
   }
 
   function closeCamera() {
-    stream?.getTracks().forEach((tr) => tr.stop())
-    setStream(null)
+    stopStream(streamRef.current)
+    streamRef.current = null
+    if (videoRef.current) videoRef.current.srcObject = null
     setCameraOpen(false)
+    setFlipping(false)
+  }
+
+  useEffect(() => () => stopStream(streamRef.current), [])
+
+  async function flipCamera() {
+    if (flipping) return
+    setFlipping(true)
+    const next = facingMode === 'environment' ? 'user' : 'environment'
+    try {
+      await startCamera(next)
+    } catch {
+      setToast(t('photo.flipFail'))
+    } finally {
+      setFlipping(false)
+    }
   }
 
   function capturePhoto() {
     const video = videoRef.current
-    if (!video) return
-    // Смали + компресирај (макс. 1600px, JPEG 0.7) за да остане под лимитот.
+    if (!video || !video.videoWidth) return
     const { dataUrl } = compressFromSource(video, video.videoWidth, video.videoHeight)
     setPhotos((prev) => (prev.length < MAX_PHOTOS ? [...prev, dataUrl] : prev))
     closeCamera()
@@ -65,9 +125,33 @@ function PhotoCapture({ photos, setPhotos, required, t }) {
 
       {cameraOpen ? (
         <div className='space-y-2'>
-          <video ref={videoRef} autoPlay playsInline className='w-full rounded-xl border border-slate-200 bg-black' style={{ maxHeight: 260 }} />
+          <div className='relative overflow-hidden rounded-xl border border-slate-200 bg-black'>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className='block w-full'
+              style={{
+                maxHeight: 320,
+                // Предна камера често е mirrored во native apps.
+                transform: facingMode === 'user' ? 'scaleX(-1)' : undefined,
+              }}
+            />
+            <button
+              type='button'
+              onClick={flipCamera}
+              disabled={flipping}
+              aria-label={t('photo.flipCamera')}
+              className='absolute bottom-3 right-3 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-black/55 text-white shadow-lg backdrop-blur-sm transition active:scale-95 disabled:opacity-60'
+            >
+              <SwitchCamera className={`h-6 w-6 ${flipping ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
           <div className='flex gap-2'>
-            <Button type='button' className='flex-1' onClick={capturePhoto}><Camera className='h-4 w-4' />{t('photo.capture')}</Button>
+            <Button type='button' className='flex-1' onClick={capturePhoto}>
+              <Camera className='h-4 w-4' />{t('photo.capture')}
+            </Button>
             <Button type='button' variant='outline' onClick={closeCamera}>{t('common.cancel')}</Button>
           </div>
         </div>
@@ -103,6 +187,7 @@ function PhotoCapture({ photos, setPhotos, required, t }) {
     </div>
   )
 }
+
 
 function SmellForm({ submitReport, onDone, loc, t }) {
   const [description, setDescription] = useState('')
@@ -244,7 +329,7 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
 
       <div>
         <p className='mb-1.5 text-sm font-medium text-slate-700'>{t('container.type')}</p>
-        <select value={containerKind} onChange={(e) => setContainerKind(e.target.value)} className='h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm'>
+        <select value={containerKind} onChange={(e) => setContainerKind(e.target.value)} className='h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base'>
           <option value='mesan'>{t('containerKind.mesan')}</option>
           <option value='podzemen'>{t('containerKind.podzemen')}</option>
           <option value='kabast'>{t('containerKind.kabast')}</option>
@@ -253,7 +338,7 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
 
       <div>
         <p className='mb-1.5 text-sm font-medium text-slate-700'>{t('container.problemType')}</p>
-        <select value={issueType} onChange={(e) => setIssueType(e.target.value)} className='h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm'>
+        <select value={issueType} onChange={(e) => setIssueType(e.target.value)} className='h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-base'>
           <option value='full'>{t('container.full')}</option>
           <option value='smell'>{t('container.smell')}</option>
           <option value='broken'>{t('container.broken')}</option>

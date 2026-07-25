@@ -5,7 +5,10 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AppProvider } from './context/AppContext'
 import './index.css'
+import { installIosViewportZoomFix } from './lib/iosViewport'
 import { appTheme } from './theme'
+
+installIosViewportZoomFix()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
