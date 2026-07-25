@@ -323,7 +323,9 @@ eventsRouter.post('/:id/remind', async (req, res, next) => {
     const { rows: signups } = await query(
       `SELECT DISTINCT s.user_id
          FROM event_signups s
-        WHERE s.event_id = $1 AND s.user_id IS NOT NULL`,
+         JOIN users u ON u.id = s.user_id
+        WHERE s.event_id = $1 AND s.user_id IS NOT NULL
+          AND COALESCE(u.notif_events, TRUE) = TRUE`,
       [event.id],
     )
     if (signups.length === 0) {

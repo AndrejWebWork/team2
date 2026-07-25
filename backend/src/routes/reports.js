@@ -279,11 +279,17 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
         ? `Твојата пријава (${loc}) е означена како решена. Ти благодариме!`
         : `Твојата пријава (${loc}) сега е: ${statusLabel}.`
       if (rows[0].reporter_id) {
-        await query(
-          `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
-          [rows[0].reporter_id, title, body],
-        ).catch(() => {})
-        sendPushToUser(rows[0].reporter_id, { title, body }).catch(() => {})
+        const { rows: userRows } = await query(
+          'SELECT notif_waste FROM users WHERE id = $1',
+          [rows[0].reporter_id],
+        )
+        if (userRows[0]?.notif_waste !== false) {
+          await query(
+            `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
+            [rows[0].reporter_id, title, body],
+          ).catch(() => {})
+          sendPushToUser(rows[0].reporter_id, { title, body }).catch(() => {})
+        }
       } else if (rows[0].reporter_device_id) {
         sendPushToDevice(rows[0].reporter_device_id, { title, body }).catch(() => {})
       }
