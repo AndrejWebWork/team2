@@ -42,15 +42,16 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Sync Capacitor iOS
-        run: npx cap sync ios
+      - name: Copy web assets to iOS
+        run: npx cap copy ios
 
       - name: Normalize SPM paths for macOS
         run: |
           set -euo pipefail
           PKG=ios/App/CapApp-SPM/Package.swift
           sed -i '' 's|\\|/|g' "$PKG"
-          grep -n 'node_modules' "$PKG"
+          test -f "$PKG"
+          grep 'node_modules' "$PKG"
 
       - name: Resolve Swift packages
         run: |

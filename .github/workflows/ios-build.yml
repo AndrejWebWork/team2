@@ -29,8 +29,8 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Sync Capacitor iOS
-        run: npx cap sync ios
+      - name: Copy web assets to iOS
+        run: npx cap copy ios
 
       - name: Import signing certificate and profile
         env:
