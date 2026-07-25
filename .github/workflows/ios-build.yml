@@ -4,16 +4,6 @@ name: iOS Build
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'ios/**'
-      - 'public/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'capacitor.config.json'
-      - '.github/workflows/ios-build.yml'
 
 concurrency:
   group: ios-build-${{ github.ref }}
