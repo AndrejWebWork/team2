@@ -26,7 +26,7 @@ export function WastePage() {
     refreshReports()
     const timer = setInterval(() => {
       if (!document.hidden) refreshReports()
-    }, 8000)
+    }, 12000)
     return () => clearInterval(timer)
   }, [refreshReports])
 

@@ -40,20 +40,32 @@ const AQI_PIN = {
   unhealthy: { bg: '#ef4444', ring: '#fee2e2' },
 }
 
+// Кеш по AQI вредност — иста референца меѓу рендери (Capacitor WebView
+// често „губи“ маркери ако секој poll прави нов L.divIcon).
+const aqiIconCache = new Map()
+
 function makeAqiIcon(aqi) {
-  const level = aqi >= 101 ? 'unhealthy' : aqi >= 51 ? 'moderate' : 'good'
+  const n = Number.isFinite(Number(aqi)) ? Math.round(Number(aqi)) : null
+  const cacheKey = n == null ? 'na' : String(n)
+  const cached = aqiIconCache.get(cacheKey)
+  if (cached) return cached
+
+  const level = n == null ? 'good' : n >= 101 ? 'unhealthy' : n >= 51 ? 'moderate' : 'good'
   const c = AQI_PIN[level]
-  return L.divIcon({
-    className: '',
+  const label = n == null ? '—' : String(n)
+  // Без CSS filter:drop-shadow — Android/iOS WebView често не го црта (празни пинови).
+  const icon = L.divIcon({
+    className: 'aqi-map-pin',
     html: `
-      <div style="position:relative;width:34px;height:42px;filter:drop-shadow(0 2px 4px rgba(15,23,42,0.35));">
+      <div style="position:relative;width:34px;height:42px;">
         <div style="
           width:34px;height:34px;border-radius:50%;
-          background:${c.bg};border:3px solid #ffffff;box-shadow:0 0 0 2px ${c.ring};
+          background:${c.bg};border:3px solid #ffffff;
+          box-shadow:0 0 0 2px ${c.ring},0 2px 6px rgba(15,23,42,0.35);
           display:flex;align-items:center;justify-content:center;
-          color:#ffffff;font-weight:800;font-size:${aqi >= 100 ? 11 : 13}px;
-          font-family:Inter,system-ui,sans-serif;line-height:1;
-        ">${aqi}</div>
+          color:#ffffff;font-weight:800;font-size:${n != null && n >= 100 ? 11 : 13}px;
+          font-family:system-ui,-apple-system,sans-serif;line-height:1;
+        ">${label}</div>
         <div style="
           position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
           width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;
@@ -64,6 +76,8 @@ function makeAqiIcon(aqi) {
     iconAnchor: [17, 42],
     popupAnchor: [0, -40],
   })
+  aqiIconCache.set(cacheKey, icon)
+  return icon
 }
 
 import { findNearestAirSensor, haversineKm, resolveLocationLabel } from '../lib/geo'
@@ -467,7 +481,13 @@ export function AirPage() {
           <div className='app-map-shell'>
             {/* Почетниот поглед на мапата е Скопје (само поглед, не податок);
                 маркерот „Вашата локација" се црта САМО со реален GPS. */}
-            <MapContainer center={[41.9981, 21.4254]} zoom={13} maxZoom={20} className='h-full w-full'>
+            <MapContainer
+              center={[41.9981, 21.4254]}
+              zoom={13}
+              maxZoom={20}
+              preferCanvas
+              className='h-full w-full'
+            >
               {userLocation && <RecenterMap lat={userLocation.lat} lng={userLocation.lng} />}
               <MapLayers />
               {userLocation && (
@@ -476,7 +496,7 @@ export function AirPage() {
                 </Marker>
               )}
               {visibleMinistrySensors.map((s) => (
-                <Marker key={s.id} position={[s.lat, s.lng]} icon={makeAqiIcon(s.aqi)}>
+                <Marker key={s.id} position={[s.lat, s.lng]} icon={makeAqiIcon(s.aqi)} zIndexOffset={400}>
                   <Popup>
                     <p className='font-bold'>{sensorName(s, t)}</p>
                     <p className='text-xs'>{t('air.referentSource')}</p>

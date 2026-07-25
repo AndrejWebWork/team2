@@ -326,10 +326,10 @@ export function CommunityPage() {
   const [reminderEvent, setReminderEvent] = useState(null)
   const [showPast, setShowPast] = useState(false)
 
-  // На Community страницата настаните се освежуваат побрзо (8s) — не чекаат 15s poll.
+  // На Community страницата настаните се освежуваат побрзо од глобалниот poll.
   useEffect(() => {
     refreshEvents()
-    const timer = setInterval(refreshEvents, 8000)
+    const timer = setInterval(refreshEvents, 12000)
     return () => clearInterval(timer)
   }, [refreshEvents])
 

@@ -218,7 +218,13 @@ export function ContainersPage() {
           </div>
 
           <div className='app-map-shell'>
-            <MapContainer center={[41.9981, 21.4254]} zoom={14} maxZoom={20} className='h-full w-full'>
+            <MapContainer
+              center={[41.9981, 21.4254]}
+              zoom={14}
+              maxZoom={20}
+              preferCanvas
+              className='h-full w-full'
+            >
               <MapLayers />
               {recyclingPoints.map((p) => (
                 <Marker key={p.id} position={[p.lat, p.lng]} icon={recyclingIcon}>

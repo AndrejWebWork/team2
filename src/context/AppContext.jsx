@@ -72,10 +72,10 @@ function readStoredAuth() {
   }
 }
 // Колку често се освежуваат податоците од backend (reports, events, leaderboard).
-const POLL_INTERVAL_MS = 15000
-const ADMIN_POLL_INTERVAL_MS = 10000
+const POLL_INTERVAL_MS = 22000
+const ADMIN_POLL_INTERVAL_MS = 12000
 // Случаен растур (jitter) за да не удрат сите клиенти истовремено (spikes).
-const POLL_JITTER_MS = 5000
+const POLL_JITTER_MS = 4000
 // Стабилен идентитет на уредот за анонимни корисници (кеш по уред).
 const DEVICE_ID = getDeviceId()
 

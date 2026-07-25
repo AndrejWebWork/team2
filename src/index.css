@@ -91,12 +91,17 @@ select:focus {
   }
 }
 
-.leaflet-container,
-.leaflet-pane,
-.leaflet-top,
-.leaflet-bottom,
-.leaflet-control {
-  z-index: 0 !important;
+/* Не ги рамни сите Leaflet panes на z-index:0 — тоа ги крие маркерите
+   зад tiles на Android/iOS WebView. Само ги држиме контролите во мапата. */
+.app-map-shell .leaflet-top,
+.app-map-shell .leaflet-bottom {
+  z-index: 1000;
+}
+
+.app-map-shell .leaflet-marker-icon,
+.app-map-shell .aqi-map-pin {
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Респonsive Leaflet мапа — пократка на телефон, повисока на tablet/desktop. */
@@ -110,6 +115,8 @@ select:focus {
   box-shadow:
     0 4px 6px -1px rgba(15, 23, 42, 0.06),
     0 12px 28px -8px rgba(15, 23, 42, 0.12);
+  /* Помалку layout thrash при pan/zoom на телефон */
+  contain: layout paint;
 }
 
 .app-map-shell .leaflet-container {
