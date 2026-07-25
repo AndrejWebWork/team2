@@ -24,13 +24,20 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
+        env:
+          NODE_ENV: development
 
       - name: Build web app
         run: npm run build
 
       - name: Copy web assets to iOS
-        run: npx cap copy ios
+        run: |
+          set -euo pipefail
+          rm -rf ios/App/App/public
+          mkdir -p ios/App/App/public
+          cp -R dist/. ios/App/App/public/
+          cp capacitor.config.json ios/App/App/capacitor.config.json
 
       - name: Import signing certificate and profile
         env:
