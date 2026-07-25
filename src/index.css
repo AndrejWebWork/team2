@@ -91,6 +91,12 @@ select:focus {
   }
 }
 
+/* iPhone notch / Dynamic Island — header под статусот, кликабилни икони */
+.app-topbar {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
 /* Не ги рамни сите Leaflet panes на z-index:0 — тоа ги крие маркерите
    зад tiles на Android/iOS WebView. Само ги држиме контролите во мапата. */
 .app-map-shell .leaflet-top,

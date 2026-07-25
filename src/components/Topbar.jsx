@@ -50,7 +50,9 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
 
   return (
     <>
-      <header className='sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-3 md:px-6'>
+      <header
+        className='app-topbar sticky top-0 z-20 border-b border-slate-200 bg-white px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:px-6'
+      >
         <div className='flex items-center justify-between'>
 
           {/* Mobile: avatar opens slide menu */}
@@ -139,7 +141,7 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
           className={`absolute left-0 top-0 flex h-full w-72 flex-col border-r border-slate-200 bg-white shadow-xl transition-transform duration-250 ease-out ${openMenu ? 'translate-x-0' : '-translate-x-full'}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className='flex items-center justify-between border-b border-slate-200 p-4'>
+          <div className='flex items-center justify-between border-b border-slate-200 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]'>
             <div>
               <p className='text-sm font-semibold text-slate-900'>{displayLabel}</p>
               <p className='text-xs text-slate-400'>{roleLabel}</p>
