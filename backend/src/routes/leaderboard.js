@@ -4,8 +4,8 @@ import { serveCachedJson } from '../lib/responseCache.js'
 
 export const leaderboardRouter = Router()
 
-// Лидербордот е ист за сите → кеш 15s (агрегатот е поскап, ретко се менува).
-const LEADERBOARD_TTL_MS = 60000
+// Лидербордот е ист за сите → краток кеш (брз одговор, свежи поени).
+const LEADERBOARD_TTL_MS = 15000
 
 // GET /api/leaderboard  → месечен ранг од погледот leaderboard_monthly (само >0)
 leaderboardRouter.get('/', async (req, res, next) => {

@@ -12,6 +12,7 @@ import {
   deleteNotificationApi,
   fetchEvents,
   fetchLeaderboard,
+  fetchMyLeaderboardRank,
   fetchNotifications,
   fetchReports,
   fetchUser,
@@ -205,6 +206,45 @@ function writeCachedEvents(identity, list) {
   }
 }
 
+const LEADERBOARD_CACHE_KEY = 'ekoskopje.leaderboard.cache'
+const MY_POINTS_CACHE_PREFIX = 'ekoskopje.mypoints.'
+
+function readCachedLeaderboard() {
+  try {
+    const raw = localStorage.getItem(LEADERBOARD_CACHE_KEY)
+    if (!raw) return []
+    const data = JSON.parse(raw)
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
+  }
+}
+
+function writeCachedLeaderboard(list) {
+  try {
+    localStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify(Array.isArray(list) ? list : []))
+  } catch { /* ignore */ }
+}
+
+function readCachedMyPoints(email) {
+  if (!email) return null
+  try {
+    const raw = localStorage.getItem(`${MY_POINTS_CACHE_PREFIX}${String(email).toLowerCase()}`)
+    if (raw == null || raw === '') return null
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedMyPoints(email, points) {
+  if (!email) return
+  try {
+    localStorage.setItem(`${MY_POINTS_CACHE_PREFIX}${String(email).toLowerCase()}`, String(Number(points) || 0))
+  } catch { /* ignore */ }
+}
+
 export function AppProvider({ children }) {
   const [auth, setAuth] = useState(readStoredAuth)
   // Сите податоци се РЕАЛНИ: сензорите доаѓаат во живо од WAQI (во AirPage),
@@ -218,7 +258,16 @@ export function AppProvider({ children }) {
   const [notifAir, setNotifAirState] = useState(true)
   const [pointsLedger, setPointsLedger] = useState({})
   const [pointsEvents, setPointsEvents] = useState([])
-  const [serverLeaderboard, setServerLeaderboard] = useState([])
+  // Кеш → веднаш видливи поени на старт (без чекање на reports sync).
+  const [serverLeaderboard, setServerLeaderboard] = useState(readCachedLeaderboard)
+  const [myServerPoints, setMyServerPoints] = useState(() => {
+    try {
+      const a = readStoredAuth()
+      return a?.email ? readCachedMyPoints(a.email) : null
+    } catch {
+      return null
+    }
+  })
   const [apiOnline, setApiOnline] = useState(null) // null=непознато, true/false
   const [language, setLanguageState] = useState(readStoredLanguage)
   // Рачно освежување: покачувањето предизвикува веднаш нов циклус на вчитување
@@ -281,7 +330,8 @@ export function AppProvider({ children }) {
     setContainers([])
     setSmellAlerts([])
     setEvents(readCachedEvents(reportsIdentityKey) || [])
-    setServerLeaderboard([])
+    setServerLeaderboard(readCachedLeaderboard())
+    setMyServerPoints(auth.email ? readCachedMyPoints(auth.email) : null)
     wasteSnapRef.current = []
     containersSnapRef.current = []
     smellSnapRef.current = []
@@ -371,10 +421,16 @@ export function AppProvider({ children }) {
       if (syncInFlight) return
       syncInFlight = true
       try {
-        const [rows, evts, board] = await Promise.all([
+        // Поените/лидербордот се применуваат ШТОМ стигнат — не чекаат reports.
+        const boardPromise = fetchLeaderboard(controller.signal).then((board) => {
+          if (cancelled || board === NOT_MODIFIED) return board
+          setServerLeaderboard(board)
+          writeCachedLeaderboard(board)
+          return board
+        })
+        const [rows, evts] = await Promise.all([
           fetchReports(controller.signal),
           fetchEvents(email, controller.signal),
-          fetchLeaderboard(controller.signal),
         ])
         if (cancelled) return
         setApiOnline(true)
@@ -396,7 +452,7 @@ export function AppProvider({ children }) {
           setEvents(evts)
           writeCachedEvents(reportsIdentityKey, evts)
         }
-        if (board !== NOT_MODIFIED) setServerLeaderboard(board)
+        await boardPromise
         // Известувања: за регистриран корисник backend е извор; анонимен = локално.
         if (email) {
           const notifs = await fetchNotifications(email, controller.signal)
@@ -438,6 +494,22 @@ export function AppProvider({ children }) {
       window.removeEventListener('focus', onFocus)
     }
   }, [reportsIdentityKey, refreshKey, language, auth.email, auth.role, auth.isAnonymous])
+
+  // Брзи поени за најавен корисник (лек endpoint) — независно од тешкиот reports sync.
+  useEffect(() => {
+    if (!email) {
+      setMyServerPoints(null)
+      return undefined
+    }
+    let cancelled = false
+    fetchMyLeaderboardRank(email).then((r) => {
+      if (cancelled || !r || r.points == null) return
+      const pts = Number(r.points) || 0
+      setMyServerPoints(pts)
+      writeCachedMyPoints(email, pts)
+    })
+    return () => { cancelled = true }
+  }, [email, refreshKey])
 
   // Веднаш повлечи свежи податоци од backend (по запис што менува состојба).
   function refreshData() {
@@ -598,6 +670,13 @@ export function AppProvider({ children }) {
     const target = userId || DEVICE_ID
     setPointsLedger((prev) => ({ ...prev, [target]: (prev[target] || 0) + amount }))
     setPointsEvents((prev) => [...prev, { userId: target, points: amount, createdAt: new Date().toISOString() }])
+    if (email && (target === email || target === currentUserId)) {
+      setMyServerPoints((prev) => {
+        const next = (prev != null ? prev : 0) + amount
+        writeCachedMyPoints(email, next)
+        return next
+      })
+    }
   }
 
   // In-app известување без телефонски banner/push (пр. AQI аларм).
@@ -904,7 +983,9 @@ export function AppProvider({ children }) {
   }, [serverLeaderboard, pointsLedger, email])
 
   const currentUserPoints = email
-    ? (serverLeaderboard.find((e) => e.userId === email)?.points || 0)
+    ? (myServerPoints != null
+      ? myServerPoints
+      : (serverLeaderboard.find((e) => e.userId === email)?.points || 0))
     : (pointsLedger[DEVICE_ID] || 0)
 
   const value = useMemo(
