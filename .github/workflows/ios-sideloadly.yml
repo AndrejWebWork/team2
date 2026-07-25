@@ -47,7 +47,6 @@ jobs:
       - name: Copy web assets to iOS
         run: |
           set -euo pipefail
-          npx cap --version
           rm -rf ios/App/App/public
           mkdir -p ios/App/App/public
           cp -R dist/. ios/App/App/public/
@@ -60,7 +59,6 @@ jobs:
           PKG=ios/App/CapApp-SPM/Package.swift
           sed -i '' 's|\\|/|g' "$PKG"
           test -f "$PKG"
-          grep 'node_modules' "$PKG"
 
       - name: Resolve Swift packages
         run: |
@@ -68,28 +66,32 @@ jobs:
           xcodebuild -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
+            -sdk iphoneos \
             -resolvePackageDependencies
 
-      - name: Archive without code signing
+      - name: Build app without code signing
         run: |
           set -euo pipefail
           xcodebuild -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$PWD/build/App.xcarchive" \
+            -sdk iphoneos \
+            -derivedDataPath "$PWD/build/DerivedData" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" \
-            archive
+            ONLY_ACTIVE_ARCH=NO \
+            OTHER_LDFLAGS="-ObjC" \
+            build
 
       - name: Package IPA for Sideloadly
         run: |
           set -euo pipefail
-          APP_PATH=$(find build/App.xcarchive/Products/Applications -maxdepth 1 -name '*.app' -print -quit)
+          APP_PATH=$(find build/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' -print -quit)
           if [ -z "$APP_PATH" ]; then
-            echo "::error::Could not find .app in archive"
+            echo "::error::Could not find .app in build output"
+            find build/DerivedData/Build/Products -name '*.app' || true
             exit 1
           fi
           mkdir -p build/sideloadly/Payload
