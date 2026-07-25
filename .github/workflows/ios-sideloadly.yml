@@ -51,7 +51,14 @@ jobs:
           mkdir -p ios/App/App/public
           cp -R dist/. ios/App/App/public/
           cp capacitor.config.json ios/App/App/capacitor.config.json
+          cat > ios/App/App/config.xml <<'EOF'
+          <?xml version='1.0' encoding='utf-8'?>
+          <widget version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+            <access origin="*" />
+          </widget>
+          EOF
           test -f ios/App/App/public/index.html
+          test -f ios/App/App/config.xml
 
       - name: Normalize SPM paths for macOS
         run: |
@@ -72,18 +79,28 @@ jobs:
       - name: Build app without code signing
         run: |
           set -euo pipefail
-          xcodebuild -project ios/App/App.xcodeproj \
+          mkdir -p build
+          if ! xcodebuild -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath "$PWD/build/DerivedData" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="" \
+            CODE_SIGN_IDENTITY=- \
+            EXPANDED_CODE_SIGN_IDENTITY= \
+            CODE_SIGN_ENTITLEMENTS= \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM= \
+            PROVISIONING_PROFILE_SPECIFIER= \
             ONLY_ACTIVE_ARCH=NO \
-            OTHER_LDFLAGS="-ObjC" \
-            build
+            build > build/xcodebuild.log 2>&1; then
+            echo "::group::xcodebuild errors"
+            grep -E 'error:|fatal error:|BUILD FAILED' build/xcodebuild.log | tail -n 40 || tail -n 80 build/xcodebuild.log
+            echo "::endgroup::"
+            exit 1
+          fi
 
       - name: Package IPA for Sideloadly
         run: |
