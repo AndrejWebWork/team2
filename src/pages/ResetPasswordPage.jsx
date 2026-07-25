@@ -44,8 +44,7 @@ export function ResetPasswordPage() {
         type='button'
         onClick={() => navigate('/login', { state: loginNavState(location.state?.returnTo) })}
         aria-label={t('common.back')}
-        className='absolute left-4 z-20 flex h-10 items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 pl-3 pr-4 text-sm font-semibold text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white hover:text-slate-900'
-        style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
+        className='app-safe-back flex h-10 items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 pl-3 pr-4 text-sm font-semibold text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white hover:text-slate-900'
       >
         <ArrowLeft className='h-4 w-4' />
         {t('common.back')}

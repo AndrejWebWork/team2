@@ -44,7 +44,7 @@ export function Toast({ toast, onClose }) {
   // body, fixed е закачен за ЕКРАНОТ на секој уред — при скрол останува на исто
   // место долу-десно, додека сам не исчезне.
   return createPortal(
-    <div className='pointer-events-none fixed inset-x-4 bottom-24 z-[1300] flex justify-end sm:inset-x-auto sm:right-4 lg:bottom-3'>
+    <div className='pointer-events-none fixed inset-x-4 bottom-[max(6rem,calc(env(safe-area-inset-bottom,0px)+5.5rem))] z-[1300] flex justify-end sm:inset-x-auto sm:right-4 lg:bottom-3'>
       <div
         role='status'
         aria-live='polite'

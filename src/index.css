@@ -91,10 +91,31 @@ select:focus {
   }
 }
 
-/* iPhone notch / Dynamic Island — header под статусот, кликабилни икони */
+/* iPhone notch / Dynamic Island / home indicator — сите модели.
+   Важно: calc(safe-area + gap), НЕ max(gap, safe-area) — инаку копчето
+   седи точно на работ од статусот и не е кликабилно. */
+.app-safe-back {
+  position: absolute;
+  z-index: 20;
+  top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  left: max(1rem, env(safe-area-inset-left, 0px));
+}
+
+.app-safe-header {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
 .app-topbar {
-  padding-left: max(1rem, env(safe-area-inset-left));
-  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-bottom: 0.75rem;
+}
+
+.app-safe-drawer-head {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
 }
 
 /* Не ги рамни сите Leaflet panes на z-index:0 — тоа ги крие маркерите
