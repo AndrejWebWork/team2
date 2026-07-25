@@ -87,7 +87,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
       <div className='animate-drawer-overlay-in absolute inset-0 bg-slate-900/40' onClick={onClose} />
       <aside className='animate-drawer-in-right relative ml-auto flex h-full w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-2xl'>
         {/* Header */}
-        <div className='flex items-center justify-between border-b border-slate-200 px-5 py-4'>
+        <div className='app-safe-drawer-head flex items-center justify-between border-b border-slate-200 px-5 pb-4'>
           <div className='flex items-center gap-2'>
             <TypePill type={report.type} />
             <StatusPill status={report.status} />

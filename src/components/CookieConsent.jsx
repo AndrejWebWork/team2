@@ -51,7 +51,7 @@ export function CookieConsent() {
   if (!visible) return null
 
   return (
-    <div className='consent-overlay fixed inset-0 z-[2500] flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm'>
+    <div className='consent-overlay fixed inset-0 z-[2500] flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm' style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
       <div
         role='dialog'
         aria-modal='true'
