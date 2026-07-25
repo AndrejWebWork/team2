@@ -115,8 +115,8 @@ select:focus {
   box-shadow:
     0 4px 6px -1px rgba(15, 23, 42, 0.06),
     0 12px 28px -8px rgba(15, 23, 42, 0.12);
-  /* Помалку layout thrash при pan/zoom на телефон */
-  contain: layout paint;
+  /* Помалку layout thrash при pan/zoom на телефон (без paint — ги сече маркерите) */
+  contain: layout;
 }
 
 .app-map-shell .leaflet-container {

@@ -270,12 +270,21 @@ export function AirPage() {
     }
     setGps((g) => ({ ...g, loading: true, error: '' }))
     captureGeolocation()
-      .then(async (pos) => {
+      .then((pos) => {
         const lat = pos.coords.latitude
         const lng = pos.coords.longitude
-        const label = await resolveLocationLabel(lat, lng)
-        setGps({ lat, lng, label, loading: false, error: '' })
+        // Веднаш покажи најблизок сензор — не чекај reverse-geocode (Nominatim).
         setUserLocation({ lat, lng })
+        setGps({
+          lat, lng,
+          label: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+          loading: false,
+          error: '',
+        })
+        resolveLocationLabel(lat, lng).then((label) => {
+          if (!label) return
+          setGps((g) => (g.lat === lat && g.lng === lng ? { ...g, label } : g))
+        }).catch(() => {})
       })
       .catch((err) => {
         const denied = err?.code === 1
@@ -485,7 +494,6 @@ export function AirPage() {
               center={[41.9981, 21.4254]}
               zoom={13}
               maxZoom={20}
-              preferCanvas
               className='h-full w-full'
             >
               {userLocation && <RecenterMap lat={userLocation.lat} lng={userLocation.lng} />}

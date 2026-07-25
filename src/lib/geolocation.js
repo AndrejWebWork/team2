@@ -31,8 +31,9 @@ async function getNativePosition(options) {
 
   const pos = await Geolocation.getCurrentPosition({
     enableHighAccuracy: options.enableHighAccuracy ?? true,
-    timeout: options.timeout ?? 15000,
-    maximumAge: options.maximumAge ?? 0,
+    timeout: options.timeout ?? 10000,
+    // Кеширана локација до 2 мин — најблискиот сензор се појавува веднаш.
+    maximumAge: options.maximumAge ?? 120000,
   })
 
   return {
@@ -52,7 +53,7 @@ async function getNativePosition(options) {
  */
 export function captureGeolocation({ desktop = isLikelyDesktop() } = {}) {
   if (Capacitor.isNativePlatform()) {
-    return getNativePosition({ enableHighAccuracy: true, maximumAge: 0, timeout: 15000 })
+    return getNativePosition({ enableHighAccuracy: true, maximumAge: 120000, timeout: 10000 })
   }
 
   if (!navigator.geolocation) {

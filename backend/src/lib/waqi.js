@@ -1,24 +1,11 @@
-// Клиент за WAQI податоци — преку backend (/api/air/waqi), за да работат
-// Capacitor Android/iOS без VITE_WAQI_TOKEN во билдот.
-// Локален fallback: директен WAQI повикот ако има токен (веб dev).
+// WAQI (aqicn.org) — официјални МЖСПП + граѓански станици за Скопје.
+// Токенот живее само на серверот (WAQI_TOKEN), за да работат Capacitor
+// Android/iOS билдови без VITE_WAQI_TOKEN во клиентот.
 
-import { Capacitor } from '@capacitor/core'
-
-const WAQI_TOKEN = import.meta.env.VITE_WAQI_TOKEN
 const API = 'https://api.waqi.info'
 const SKOPJE_BOUNDS = '41.90,21.30,42.10,21.75'
 const EXTRA_UIDS = [12408]
 const FRESH_MS = 48 * 60 * 60 * 1000
-
-const PRODUCTION_API = 'https://team2-zeta.vercel.app'
-
-function resolveApiUrl() {
-  const fromEnv = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-  if (fromEnv) return fromEnv
-  if (import.meta.env.DEV) return 'http://localhost:4000'
-  if (Capacitor.isNativePlatform()) return PRODUCTION_API
-  return ''
-}
 
 const NAME_MK = {
   centar: 'Центар',
@@ -47,6 +34,11 @@ const NAME_KEY = {
 
 const REFERENT_KEYS = new Set(Object.keys(NAME_MK))
 
+function toNumber(v) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
 function nameKeyFor(raw) {
   const key = String(raw || '').split(',')[0].trim().toLowerCase()
   return NAME_KEY[key] || null
@@ -70,22 +62,27 @@ function cleanName(raw) {
   return NAME_MK[key] || base || 'Непозната станица'
 }
 
-function toNumber(v) {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : null
+function isFresh(iso) {
+  if (!iso) return false
+  const t = Date.parse(iso)
+  return Number.isFinite(t) && Date.now() - t < FRESH_MS
 }
 
-async function getJson(url, signal) {
-  const res = await fetch(url, { signal, cache: 'no-store' })
+function getToken() {
+  return (process.env.WAQI_TOKEN || process.env.VITE_WAQI_TOKEN || '').trim()
+}
+
+async function getJson(url) {
+  const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`WAQI HTTP ${res.status}`)
   const json = await res.json()
   if (json.status !== 'ok') throw new Error('WAQI status not ok')
   return json.data
 }
 
-async function fetchStationDetail(uid, signal) {
+async function fetchStationDetail(uid, token) {
   try {
-    const d = await getJson(`${API}/feed/@${uid}/?token=${WAQI_TOKEN}`, signal)
+    const d = await getJson(`${API}/feed/@${uid}/?token=${token}`)
     return {
       pm25: toNumber(d.iaqi?.pm25?.v),
       pm10: toNumber(d.iaqi?.pm10?.v),
@@ -100,26 +97,21 @@ async function fetchStationDetail(uid, signal) {
   }
 }
 
-function isFresh(iso) {
-  if (!iso) return false
-  const t = Date.parse(iso)
-  return Number.isFinite(t) && Date.now() - t < FRESH_MS
-}
+/** Сите WAQI станици во Скопје (референтни + граѓански). */
+export async function fetchSkopjeWaqiSensors() {
+  const token = getToken()
+  if (!token) throw new Error('WAQI_TOKEN не е поставен на серверот')
 
-async function fetchSkopjeSensorsDirect(signal) {
-  if (!WAQI_TOKEN) throw new Error('VITE_WAQI_TOKEN не е поставен')
   const list = await getJson(
-    `${API}/map/bounds/?token=${WAQI_TOKEN}&latlng=${SKOPJE_BOUNDS}&networks=all`,
-    signal,
+    `${API}/map/bounds/?token=${token}&latlng=${SKOPJE_BOUNDS}&networks=all`,
   )
-
   const stations = (Array.isArray(list) ? list : []).filter((s) => toNumber(s.uid) != null)
   const boundsUids = new Set(stations.map((s) => Number(s.uid)))
   const extraUids = EXTRA_UIDS.filter((uid) => !boundsUids.has(uid))
 
   const [details, extraDetails] = await Promise.all([
-    Promise.all(stations.map((s) => fetchStationDetail(s.uid, signal))),
-    Promise.all(extraUids.map((uid) => fetchStationDetail(uid, signal))),
+    Promise.all(stations.map((s) => fetchStationDetail(s.uid, token))),
+    Promise.all(extraUids.map((uid) => fetchStationDetail(uid, token))),
   ])
 
   const fromBounds = stations.map((s, i) => {
@@ -171,22 +163,4 @@ async function fetchSkopjeSensorsDirect(signal) {
   }).filter(Boolean)
 
   return [...fromBounds, ...fromExtras]
-}
-
-async function fetchSkopjeSensorsViaBackend(_signal) {
-  const base = resolveApiUrl()
-  const res = await fetch(`${base}/api/air/waqi`, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`WAQI proxy HTTP ${res.status}`)
-  const data = await res.json()
-  return Array.isArray(data) ? data : []
-}
-
-/** Преферира backend (мобилни + прод); fallback директен WAQI ако има токен. */
-export async function fetchSkopjeSensors(signal) {
-  try {
-    return await fetchSkopjeSensorsViaBackend(signal)
-  } catch (err) {
-    if (WAQI_TOKEN) return fetchSkopjeSensorsDirect(signal)
-    throw err
-  }
 }

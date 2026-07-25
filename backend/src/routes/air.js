@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import { Router } from 'express'
 import { query } from '../db.js'
 import { fetchPulseSensors } from '../lib/pulse.js'
+import { fetchSkopjeWaqiSensors } from '../lib/waqi.js'
 
 export const airRouter = Router()
 
@@ -38,6 +39,36 @@ refresh()
 const timer = setInterval(refresh, REFRESH_MS)
 if (typeof timer.unref === 'function') timer.unref()
 
+// ============================================================================
+// WAQI / МЖСПП — иста снимка-патерн. Capacitor билдовите немаат VITE_WAQI_TOKEN;
+// токенот е само на серверот (WAQI_TOKEN / VITE_WAQI_TOKEN).
+// ============================================================================
+
+const WAQI_REFRESH_MS = 60_000
+let waqiSnapshot = null
+let waqiRefreshing = null
+
+async function refreshWaqi() {
+  if (waqiRefreshing) return waqiRefreshing
+  waqiRefreshing = (async () => {
+    try {
+      const data = await fetchSkopjeWaqiSensors()
+      const body = JSON.stringify(data)
+      const etag = 'W/"' + crypto.createHash('sha1').update(body).digest('base64') + '"'
+      waqiSnapshot = { body, etag, at: Date.now() }
+    } catch {
+      /* задржи последна успешна снимка */
+    } finally {
+      waqiRefreshing = null
+    }
+  })()
+  return waqiRefreshing
+}
+
+refreshWaqi()
+const waqiTimer = setInterval(refreshWaqi, WAQI_REFRESH_MS)
+if (typeof waqiTimer.unref === 'function') waqiTimer.unref()
+
 // GET /api/air/pulse → нереферентни (граѓански) сензори во живо (од снимка).
 airRouter.get('/pulse', async (req, res, next) => {
   try {
@@ -55,6 +86,23 @@ airRouter.get('/pulse', async (req, res, next) => {
     if (req.headers['if-none-match'] === snapshot.etag) return res.status(304).end()
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
     return res.status(200).send(snapshot.body)
+  } catch (err) { next(err) }
+})
+
+// GET /api/air/waqi → МЖСПП + граѓански WAQI станици (од снимка).
+airRouter.get('/waqi', async (req, res, next) => {
+  try {
+    if (!waqiSnapshot) await refreshWaqi()
+    else if (Date.now() - waqiSnapshot.at > WAQI_REFRESH_MS) {
+      if (Date.now() - waqiSnapshot.at > 4 * WAQI_REFRESH_MS) await refreshWaqi()
+      else refreshWaqi()
+    }
+    if (!waqiSnapshot) return res.json([])
+    res.setHeader('ETag', waqiSnapshot.etag)
+    res.setHeader('Cache-Control', 'public, max-age=20')
+    if (req.headers['if-none-match'] === waqiSnapshot.etag) return res.status(304).end()
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    return res.status(200).send(waqiSnapshot.body)
   } catch (err) { next(err) }
 })
 

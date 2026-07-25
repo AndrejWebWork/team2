@@ -51,6 +51,8 @@ jobs:
           NODE_ENV: development
 
       - name: Build web app
+        env:
+          VITE_WAQI_TOKEN: ${{ secrets.VITE_WAQI_TOKEN }}
         run: npm run build
 
       - name: Sync Capacitor Android
