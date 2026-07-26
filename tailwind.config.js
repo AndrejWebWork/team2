@@ -1,6 +1,11 @@
 ﻿/** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
+  // Hover styles only on real pointers (mouse/trackpad) — stops sticky
+  // “selected” look after tap on iPhone/Android.
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     extend: {
       fontFamily: {

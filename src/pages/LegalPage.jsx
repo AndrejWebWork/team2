@@ -34,14 +34,14 @@ export function LegalPage() {
   }
 
   return (
-    <div className='min-h-screen bg-slate-50'>
+    <div className='min-h-screen bg-slate-50 app-safe-page'>
       <header className='app-safe-header sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur'>
         <div className='mx-auto flex max-w-3xl items-center gap-3 px-4 pb-3'>
           <button
             type='button'
             onClick={goBack}
             aria-label={t('legal.back')}
-            className='flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100'
+            className='flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-colors active:bg-slate-100 hover:bg-slate-100'
           >
             <ArrowLeft className='h-5 w-5' />
           </button>

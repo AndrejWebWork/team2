@@ -116,7 +116,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
         </div>
 
         {/* Content */}
-        <div className='flex-1 overflow-y-auto p-5 space-y-5'>
+        <div className='flex-1 overflow-y-auto app-scroll p-5 space-y-5'>
           {/* Photos */}
           {(report.photos?.length ? report.photos : report.photo ? [report.photo] : []).length > 0 ? (
             <div className='grid grid-cols-2 gap-2'>
@@ -256,7 +256,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
 
         {/* Footer save */}
         {report.type !== 'smell' && (
-          <div className='border-t border-slate-200 px-5 py-4 flex gap-3'>
+          <div className='app-safe-drawer-foot border-t border-slate-200 px-5 pt-4 flex gap-3'>
             <Button
               className='flex-1'
               disabled={!changed}
@@ -271,7 +271,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
           </div>
         )}
         {report.type === 'smell' && (
-          <div className='border-t border-slate-200 px-5 py-4'>
+          <div className='app-safe-drawer-foot border-t border-slate-200 px-5 pt-4'>
             <Button variant='outline' className='w-full' onClick={onClose}>{t('common.close')}</Button>
           </div>
         )}

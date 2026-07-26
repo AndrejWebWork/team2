@@ -25,7 +25,7 @@ export function AuthLoadingPage() {
   }, [auth, navigate])
 
   return (
-    <div className='flex min-h-screen items-center justify-center bg-transparent p-4'>
+    <div className='flex min-h-screen items-center justify-center bg-transparent p-4 app-safe-page'>
       <Card className='w-full max-w-md border-white/70 bg-white/75 backdrop-blur-xl'>
         <CardHeader className='text-center'>
           <div className='mx-auto mb-2 inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-sky-100 text-emerald-700'>

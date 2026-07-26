@@ -4,6 +4,11 @@ import { cx } from '../utils/ui'
 import { useApp } from '../context/AppContext'
 import { BRAND_SRC } from '../lib/brand'
 
+function clearTapFocus(e) {
+  const el = e.currentTarget
+  requestAnimationFrame(() => el.blur())
+}
+
 export function Sidebar({ role }) {
   const { t } = useApp()
   const main = navItems.filter((item) => {
@@ -15,8 +20,8 @@ export function Sidebar({ role }) {
   const bottom = navItems.filter((item) => item.hideFromMobile)
 
   return (
-    <aside className='hidden border-r border-slate-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-64 lg:flex-col'>
-      <div className='flex flex-1 flex-col p-5'>
+    <aside className='hidden border-r border-slate-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:pt-[env(safe-area-inset-top,0px)] lg:pb-[env(safe-area-inset-bottom,0px)]'>
+      <div className='app-scroll flex flex-1 flex-col p-5'>
         <div className='relative mb-6 overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5'>
           <img
             src={BRAND_SRC}
@@ -35,6 +40,7 @@ export function Sidebar({ role }) {
             <NavLink
               key={item.to}
               to={item.to}
+              onPointerUp={clearTapFocus}
               className={({ isActive }) => cx(
                 'flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-150',
                 isActive
@@ -52,6 +58,7 @@ export function Sidebar({ role }) {
             <NavLink
               key={item.to}
               to={item.to}
+              onPointerUp={clearTapFocus}
               className={({ isActive }) => cx(
                 'flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-150',
                 isActive

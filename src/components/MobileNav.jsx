@@ -3,6 +3,12 @@ import { navItems } from './navConfig'
 import { cx } from '../utils/ui'
 import { useApp } from '../context/AppContext'
 
+function clearTapFocus(e) {
+  // Drop sticky :focus after finger lift on touch devices
+  const el = e.currentTarget
+  requestAnimationFrame(() => el.blur())
+}
+
 export function MobileNav({ role }) {
   const { t } = useApp()
   const visible = navItems.filter((item) => {
@@ -14,17 +20,18 @@ export function MobileNav({ role }) {
   const cols = Math.min(visible.length, 5)
 
   return (
-    <nav className='fixed inset-x-0 bottom-0 z-[1200] border-t border-slate-200 bg-white pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3 lg:hidden'>
+    <nav className='fixed inset-x-0 bottom-0 z-[1200] border-t border-slate-200 bg-white pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-3 lg:hidden'>
       <div className='mx-auto grid max-w-xl' style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {visible.slice(0, 5).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
+            onPointerUp={clearTapFocus}
             className={({ isActive }) => cx(
               'relative flex flex-col items-center gap-1 px-0.5 py-2 text-[11px] font-semibold leading-tight text-center transition-colors duration-150',
               // Оптичка корекција: „Воздух" малку влево за визуелно порамнет ред.
               item.to === '/air' && '-translate-x-[7px]',
-              isActive ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400',
+              isActive ? 'text-emerald-500' : 'text-slate-500 active:text-emerald-400 hover:text-emerald-400',
             )}
           >
             {({ isActive }) => (

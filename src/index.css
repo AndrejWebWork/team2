@@ -4,10 +4,19 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  font-size: clamp(15px, 14px + 0.4vw, 18px);
+  /* Instant route jumps — CSS smooth scroll feels laggy with mobile nav. */
+  scroll-behavior: auto;
+}
+
 body {
   @apply font-sans antialiased;
   background: #f4f6f8;
   color: #0f172a;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -18,17 +27,24 @@ body {
 /* Флуидна основна големина на фонт: сите rem-базирани фонтови (наслови, текст,
    копчиња) се скалираат мазно со ширината на екранот — од мал телефон до десктоп,
    без резки скокови на breakpoint. */
-html {
-  font-size: clamp(15px, 14px + 0.4vw, 18px);
-  scroll-behavior: smooth;
-}
 
 button,
 a,
 input,
 textarea,
-select {
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease;
+select,
+[role='button'] {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease, opacity 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Clear sticky focus ring after touch taps (keep keyboard :focus-visible). */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+[role='button']:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
 }
 
 select {
@@ -79,7 +95,7 @@ html.native-app select {
 }
 
 .page-enter {
-  animation: fade-up 0.3s ease-out both;
+  animation: fade-up 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Leaflet контрола за слоеви (Мапа/Сателит) — усогласена со дизајнот. */
@@ -119,15 +135,9 @@ html.native-app select {
   }
 }
 
-@supports (padding: max(0px)) {
-  main {
-    padding-bottom: max(6rem, env(safe-area-inset-bottom));
-  }
-}
-
-/* iPhone notch / Dynamic Island / home indicator — сите модели.
-   Важно: calc(safe-area + gap), НЕ max(gap, safe-area) — инаку копчето
-   седи точно на работ од статусот и не е кликабилно. */
+/* iPhone notch / Dynamic Island / home indicator — сите модели (SE → 16 Pro Max).
+   Важно: calc(safe-area + gap), НЕ max(gap, safe-area) — инаку контролата
+   седи на работ од статусот / island и не е кликабилна. */
 .app-safe-back {
   position: absolute;
   z-index: 20;
@@ -146,10 +156,29 @@ html.native-app select {
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
   padding-right: max(1rem, env(safe-area-inset-right, 0px));
   padding-bottom: 0.75rem;
+  /* Keep bar opaque while scrolling under Dynamic Island / status bar */
+  background-clip: padding-box;
 }
 
 .app-safe-drawer-head {
   padding-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+}
+
+.app-safe-drawer-foot {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+.app-safe-page {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+}
+
+/* Nested scrollers (drawers, modals) — momentum + no chain to body */
+.app-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* Не ги рамни сите Leaflet panes на z-index:0 — тоа ги крие маркерите
@@ -272,8 +301,10 @@ html.native-app select {
   position: relative;
   box-sizing: border-box;
   width: min(100%, 28rem);
-  max-height: min(calc(100dvh - 2rem), 90vh);
+  max-height: min(calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), 90vh);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   border-radius: 1rem;
   border: 1px solid rgba(226, 232, 240, 0.85);
   background: #fff;

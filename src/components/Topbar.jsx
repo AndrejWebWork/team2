@@ -4,6 +4,11 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
 import { loginNavState } from '../lib/authNav'
 
+function clearTapFocus(e) {
+  const el = e.currentTarget
+  requestAnimationFrame(() => el.blur())
+}
+
 export function Topbar({ role, unreadCount, logout, email, displayName, isAnonymous, currentUserPoints, t }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -32,7 +37,8 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
     prevPathRef.current = location.pathname
   }
 
-  function handleBellClick() {
+  function handleBellClick(e) {
+    clearTapFocus(e)
     if (location.pathname === '/notifications') {
       navigate(prevPathRef.current || -1)
     } else {
@@ -57,7 +63,8 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
           <button
             type='button'
             onClick={() => setOpenMenu(true)}
-            className='rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 lg:hidden'
+            onPointerUp={clearTapFocus}
+            className='rounded-lg p-1.5 text-slate-500 active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 lg:hidden'
           >
             <UserCircle2 className='h-8 w-8' />
           </button>
@@ -76,7 +83,9 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
             {/* Rewards — desktop only. Без коцка: само икона + текст + „жетон"
                 со поени; иконата се движи на hover за поживо чувство. */}
             <button
+              type='button'
               onClick={() => navigate('/leaderboard')}
+              onPointerUp={clearTapFocus}
               aria-label={t('topbar.rewards')}
               className='group hidden items-center gap-1.5 rounded-full px-1.5 py-1.5 text-sm font-semibold text-amber-600 transition-colors hover:text-amber-700 lg:flex'
             >
@@ -90,9 +99,14 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
 
             {/* Notifications — само ѕвонче (без рамка/коцка), покрупно на телефон */}
             <button
+              type='button'
               onClick={handleBellClick}
+              onPointerUp={clearTapFocus}
               aria-label={t('topbar.notifications')}
-              className='relative rounded-full p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800'
+              aria-pressed={location.pathname === '/notifications'}
+              className={`relative rounded-full p-1.5 transition-colors active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 ${
+                location.pathname === '/notifications' ? 'text-emerald-600' : 'text-slate-500'
+              }`}
             >
               <Bell className={`h-7 w-7 lg:h-5 lg:w-5 ${pinging ? 'badge-pop' : ''}`} />
               {unreadCount > 0 && (
@@ -144,15 +158,22 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
               <p className='text-sm font-semibold text-slate-900'>{displayLabel}</p>
               <p className='text-xs text-slate-400'>{roleLabel}</p>
             </div>
-            <button onClick={() => setOpenMenu(false)} className='rounded-lg p-1.5 text-slate-400 hover:bg-slate-100'>
+            <button
+              type='button'
+              onClick={() => setOpenMenu(false)}
+              onPointerUp={clearTapFocus}
+              className='rounded-lg p-1.5 text-slate-400 active:bg-slate-100 hover:bg-slate-100'
+            >
               <X className='h-4 w-4' />
             </button>
           </div>
 
-          <div className='p-4'>
+          <div className='app-scroll app-safe-drawer-foot flex-1 p-4'>
             <button
+              type='button'
               onClick={() => { navigate('/leaderboard'); setOpenMenu(false) }}
-              className='flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-semibold text-amber-700 transition-colors hover:bg-amber-50'
+              onPointerUp={clearTapFocus}
+              className='flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-semibold text-amber-700 transition-colors active:bg-amber-50 hover:bg-amber-50'
             >
               <span className='flex items-center gap-3'><Gift className='h-5 w-5 shrink-0' />{t('topbar.rewards')}</span>
               <span className='rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold'>{currentUserPoints}</span>
@@ -161,29 +182,37 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
             {/* Чисти редови без рамки — како на десктоп страничното мени */}
             <div className='mt-4 space-y-0.5 border-t border-slate-100 pt-4'>
               <button
+                type='button'
                 onClick={() => { navigate('/impressum'); setOpenMenu(false) }}
-                className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900'
+                onPointerUp={clearTapFocus}
+                className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-600 transition-colors active:bg-slate-50 hover:bg-slate-50 hover:text-slate-900'
               >
                 <ScrollText className='h-5 w-5 shrink-0' />{t('nav.impressum')}
               </button>
               <button
+                type='button'
                 onClick={() => { navigate('/settings'); setOpenMenu(false) }}
-                className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900'
+                onPointerUp={clearTapFocus}
+                className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-slate-600 transition-colors active:bg-slate-50 hover:bg-slate-50 hover:text-slate-900'
               >
                 <Settings className='h-5 w-5 shrink-0' />{t('topbar.settings')}
               </button>
 
               {isAnonymous ? (
                 <button
+                  type='button'
                   onClick={() => { navigate('/login', { state: loginNavState(location.pathname) }); setOpenMenu(false) }}
-                  className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50'
+                  onPointerUp={clearTapFocus}
+                  className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-emerald-700 transition-colors active:bg-emerald-50 hover:bg-emerald-50'
                 >
                   <LogIn className='h-5 w-5 shrink-0' />{t('topbar.login')}
                 </button>
               ) : (
                 <button
+                  type='button'
                   onClick={handleLogout}
-                  className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-rose-600 transition-colors hover:bg-rose-50'
+                  onPointerUp={clearTapFocus}
+                  className='flex w-full items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-semibold text-rose-600 transition-colors active:bg-rose-50 hover:bg-rose-50'
                 >
                   <LogOut className='h-5 w-5 shrink-0' />{t('topbar.logout')}
                 </button>

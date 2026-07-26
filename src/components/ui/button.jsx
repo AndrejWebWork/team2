@@ -26,8 +26,17 @@ const buttonVariants = cva(
   },
 )
 
-const Button = React.forwardRef(({ className, variant, size, ...props }, ref) => (
-  <button ref={ref} className={cn(buttonVariants({ variant, size, className }))} {...props} />
+const Button = React.forwardRef(({ className, variant, size, onPointerUp, ...props }, ref) => (
+  <button
+    ref={ref}
+    className={cn(buttonVariants({ variant, size, className }))}
+    {...props}
+    onPointerUp={(e) => {
+      onPointerUp?.(e)
+      // Avoid sticky hover/focus highlight after tap on touch devices
+      requestAnimationFrame(() => e.currentTarget?.blur())
+    }}
+  />
 ))
 Button.displayName = 'Button'
 

@@ -39,7 +39,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className='relative min-h-screen bg-gradient-to-br from-emerald-50 via-white to-sky-50 flex items-center justify-center p-4'>
+    <div className='relative min-h-screen bg-gradient-to-br from-emerald-50 via-white to-sky-50 flex items-center justify-center p-4 app-safe-page'>
       <button
         type='button'
         onClick={() => navigate('/login', { state: loginNavState(location.state?.returnTo) })}

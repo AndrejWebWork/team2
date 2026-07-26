@@ -24,7 +24,8 @@ import { WastePage } from './pages/WastePage'
 function ScrollToTop() {
   const { pathname, search } = useLocation()
   useLayoutEffect(() => {
-    window.scrollTo(0, 0)
+    // Instant jump — avoids fighting sticky top/bottom chrome on iOS/Android
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [pathname, search])
   return null
 }
