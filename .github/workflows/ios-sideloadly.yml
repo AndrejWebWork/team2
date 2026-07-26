@@ -46,6 +46,9 @@ jobs:
           VITE_WAQI_TOKEN: ${{ secrets.VITE_WAQI_TOKEN }}
         run: npm run build
 
+      - name: Sync Capacitor iOS (native plugins)
+        run: npx cap sync ios
+
       - name: Copy web assets to iOS
         run: |
           set -euo pipefail

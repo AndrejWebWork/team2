@@ -19,10 +19,14 @@ function getWebCurrentPosition(options) {
   })
 }
 
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
 /** Capacitor GPS на Android/iOS — поточен и со правилни дозволи. */
 async function getNativePosition(options) {
   let perm = await Geolocation.checkPermissions()
-  if (perm.location === 'denied' || perm.location === 'prompt') {
+  if (perm.location === 'denied' || perm.location === 'prompt' || perm.location === 'prompt-with-rationale') {
     perm = await Geolocation.requestPermissions()
   }
   if (perm.location === 'denied') {
@@ -32,7 +36,6 @@ async function getNativePosition(options) {
   const pos = await Geolocation.getCurrentPosition({
     enableHighAccuracy: options.enableHighAccuracy ?? true,
     timeout: options.timeout ?? 10000,
-    // Кеширана локација до 2 мин — најблискиот сензор се појавува веднаш.
     maximumAge: options.maximumAge ?? 120000,
   })
 
@@ -51,9 +54,17 @@ async function getNativePosition(options) {
  * На Android/iOS: Capacitor Geolocation plugin.
  * На мобилен web: едно getCurrentPosition.
  */
-export function captureGeolocation({ desktop = isLikelyDesktop() } = {}) {
+export function captureGeolocation({
+  desktop = isLikelyDesktop(),
+  maximumAge,
+  timeout,
+} = {}) {
   if (Capacitor.isNativePlatform()) {
-    return getNativePosition({ enableHighAccuracy: true, maximumAge: 120000, timeout: 10000 })
+    return getNativePosition({
+      enableHighAccuracy: true,
+      maximumAge: maximumAge ?? 120000,
+      timeout: timeout ?? 10000,
+    })
   }
 
   if (!navigator.geolocation) {
@@ -62,8 +73,8 @@ export function captureGeolocation({ desktop = isLikelyDesktop() } = {}) {
 
   const options = {
     enableHighAccuracy: true,
-    maximumAge: desktop ? 0 : 30000,
-    timeout: desktop ? 25000 : 12000,
+    maximumAge: maximumAge ?? (desktop ? 0 : 30000),
+    timeout: timeout ?? (desktop ? 25000 : 12000),
   }
 
   if (!desktop) {
@@ -107,9 +118,71 @@ export function captureGeolocation({ desktop = isLikelyDesktop() } = {}) {
   })
 }
 
+/**
+ * До 3 обиди за локација (ако GPS е исклучен / уредот доцни).
+ * Првиот обид може да користи кеш; следните бараат посвежо мерење.
+ */
+export async function captureGeolocationWithRetries({
+  attempts = 3,
+  delayMs = 1200,
+} = {}) {
+  let lastErr = null
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await captureGeolocation({
+        maximumAge: i === 0 ? 120000 : 0,
+        timeout: 10000,
+      })
+    } catch (err) {
+      lastErr = err
+      // Ако е трајно одбиена дозвола — нема смисла да се обидуваме уште 2 пати.
+      if (err?.code === 1 && i === 0) {
+        // Уште еден обид по кратка пауза (корисникот може да кликне Allow).
+        await sleep(delayMs)
+        try {
+          return await captureGeolocation({ maximumAge: 0, timeout: 10000 })
+        } catch (err2) {
+          throw err2
+        }
+      }
+      if (i < attempts - 1) await sleep(delayMs)
+    }
+  }
+  throw lastErr || Object.assign(new Error('failed'), { code: 2 })
+}
+
+/**
+ * Отвори системски settings за локација / дозволи на апликацијата (iOS + Android).
+ * Враќа true ако е отворено.
+ */
+export async function openNativeLocationSettings({ denied = false } = {}) {
+  if (!Capacitor.isNativePlatform()) return false
+  try {
+    const { NativeSettings, AndroidSettings, IOSSettings } = await import('capacitor-native-settings')
+    // Одбиена дозвола → settings на апликацијата (Location permission).
+    // Инаку → системски Location (GPS on/off) на Android; на iOS сепак App settings.
+    await NativeSettings.open({
+      optionAndroid: denied ? AndroidSettings.ApplicationDetails : AndroidSettings.Location,
+      optionIOS: IOSSettings.App,
+    })
+    return true
+  } catch {
+    // Fallback: iOS app-settings URL
+    try {
+      if (Capacitor.getPlatform() === 'ios') {
+        const { App } = await import('@capacitor/app')
+        await App.openUrl({ url: 'app-settings:' })
+        return true
+      }
+    } catch { /* ignore */ }
+    return false
+  }
+}
+
 export function geoErrorMessage(err, t) {
   if (err?.key) return t(err.key)
   const mapped = mapGeoError(err)
+  if (Capacitor.isNativePlatform() && mapped.denied) return t('gps.deniedNative')
   return t(mapped.denied ? 'gps.denied' : 'gps.failed')
 }
 

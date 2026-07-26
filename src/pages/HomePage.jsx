@@ -219,7 +219,7 @@ function SmellForm({ submitReport, onDone, loc, t }) {
 
   return (
     <form onSubmit={submit} className='space-y-4'>
-      <GPSStatus loc={loc} onRetry={loc.retry} t={t} />
+      <GPSStatus loc={loc} onRetry={loc.retry} onRefresh={loc.refresh} t={t} />
 
       <div>
         <p className='mb-2 text-sm font-medium text-slate-700'>{t('form.smellIntensity')}</p>
@@ -280,7 +280,7 @@ function DeponijForm({ submitReport, onDone, loc, t }) {
 
   return (
     <form onSubmit={submit} className='space-y-4'>
-      <GPSStatus loc={loc} onRetry={loc.retry} t={t} />
+      <GPSStatus loc={loc} onRetry={loc.retry} onRefresh={loc.refresh} t={t} />
       <PhotoCapture photos={photos} setPhotos={setPhotos} required t={t} />
       <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('deponija.descPlaceholder')} className='min-h-20' />
       <Button type='submit' className='w-full' disabled={loc.loading || busy}>{t('common.submitReport')}</Button>
@@ -325,7 +325,7 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
 
   return (
     <form onSubmit={submit} className='space-y-4'>
-      <GPSStatus loc={loc} onRetry={loc.retry} t={t} />
+      <GPSStatus loc={loc} onRetry={loc.retry} onRefresh={loc.refresh} t={t} />
 
       <div>
         <p className='mb-1.5 text-sm font-medium text-slate-700'>{t('container.type')}</p>

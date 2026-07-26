@@ -54,6 +54,30 @@ select:focus {
   }
 }
 
+/* Native Capacitor app: како вистинска апликација — без селекција/копирање на UI.
+   Формите (input/textarea) остануваат селектирачки за пишување. */
+html.native-app,
+html.native-app body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.native-app *:not(input):not(textarea):not(select) {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none;
+}
+
+html.native-app input,
+html.native-app textarea,
+html.native-app select {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default;
+}
+
 .page-enter {
   animation: fade-up 0.3s ease-out both;
 }

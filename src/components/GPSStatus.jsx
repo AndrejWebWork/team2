@@ -1,9 +1,12 @@
-import { CheckCircle2, Loader2, MapPin, XCircle } from 'lucide-react'
+import { CheckCircle2, Loader2, MapPin, Settings, XCircle } from 'lucide-react'
+import { Capacitor } from '@capacitor/core'
 import { formatAccuracyMeters } from '../lib/geolocation'
 
-export function GPSStatus({ loc, onRetry, t }) {
+export function GPSStatus({ loc, onRetry, onRefresh, t }) {
   const accuracyLabel = formatAccuracyMeters(loc.accuracy, t)
   const lowAccuracy = loc.isDesktop && loc.accuracy != null && loc.accuracy > 400
+  const native = Capacitor.isNativePlatform()
+  const handleRefresh = onRefresh || onRetry
 
   if (loc.loading) {
     return (
@@ -29,13 +32,18 @@ export function GPSStatus({ loc, onRetry, t }) {
         {loc.isDesktop && !loc.denied && (
           <p className='text-xs text-rose-600/90'>{t('gps.desktopHint')}</p>
         )}
+        {native && (
+          <p className='text-xs text-rose-600/90'>{t('gps.openSettingsHint')}</p>
+        )}
         <button
           type='button'
           onClick={onRetry}
           className='flex w-full items-center justify-center gap-2 rounded-lg border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50'
         >
-          <MapPin className='h-4 w-4' />
-          {loc.denied ? t('gps.retryDenied') : t('gps.retry')}
+          {native ? <Settings className='h-4 w-4' /> : <MapPin className='h-4 w-4' />}
+          {native
+            ? t('gps.retryOpenSettings')
+            : (loc.denied ? t('gps.retryDenied') : t('gps.retry'))}
         </button>
       </div>
     )
@@ -54,7 +62,7 @@ export function GPSStatus({ loc, onRetry, t }) {
         )}
         <button
           type='button'
-          onClick={onRetry}
+          onClick={handleRefresh}
           className='shrink-0 rounded-lg border border-emerald-300 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100'
         >
           {t('gps.refresh')}
