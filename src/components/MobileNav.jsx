@@ -39,7 +39,7 @@ export function MobileNav({ role }) {
               onContextMenu={(e) => e.preventDefault()}
               aria-current={isActive ? 'page' : undefined}
               className={cx(
-                'relative flex flex-col items-center gap-0.5 px-0.5 py-1.5 text-[11px] font-semibold leading-tight text-center transition-colors duration-150',
+                'relative flex flex-col items-center gap-0.5 px-0.5 py-2 text-[11px] font-semibold leading-tight text-center transition-colors duration-150',
                 item.to === '/air' && '-translate-x-[7px]',
                 isActive ? 'text-emerald-500' : 'text-slate-500 active:text-emerald-400 hover:text-emerald-400',
               )}
@@ -47,11 +47,11 @@ export function MobileNav({ role }) {
               <span
                 aria-hidden='true'
                 className={cx(
-                  'absolute -top-1 left-1/2 h-[3px] w-10 -translate-x-1/2 rounded-b-full bg-emerald-500 transition-all duration-200',
+                  'absolute -top-1.5 left-1/2 h-[3px] w-10 -translate-x-1/2 rounded-b-full bg-emerald-500 transition-all duration-200',
                   isActive ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0',
                 )}
               />
-              <item.icon className='h-[20px] w-[20px]' />
+              <item.icon className='h-[21px] w-[21px]' />
               {t(item.labelKey)}
             </button>
           )
