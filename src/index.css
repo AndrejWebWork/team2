@@ -189,9 +189,11 @@ html[data-platform='android'] .app-safe-drawer-head {
   padding-bottom: calc(0.4rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Android: малку подигнат (сè уште full-width), + safe-area за gesture/nav bar */
 html[data-platform='android'] .app-mobile-nav {
-  padding-top: 0.4rem;
-  padding-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  bottom: 0.28rem;
+  padding-top: 0.5rem;
+  padding-bottom: calc(0.45rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Chrome (nav/topbar): без select / long-press „Copy link" */
