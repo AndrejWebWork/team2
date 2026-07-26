@@ -65,9 +65,9 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
             onClick={() => setOpenMenu(true)}
             onPointerUp={clearTapFocus}
             onContextMenu={(e) => e.preventDefault()}
-            className='rounded-lg p-1 text-slate-500 active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 lg:hidden'
+            className='rounded-lg p-1.5 text-slate-500 active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 lg:hidden'
           >
-            <UserCircle2 className='h-7 w-7' />
+            <UserCircle2 className='h-[30px] w-[30px]' />
           </button>
 
           {/* Desktop: user info */}
@@ -106,11 +106,11 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
               onContextMenu={(e) => e.preventDefault()}
               aria-label={t('topbar.notifications')}
               aria-pressed={location.pathname === '/notifications'}
-              className={`relative rounded-full p-1 transition-colors active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 ${
+              className={`relative rounded-full p-1.5 transition-colors active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 ${
                 location.pathname === '/notifications' ? 'text-emerald-600' : 'text-slate-500'
               }`}
             >
-              <Bell className={`h-6 w-6 lg:h-5 lg:w-5 ${pinging ? 'badge-pop' : ''}`} />
+              <Bell className={`h-[26px] w-[26px] lg:h-5 lg:w-5 ${pinging ? 'badge-pop' : ''}`} />
               {unreadCount > 0 && (
                 <span className='absolute -right-0.5 -top-0.5 flex h-[18px] w-[18px] items-center justify-center'>
                   {pinging && (

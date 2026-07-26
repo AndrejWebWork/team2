@@ -159,23 +159,22 @@ html.native-app select {
   background-clip: padding-box;
 }
 
-/* Android: status bar inset + 0.75rem прави преголем header на многу телефони.
-   Компактен gap + помал chrome; iOS останува со поголем Breathing room за Island. */
+/* Android: малку покомпактен од iOS, но не претесен */
 html[data-platform='android'] .app-topbar {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 0.28rem);
-  padding-bottom: 0.4rem;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
+  padding-bottom: 0.55rem;
 }
 
 html[data-platform='android'] .app-safe-header {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 0.28rem);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
 }
 
 html[data-platform='android'] .app-safe-back {
-  top: calc(env(safe-area-inset-top, 0px) + 0.28rem);
+  top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
 }
 
 html[data-platform='android'] .app-safe-drawer-head {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.6rem);
 }
 
 /* Bottom nav: full-bleed edge-to-edge, flush to bottom (safe-area inside) */
