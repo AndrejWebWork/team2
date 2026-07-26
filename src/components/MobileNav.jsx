@@ -22,7 +22,7 @@ export function MobileNav({ role }) {
 
   return (
     <nav
-      className='app-chrome app-mobile-nav fixed z-[1200] border-t border-slate-200 bg-white lg:hidden'
+      className='app-chrome app-mobile-nav fixed inset-x-0 bottom-0 z-[1200] border-t border-slate-200 bg-white lg:hidden'
       onContextMenu={(e) => e.preventDefault()}
     >
       <div className='mx-auto grid max-w-xl' style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>

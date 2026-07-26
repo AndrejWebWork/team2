@@ -178,23 +178,21 @@ html[data-platform='android'] .app-safe-drawer-head {
   padding-top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
 }
 
-/* Bottom nav: малку подигнат од работ + компактен */
+/* Bottom nav: full-bleed edge-to-edge, flush to bottom (safe-area inside) */
 .app-mobile-nav {
-  padding-top: 0.4rem;
-  padding-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
-  /* Поткрени го малку над работ на екранот */
-  bottom: 0.2rem;
-  left: 0.4rem;
-  right: 0.4rem;
-  width: auto;
-  border-radius: 1rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 8px 24px -12px rgba(15, 23, 42, 0.28);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: 0;
+  box-shadow: none;
+  padding-top: 0.45rem;
+  padding-bottom: calc(0.4rem + env(safe-area-inset-bottom, 0px));
 }
 
 html[data-platform='android'] .app-mobile-nav {
-  bottom: 0.35rem;
-  padding-bottom: calc(0.3rem + env(safe-area-inset-bottom, 0px));
+  padding-top: 0.4rem;
+  padding-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Chrome (nav/topbar): без select / long-press „Copy link" */
