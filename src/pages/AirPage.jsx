@@ -233,7 +233,7 @@ export function AirPage() {
           ? civic
           : prev.filter((s) => String(s.id).startsWith('WAQI-'))
         const nextPulse = pulseRes.status === 'fulfilled'
-          ? pulseLive
+          ? (pulseLive.length > 0 ? pulseLive : prev.filter((s) => String(s.id).startsWith('PULSE-')))
           : prev.filter((s) => String(s.id).startsWith('PULSE-'))
         if (waqiRes.status !== 'fulfilled' && pulseRes.status !== 'fulfilled') return prev
         const seen = new Set()

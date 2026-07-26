@@ -1,3 +1,6 @@
+import https from 'node:https'
+import { URL } from 'node:url'
+
 // ============================================================================
 // Pulse.eco — граѓанска (НЕРЕФЕРЕНТНА) мрежа сензори за Скопје, во живо.
 // WAQI ги дава само 6-те официјални МЖСПП станици; граѓанските нискобуџетни
@@ -6,7 +9,12 @@
 // ============================================================================
 
 const BASE = 'https://skopje.pulse.eco/rest'
-const HEADERS = { 'User-Agent': 'EkoSkopje/1.0 (Grad Skopje)' }
+const HEADERS = { 'User-Agent': 'EkoSkopje/1.0 (Grad Skopje)', Accept: 'application/json' }
+
+// skopje.pulse.eco моментално има ИСТЕЧЕН TLS сертификат (SEC_E_CERT_EXPIRED).
+// Без ова, Node/Vercel fetch паѓа и /api/air/pulse враќа [] → празна мапа на
+// телефоните. Податоците се јавни; го олабавуваме само за овој хост.
+const pulseAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true })
 
 // Граници на Скопскиот регион — Pulse.eco повремено враќа сензори со сосема
 // погрешни координати (пр. уред регистриран во странство), па ги отфрламе.
@@ -53,10 +61,52 @@ function parsePosition(pos) {
   return { lat: lat ?? null, lng: lng ?? null }
 }
 
-async function getJson(url, signal) {
-  const res = await fetch(url, { headers: HEADERS, signal })
-  if (!res.ok) throw new Error(`Pulse.eco HTTP ${res.status}`)
-  return res.json()
+function getJson(url, signal) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const req = https.get(
+      {
+        protocol: u.protocol,
+        hostname: u.hostname,
+        path: `${u.pathname}${u.search}`,
+        headers: HEADERS,
+        agent: pulseAgent,
+        timeout: 20_000,
+      },
+      (res) => {
+        if (res.statusCode && res.statusCode >= 400) {
+          res.resume()
+          reject(new Error(`Pulse.eco HTTP ${res.statusCode}`))
+          return
+        }
+        const chunks = []
+        res.on('data', (c) => chunks.push(c))
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+          } catch (err) {
+            reject(err)
+          }
+        })
+      },
+    )
+    req.on('error', reject)
+    req.on('timeout', () => {
+      req.destroy()
+      reject(new Error('Pulse.eco timeout'))
+    })
+    if (signal) {
+      if (signal.aborted) {
+        req.destroy()
+        reject(new Error('aborted'))
+        return
+      }
+      signal.addEventListener('abort', () => {
+        req.destroy()
+        reject(new Error('aborted'))
+      }, { once: true })
+    }
+  })
 }
 
 // Имиња/позиции на сензорите ретко се менуваат → кеш 1 час.
@@ -84,13 +134,11 @@ async function getSensorMeta(signal) {
 // Ги враќа сите граѓански сензори што имаат мерење за PM2.5 или PM10, во истиот
 // облик како референтните (WAQI) сензори за директно спојување во клиентот.
 export async function fetchPulseSensors(signal) {
-  // Само мерењата се влечат секогаш (свежи); имињата се од долгиот кеш.
   const [current, metaById] = await Promise.all([
     getJson(`${BASE}/current`, signal),
     getSensorMeta(signal),
   ])
 
-  // Групирај мерења по сензор; чувај ги последните вредности по тип.
   const byId = new Map()
   for (const r of Array.isArray(current) ? current : []) {
     if (!r?.sensorId) continue
@@ -108,7 +156,6 @@ export async function fetchPulseSensors(signal) {
   for (const entry of byId.values()) {
     const pm25 = num(entry.values.pm25)
     const pm10 = num(entry.values.pm10)
-    // Прикажуваме само сензори со реален PM податок (тоа е поентата на воздух).
     if (pm25 == null && pm10 == null) continue
     const meta = metaById.get(entry.sensorId)
     const { lat, lng } = parsePosition(entry.position || meta?.position)
@@ -116,8 +163,6 @@ export async function fetchPulseSensors(signal) {
     const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
     const rawName = meta?.name
     const name = (rawName && rawName.trim()) || `Граѓански сензор ${String(entry.sensorId).slice(0, 6)}`
-    // Официјалните МЖСПП станици веќе доаѓаат како референтни преку WAQI —
-    // прескокни ги нивните копии во Pulse.eco за да нема дупли маркери.
     if (/^moepp/i.test(name)) continue
     out.push({
       id: `PULSE-${entry.sensorId}`,

@@ -156,8 +156,54 @@ html.native-app select {
   padding-left: max(1rem, env(safe-area-inset-left, 0px));
   padding-right: max(1rem, env(safe-area-inset-right, 0px));
   padding-bottom: 0.75rem;
-  /* Keep bar opaque while scrolling under Dynamic Island / status bar */
   background-clip: padding-box;
+}
+
+/* Android: status bar inset + 0.75rem прави преголем header на многу телефони.
+   Компактен gap + помал chrome; iOS останува со поголем Breathing room за Island. */
+html[data-platform='android'] .app-topbar {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.28rem);
+  padding-bottom: 0.4rem;
+}
+
+html[data-platform='android'] .app-safe-header {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.28rem);
+}
+
+html[data-platform='android'] .app-safe-back {
+  top: calc(env(safe-area-inset-top, 0px) + 0.28rem);
+}
+
+html[data-platform='android'] .app-safe-drawer-head {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
+}
+
+/* Bottom nav: малку подигнат од работ + компактен */
+.app-mobile-nav {
+  padding-top: 0.4rem;
+  padding-bottom: calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  /* Поткрени го малку над работ на екранот */
+  bottom: 0.2rem;
+  left: 0.4rem;
+  right: 0.4rem;
+  width: auto;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 24px -12px rgba(15, 23, 42, 0.28);
+}
+
+html[data-platform='android'] .app-mobile-nav {
+  bottom: 0.35rem;
+  padding-bottom: calc(0.3rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Chrome (nav/topbar): без select / long-press „Copy link" */
+.app-chrome,
+.app-chrome * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-drag: none;
 }
 
 .app-safe-drawer-head {

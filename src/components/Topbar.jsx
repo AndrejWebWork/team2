@@ -56,7 +56,7 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
 
   return (
     <>
-      <header className='app-topbar sticky top-0 z-20 border-b border-slate-200 bg-white md:px-6'>
+      <header className='app-chrome app-topbar sticky top-0 z-20 border-b border-slate-200 bg-white md:px-6' onContextMenu={(e) => e.preventDefault()}>
         <div className='flex items-center justify-between px-4 md:px-0'>
 
           {/* Mobile: avatar opens slide menu */}
@@ -64,9 +64,10 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
             type='button'
             onClick={() => setOpenMenu(true)}
             onPointerUp={clearTapFocus}
-            className='rounded-lg p-1.5 text-slate-500 active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 lg:hidden'
+            onContextMenu={(e) => e.preventDefault()}
+            className='rounded-lg p-1 text-slate-500 active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 lg:hidden'
           >
-            <UserCircle2 className='h-8 w-8' />
+            <UserCircle2 className='h-7 w-7' />
           </button>
 
           {/* Desktop: user info */}
@@ -102,13 +103,14 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
               type='button'
               onClick={handleBellClick}
               onPointerUp={clearTapFocus}
+              onContextMenu={(e) => e.preventDefault()}
               aria-label={t('topbar.notifications')}
               aria-pressed={location.pathname === '/notifications'}
-              className={`relative rounded-full p-1.5 transition-colors active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 ${
+              className={`relative rounded-full p-1 transition-colors active:bg-slate-100 hover:bg-slate-100 hover:text-slate-800 ${
                 location.pathname === '/notifications' ? 'text-emerald-600' : 'text-slate-500'
               }`}
             >
-              <Bell className={`h-7 w-7 lg:h-5 lg:w-5 ${pinging ? 'badge-pop' : ''}`} />
+              <Bell className={`h-6 w-6 lg:h-5 lg:w-5 ${pinging ? 'badge-pop' : ''}`} />
               {unreadCount > 0 && (
                 <span className='absolute -right-0.5 -top-0.5 flex h-[18px] w-[18px] items-center justify-center'>
                   {pinging && (

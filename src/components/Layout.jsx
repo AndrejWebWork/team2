@@ -20,7 +20,7 @@ export function Layout() {
   return (
     <div className='min-h-screen bg-[#f4f6f8]'>
       <Sidebar role={auth.role} />
-      <main className='flex min-h-screen flex-col pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:ml-64 lg:pb-8'>
+      <main className='flex min-h-screen flex-col pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:ml-64 lg:pb-8'>
         <Topbar
           role={auth.role}
           unreadCount={unreadCount}
