@@ -240,6 +240,18 @@ html[data-platform='android'] .app-mobile-nav {
   border: none !important;
 }
 
+/* Сензорите да стојат фиксно — без „лизгање" при zoom / refresh */
+.app-map-shell .leaflet-marker-icon,
+.app-map-shell .leaflet-marker-shadow,
+.app-map-shell .leaflet-pane,
+.app-map-shell .leaflet-tile,
+.app-map-shell .leaflet-zoom-anim .leaflet-zoom-animated,
+.app-map-shell .leaflet-fade-anim .leaflet-tile,
+.app-map-shell .leaflet-fade-anim .leaflet-popup {
+  transition: none !important;
+  animation: none !important;
+}
+
 /* Респonsive Leaflet мапа — пократка на телефон, повисока на tablet/desktop. */
 .app-map-shell {
   position: relative;

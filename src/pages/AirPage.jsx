@@ -507,6 +507,10 @@ export function AirPage() {
               zoom={13}
               maxZoom={20}
               className='h-full w-full'
+              zoomAnimation={false}
+              markerZoomAnimation={false}
+              fadeAnimation={false}
+              inertia={false}
             >
               {userLocation && <RecenterMap lat={userLocation.lat} lng={userLocation.lng} />}
               <MapLayers />
@@ -516,7 +520,12 @@ export function AirPage() {
                 </Marker>
               )}
               {visibleMinistrySensors.map((s) => (
-                <Marker key={s.id} position={[s.lat, s.lng]} icon={makeAqiIcon(s.aqi)} zIndexOffset={400}>
+                <Marker
+                  key={s.id}
+                  position={[Number(Number(s.lat).toFixed(5)), Number(Number(s.lng).toFixed(5))]}
+                  icon={makeAqiIcon(s.aqi)}
+                  zIndexOffset={400}
+                >
                   <Popup>
                     <p className='font-bold'>{sensorName(s, t)}</p>
                     <p className='text-xs'>{t('air.referentSource')}</p>
@@ -527,8 +536,11 @@ export function AirPage() {
                 </Marker>
               ))}
               {visiblePulseSensors.map((s) => (
-                <Marker key={s.id} position={[s.lat, s.lng]} icon={pulseIcon}>
-                  <Popup>
+                <Marker
+                  key={s.id}
+                  position={[Number(Number(s.lat).toFixed(5)), Number(Number(s.lng).toFixed(5))]}
+                  icon={pulseIcon}
+                >                  <Popup>
                     <p className='font-bold'>{sensorName(s, t)}</p>
                     <p className='text-xs'>{t('air.pulseSensor')}</p>
                     {s.aqi != null && <p className='text-xs'>AQI: <b>{s.aqi}</b> · {t(`aqi.${aqiColor(s.aqi).key}`)}</p>}

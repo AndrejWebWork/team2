@@ -224,6 +224,10 @@ export function ContainersPage() {
               maxZoom={20}
               preferCanvas
               className='h-full w-full'
+              zoomAnimation={false}
+              markerZoomAnimation={false}
+              fadeAnimation={false}
+              inertia={false}
             >
               <MapLayers />
               {recyclingPoints.map((p) => (

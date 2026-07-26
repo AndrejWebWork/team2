@@ -266,17 +266,20 @@ export function SettingsPage() {
             <p className='text-xs text-slate-500 mt-0.5'>EkoSkopje v1.0.0</p>
             <p className='text-xs text-slate-400 mt-1'>{t('common.credit')}</p>
           </div>
-          <Button
-            variant='outline'
-            className='w-full justify-start gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300'
-            onClick={handleLogout}
-          >
-            <LogOut className='h-4 w-4' />
-            {t('settings.logout')}
-          </Button>
+          {/* Одјава — само за најавени (анонимен нема сметка за одјава) */}
+          {!isAnonymous && (
+            <Button
+              variant='outline'
+              className='w-full justify-start gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300'
+              onClick={handleLogout}
+            >
+              <LogOut className='h-4 w-4' />
+              {t('settings.logout')}
+            </Button>
+          )}
 
           {/* Бришење сметка — само за регистрирани корисници (Play/App Store барање) */}
-          {!auth.isAnonymous && auth.email && auth.role !== 'admin' && (
+          {!isAnonymous && auth.email && auth.role !== 'admin' && (
             !deleteOpen ? (
               <button
                 type='button'
