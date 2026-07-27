@@ -278,8 +278,8 @@ export function AirPage() {
       setGps({ lat: null, lng: null, label: '', loading: false, error: t('gps.notSupported'), denied: false })
       return
     }
-    if (openSettings && Capacitor.isNativePlatform()) {
-      await openNativeLocationSettings({ denied: Boolean(gps.denied) })
+    if (openSettings && Capacitor.isNativePlatform() && gps.denied) {
+      await openNativeLocationSettings({ denied: true })
     }
     setGps((g) => ({ ...g, loading: true, error: '', denied: false }))
     try {
