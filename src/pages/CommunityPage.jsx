@@ -170,7 +170,7 @@ function ReminderModal({ event, onClose, onSent }) {
     setError('')
     try {
       const result = await sendEventReminderApi(event.id, { email: auth.email, message: text })
-      onSent(result?.sent ?? 0, text, result?.pushed ?? 0)
+      onSent(result?.sent ?? 0, text)
     } catch (err) {
       setError(err.message || t('comm.reminderFailed'))
       setSending(false)
@@ -526,14 +526,10 @@ export function CommunityPage() {
           <ReminderModal
             event={reminderEvent}
             onClose={() => setReminderEvent(null)}
-            onSent={(count, message, pushed) => {
+            onSent={(count, message) => {
               setEvents((prev) => prev.map((e) => (e.id === reminderEvent.id ? { ...e, reminderMessage: message } : e)))
               setReminderEvent(null)
-              setToast(
-                pushed > 0
-                  ? t('comm.reminderSent', { count })
-                  : t('comm.reminderSentNoPush', { count }),
-              )
+              setToast(t('comm.reminderSent', { count }))
               refreshData()
             }}
           />

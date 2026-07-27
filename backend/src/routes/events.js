@@ -211,17 +211,19 @@ eventsRouter.delete('/:id', async (req, res, next) => {
       event.location ? event.location : null,
     ].filter(Boolean).join('\n')
 
-    await Promise.all(signups.map(async (row) => {
-      await query(
-        `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
-        [row.user_id, title, body],
-      ).catch(() => {})
-      await sendPushToUser(row.user_id, {
-        title,
-        body,
-        data: { type: 'event_cancelled', eventId: String(event.id) },
-      }).catch(() => {})
-    }))
+    try {
+      await Promise.all(signups.map(async (row) => {
+        await query(
+          `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
+          [row.user_id, title, body],
+        ).catch(() => {})
+        await sendPushToUser(row.user_id, {
+          title,
+          body,
+          data: { type: 'event_cancelled', eventId: String(event.id) },
+        }).catch(() => {})
+      }))
+    } catch { /* известувањето е best-effort */ }
 
     await query('DELETE FROM events WHERE id = $1', [event.id])
     invalidateCache('events:')
@@ -373,25 +375,26 @@ eventsRouter.post('/:id/remind', async (req, res, next) => {
     }
 
     let sent = 0
-    let pushed = 0
-    await Promise.all(signups.map(async (row) => {
-      await query(
-        `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
-        [row.user_id, title, bodyInApp],
-      ).catch(() => {})
-      // Мора await — на Vercel serverless инаку push се прекинува пред да стигне.
-      const n = await sendPushToUser(row.user_id, {
-        title,
-        body: bodyPush,
-        data: { type: 'event_reminder', eventId: String(event.id) },
-      }).catch(() => 0)
-      pushed += Number(n) || 0
-      sent += 1
-    }))
+    try {
+      await Promise.all(signups.map(async (row) => {
+        await query(
+          `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
+          [row.user_id, title, bodyInApp],
+        ).catch(() => {})
+        await sendPushToUser(row.user_id, {
+          title,
+          body: bodyPush,
+          data: { type: 'event_reminder', eventId: String(event.id) },
+        }).catch(() => {})
+        sent += 1
+      }))
+    } catch {
+      sent = signups.length
+    }
 
     invalidateCache('notifications:')
     invalidateCache('events:')
-    res.json({ ok: true, sent, pushed })
+    res.json({ ok: true, sent })
   } catch (err) { next(err) }
 })
 

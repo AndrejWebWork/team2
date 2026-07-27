@@ -268,43 +268,45 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
       }
     }
     // Извести го пријавувачот при секоја промена на статус (не само resolved).
+    // Push/in-app се тивки — грешка во известување НЕ смее да го сруши ажурирањето.
     if (status !== oldStatus) {
-      const loc = rows[0].location_label || 'локација'
-      const statusLabels = {
-        pending: 'Поднесено',
-        in_progress: 'Во тек на решавање',
-        resolved: 'Решен проблем',
-      }
-      const statusLabel = statusLabels[status] || status
-      const title = status === 'resolved' ? 'Пријавата е решена' : 'Статусот на пријавата е ажуриран'
-      const body = status === 'resolved'
-        ? `Твојата пријава (${loc}) е означена како решена. Ти благодариме!`
-        : `Твојата пријава (${loc}) сега е: ${statusLabel}.`
-      if (rows[0].reporter_id) {
-        const { rows: userRows } = await query(
-          'SELECT notif_waste FROM users WHERE id = $1',
-          [rows[0].reporter_id],
-        )
-        if (userRows[0]?.notif_waste !== false) {
-          await query(
-            `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
-            [rows[0].reporter_id, title, body],
-          ).catch(() => {})
-          // await — инаку на Vercel push се прекинува пред да стигне.
-          await sendPushToUser(rows[0].reporter_id, {
+      try {
+        const loc = rows[0].location_label || 'локација'
+        const statusLabels = {
+          pending: 'Поднесено',
+          in_progress: 'Во тек на решавање',
+          resolved: 'Решен проблем',
+        }
+        const statusLabel = statusLabels[status] || status
+        const title = status === 'resolved' ? 'Пријавата е решена' : 'Статусот на пријавата е ажуриран'
+        const body = status === 'resolved'
+          ? `Твојата пријава (${loc}) е означена како решена. Ти благодариме!`
+          : `Твојата пријава (${loc}) сега е: ${statusLabel}.`
+        if (rows[0].reporter_id) {
+          const { rows: userRows } = await query(
+            'SELECT notif_waste FROM users WHERE id = $1',
+            [rows[0].reporter_id],
+          )
+          if (userRows[0]?.notif_waste !== false) {
+            await query(
+              `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
+              [rows[0].reporter_id, title, body],
+            ).catch(() => {})
+            await sendPushToUser(rows[0].reporter_id, {
+              title,
+              body,
+              data: { type: 'report_status', reportId: String(rows[0].id), status },
+            }).catch(() => {})
+          }
+        } else if (rows[0].reporter_device_id) {
+          await sendPushToDevice(rows[0].reporter_device_id, {
             title,
             body,
             data: { type: 'report_status', reportId: String(rows[0].id), status },
           }).catch(() => {})
         }
-      } else if (rows[0].reporter_device_id) {
-        await sendPushToDevice(rows[0].reporter_device_id, {
-          title,
-          body,
-          data: { type: 'report_status', reportId: String(rows[0].id), status },
-        }).catch(() => {})
-      }
-      invalidateCache('notifications:')
+        invalidateCache('notifications:')
+      } catch { /* известувањето е best-effort */ }
     }
     invalidateCache('reports:')
     invalidateCache('leaderboard:')
