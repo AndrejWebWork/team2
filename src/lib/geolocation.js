@@ -25,27 +25,37 @@ function sleep(ms) {
 
 /** Capacitor GPS на Android/iOS — поточен и со правилни дозволи. */
 async function getNativePosition(options) {
+  const platform = Capacitor.getPlatform()
   let perm = await Geolocation.checkPermissions()
-  if (perm.location === 'denied' || perm.location === 'prompt' || perm.location === 'prompt-with-rationale') {
+  // На iOS: prompt → барај дозвола; denied → фрли за да се отворат Settings.
+  if (perm.location !== 'granted' && perm.location !== 'limited') {
     perm = await Geolocation.requestPermissions()
   }
   if (perm.location === 'denied') {
     throw Object.assign(new Error('denied'), { code: 1 })
   }
 
-  const pos = await Geolocation.getCurrentPosition({
-    enableHighAccuracy: options.enableHighAccuracy ?? true,
-    timeout: options.timeout ?? 10000,
-    maximumAge: options.maximumAge ?? 120000,
-  })
-
-  return {
-    coords: {
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      accuracy: pos.coords.accuracy,
-    },
-    timestamp: pos.timestamp,
+  try {
+    const pos = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: options.enableHighAccuracy ?? true,
+      timeout: options.timeout ?? (platform === 'ios' ? 20000 : 10000),
+      maximumAge: options.maximumAge ?? 120000,
+    })
+    return {
+      coords: {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+      },
+      timestamp: pos.timestamp,
+    }
+  } catch (err) {
+    // iOS често враќа грешка кога Location Services се исклучени.
+    const msg = String(err?.message || err || '').toLowerCase()
+    if (platform === 'ios' && (msg.includes('denied') || msg.includes('disabled') || msg.includes('kclerror'))) {
+      throw Object.assign(new Error('denied'), { code: 1, iosLocationOff: true })
+    }
+    throw err
   }
 }
 
@@ -154,22 +164,33 @@ export async function captureGeolocationWithRetries({
 /**
  * Отвори системски settings за локација / дозволи на апликацијата (iOS + Android).
  * Враќа true ако е отворено.
+ *
+ * iOS:
+ *  - denied → App Settings (дозвола за оваа апликација)
+ *  - инаку → Location Services (главен GPS прекинувач)
+ * Android останува како што беше.
  */
 export async function openNativeLocationSettings({ denied = false } = {}) {
   if (!Capacitor.isNativePlatform()) return false
+  const platform = Capacitor.getPlatform()
   try {
     const { NativeSettings, AndroidSettings, IOSSettings } = await import('capacitor-native-settings')
-    // Одбиена дозвола → settings на апликацијата (Location permission).
-    // Инаку → системски Location (GPS on/off) на Android; на iOS сепак App settings.
+    if (platform === 'ios') {
+      await NativeSettings.open({
+        optionAndroid: AndroidSettings.Location,
+        optionIOS: denied ? IOSSettings.App : IOSSettings.LocationServices,
+      })
+      return true
+    }
     await NativeSettings.open({
       optionAndroid: denied ? AndroidSettings.ApplicationDetails : AndroidSettings.Location,
       optionIOS: IOSSettings.App,
     })
     return true
   } catch {
-    // Fallback: iOS app-settings URL
+    // Fallback: iOS app-settings URL (официјално поддржан)
     try {
-      if (Capacitor.getPlatform() === 'ios') {
+      if (platform === 'ios') {
         const { App } = await import('@capacitor/app')
         await App.openUrl({ url: 'app-settings:' })
         return true
