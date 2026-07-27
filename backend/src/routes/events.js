@@ -165,18 +165,21 @@ eventsRouter.post('/', async (req, res, next) => {
 })
 
 // DELETE /api/events/:id  → откажување/бришење настан (организатор или админ).
-// Настанот исчезнува за сите корисници (event_signups се бришат каскадно).
+// Пред бришење: in-app + FCM push до пријавените („настанот е откажан").
+// Настанот исчезнува за сите (event_signups се бришат каскадно).
 eventsRouter.delete('/:id', async (req, res, next) => {
   try {
     const email = req.query.email || req.body?.email || null
     const { rows } = await query(
-      `SELECT (SELECT email FROM users WHERE id = e.organizer_id) AS organizer_email
-       FROM events e WHERE e.id = $1`,
+      `SELECT e.id, e.title, e.location, e.event_date, e.event_time,
+              (SELECT email FROM users WHERE id = e.organizer_id) AS organizer_email
+         FROM events e WHERE e.id = $1`,
       [req.params.id],
     )
     if (!rows[0]) return res.status(404).json({ error: 'Настанот не постои.' })
 
-    const organizerEmail = rows[0].organizer_email
+    const event = rows[0]
+    const organizerEmail = event.organizer_email
     const isOrganizer = email && organizerEmail && String(email).toLowerCase() === String(organizerEmail).toLowerCase()
     // Ако адмн токен не е поставен → отворено (локален развој), инаку мора да се совпаѓа.
     const provided = req.get('x-admin-token') || ''
@@ -185,9 +188,41 @@ eventsRouter.delete('/:id', async (req, res, next) => {
     if (!isOrganizer && !isAdmin) {
       return res.status(403).json({ error: 'Само организаторот или админ може да го откаже настанот.' })
     }
-    await query('DELETE FROM events WHERE id = $1', [req.params.id])
+
+    // Земи ги пријавените ПРЕД бришење (CASCADE ги брише signups).
+    const { rows: signups } = await query(
+      `SELECT DISTINCT s.user_id
+         FROM event_signups s
+         JOIN users u ON u.id = s.user_id
+        WHERE s.event_id = $1 AND s.user_id IS NOT NULL
+          AND COALESCE(u.notif_events, TRUE) = TRUE`,
+      [event.id],
+    )
+
+    const timeLabel = formatEventTime(event.event_time)
+    const dateLabel = event.event_date instanceof Date
+      ? event.event_date.toISOString().slice(0, 10)
+      : String(event.event_date || '').slice(0, 10)
+    const when = timeLabel ? `${dateLabel} · ${timeLabel}` : dateLabel
+    const title = `Настан откажан: ${event.title}`
+    const body = [
+      `Настанот „${event.title}" е откажан.`,
+      when ? when : null,
+      event.location ? event.location : null,
+    ].filter(Boolean).join('\n')
+
+    for (const row of signups) {
+      await query(
+        `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
+        [row.user_id, title, body],
+      ).catch(() => {})
+      sendPushToUser(row.user_id, { title, body, data: { type: 'event_cancelled', eventId: String(event.id) } }).catch(() => {})
+    }
+
+    await query('DELETE FROM events WHERE id = $1', [event.id])
     invalidateCache('events:')
-    res.json({ ok: true })
+    if (signups.length > 0) invalidateCache('notifications:')
+    res.json({ ok: true, notified: signups.length })
   } catch (err) { next(err) }
 })
 
