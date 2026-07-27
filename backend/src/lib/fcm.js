@@ -97,40 +97,57 @@ function stringifyData(data = {}) {
 // токенот е застарен). Застарените токени се бришат од базата (404/UNREGISTERED).
 export async function sendPushToTokens(tokens, { title, body, data = {} }) {
   const acct = loadServiceAccount()
-  if (!acct || !Array.isArray(tokens) || tokens.length === 0) return
+  if (!acct || !Array.isArray(tokens) || tokens.length === 0) return 0
   const accessToken = await getAccessToken()
-  if (!accessToken) return
+  if (!accessToken) return 0
 
   const url = `https://fcm.googleapis.com/v1/projects/${acct.project_id}/messages:send`
+  let ok = 0
   await Promise.all(tokens.map(async (token) => {
     try {
       const res = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: { token, notification: { title, body }, data: stringifyData(data) } }),
+        body: JSON.stringify({
+          message: {
+            token,
+            notification: { title, body },
+            data: stringifyData(data),
+            android: { priority: 'high' },
+            apns: { headers: { 'apns-priority': '10' }, payload: { aps: { sound: 'default' } } },
+          },
+        }),
       })
+      if (res.ok) {
+        ok += 1
+        return
+      }
       if (res.status === 404 || res.status === 400) {
-        // Токенот повеќе не важи — исчисти го за да не праќаме залудно.
         await query('DELETE FROM device_tokens WHERE token = $1', [token]).catch(() => {})
       }
     } catch { /* мрежна грешка — игнорирај */ }
   }))
+  return ok
 }
 
 // Праќа push до сите уреди на даден корисник (по user_id).
 export async function sendPushToUser(userId, payload) {
-  if (!isPushConfigured() || !userId) return
+  if (!isPushConfigured() || !userId) return 0
   try {
     const { rows } = await query('SELECT token FROM device_tokens WHERE user_id = $1', [userId])
-    await sendPushToTokens(rows.map((r) => r.token), payload)
-  } catch { /* игнорирај */ }
+    return await sendPushToTokens(rows.map((r) => r.token), payload)
+  } catch {
+    return 0
+  }
 }
 
 // Праќа push до анонимен уред (по device_id од локалниот идентитет).
 export async function sendPushToDevice(deviceId, payload) {
-  if (!isPushConfigured() || !deviceId) return
+  if (!isPushConfigured() || !deviceId) return 0
   try {
     const { rows } = await query('SELECT token FROM device_tokens WHERE device_id = $1', [deviceId])
-    await sendPushToTokens(rows.map((r) => r.token), payload)
-  } catch { /* игнорирај */ }
+    return await sendPushToTokens(rows.map((r) => r.token), payload)
+  } catch {
+    return 0
+  }
 }

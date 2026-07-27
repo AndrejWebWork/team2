@@ -43,7 +43,11 @@ async function notifySignup(userId, title, body) {
     `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
     [userId, title, body],
   ).catch(() => {})
-  sendPushToUser(userId, { title, body }).catch(() => {})
+  await sendPushToUser(userId, {
+    title,
+    body: String(body).replace(/\n+/g, ' · '),
+    data: { type: 'event_reminder_24h' },
+  }).catch(() => {})
 }
 
 /** Испраќа 24ч потсетник до сите пријавени (со notif_events) за настани утре. */

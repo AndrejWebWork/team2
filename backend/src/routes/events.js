@@ -211,13 +211,17 @@ eventsRouter.delete('/:id', async (req, res, next) => {
       event.location ? event.location : null,
     ].filter(Boolean).join('\n')
 
-    for (const row of signups) {
+    await Promise.all(signups.map(async (row) => {
       await query(
         `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
         [row.user_id, title, body],
       ).catch(() => {})
-      sendPushToUser(row.user_id, { title, body, data: { type: 'event_cancelled', eventId: String(event.id) } }).catch(() => {})
-    }
+      await sendPushToUser(row.user_id, {
+        title,
+        body,
+        data: { type: 'event_cancelled', eventId: String(event.id) },
+      }).catch(() => {})
+    }))
 
     await query('DELETE FROM events WHERE id = $1', [event.id])
     invalidateCache('events:')
@@ -353,14 +357,15 @@ eventsRouter.post('/:id/remind', async (req, res, next) => {
       : String(event.event_date || '').slice(0, 10)
     const when = timeLabel ? `${dateLabel} · ${timeLabel}` : dateLabel
     const title = `Потсетник: ${event.title}`
-    const body = `${message}\n\n${when}${event.location ? ` — ${event.location}` : ''}`
+    const bodyInApp = `${message}\n\n${when}${event.location ? ` — ${event.location}` : ''}`
+    // FCM notification body — една линија (подобро приказ на Android/iOS).
+    const bodyPush = [message, when, event.location].filter(Boolean).join(' · ')
 
+    // Сите пријавени со сметка — рачниот потсетник од инфлуенсер е експлицитен.
     const { rows: signups } = await query(
       `SELECT DISTINCT s.user_id
          FROM event_signups s
-         JOIN users u ON u.id = s.user_id
-        WHERE s.event_id = $1 AND s.user_id IS NOT NULL
-          AND COALESCE(u.notif_events, TRUE) = TRUE`,
+        WHERE s.event_id = $1 AND s.user_id IS NOT NULL`,
       [event.id],
     )
     if (signups.length === 0) {
@@ -368,14 +373,19 @@ eventsRouter.post('/:id/remind', async (req, res, next) => {
     }
 
     let sent = 0
-    for (const row of signups) {
+    await Promise.all(signups.map(async (row) => {
       await query(
         `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
-        [row.user_id, title, body],
+        [row.user_id, title, bodyInApp],
       ).catch(() => {})
-      sendPushToUser(row.user_id, { title, body }).catch(() => {})
+      // Мора await — на Vercel serverless инаку push се прекинува пред да стигне.
+      await sendPushToUser(row.user_id, {
+        title,
+        body: bodyPush,
+        data: { type: 'event_reminder', eventId: String(event.id) },
+      }).catch(() => {})
       sent += 1
-    }
+    }))
 
     invalidateCache('notifications:')
     invalidateCache('events:')
