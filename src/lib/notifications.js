@@ -14,6 +14,38 @@ export function isNativePlatform() {
 
 let localPermissionAsked = false
 
+/** Експлицитно барај дозвола за локални/push нотификации (iOS дијалог). */
+export async function requestNotificationPermissions() {
+  if (!isNativePlatform()) return { display: 'denied', receive: 'denied' }
+  let display = 'denied'
+  let receive = 'denied'
+  try {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    localPermissionAsked = true
+    const perm = await LocalNotifications.requestPermissions()
+    display = perm?.display || 'denied'
+    if (display === 'granted') {
+      try {
+        await LocalNotifications.createChannel({
+          id: 'ekoskopje',
+          name: 'EkoSkopje',
+          description: 'Известувања за настани и пријави',
+          importance: 5,
+          visibility: 1,
+          sound: 'default',
+          vibration: true,
+        })
+      } catch { /* iOS */ }
+    }
+  } catch { /* */ }
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications')
+    const perm = await PushNotifications.requestPermissions()
+    receive = perm?.receive || 'denied'
+  } catch { /* */ }
+  return { display, receive }
+}
+
 // Локална нотификација на уредот (веднаш). На веб: noop.
 export async function scheduleLocalNotification({ title, body }) {
   if (!isNativePlatform()) return

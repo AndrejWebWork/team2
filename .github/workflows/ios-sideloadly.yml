@@ -116,6 +116,13 @@ jobs:
             find build/DerivedData/Build/Products -name '*.app' || true
             exit 1
           fi
+          # Unsigned build strips CODE_SIGN_ENTITLEMENTS — copy them back so Sideloadly
+          # can re-sign with aps-environment (notifications) when possible.
+          if [ -f ios/App/App/App.entitlements ]; then
+            cp ios/App/App/App.entitlements "$APP_PATH/archived-expanded-entitlements.xcent" || true
+          fi
+          # Sanity: usage strings must be present or iOS never shows Location dialog.
+          /usr/libexec/PlistBuddy -c 'Print :NSLocationWhenInUseUsageDescription' "$APP_PATH/Info.plist"
           mkdir -p build/sideloadly/Payload
           cp -R "$APP_PATH" build/sideloadly/Payload/
           cd build/sideloadly
