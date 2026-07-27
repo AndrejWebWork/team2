@@ -304,8 +304,11 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "EkoSkopje го користи камерата за фотографии на пријави.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "EkoSkopje ја користи локацијата за пријави и најблискиот сензор.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "EkoSkopje ја користи локацијата за пријави и најблискиот сензор.";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -329,8 +332,11 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "EkoSkopje го користи камерата за фотографии на пријави.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "EkoSkopje ја користи локацијата за пријави и најблискиот сензор.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "EkoSkopje ја користи локацијата за пријави и најблискиот сензор.";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

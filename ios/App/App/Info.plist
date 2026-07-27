@@ -63,9 +63,13 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>EkoSkopje го користи камерата за фотографии на пријави.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
 	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>

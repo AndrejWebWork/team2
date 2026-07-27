@@ -19,6 +19,7 @@ export function useGeolocation(t) {
     loading: true,
     error: '',
     denied: false,
+    servicesOff: false,
     isDesktop: isLikelyDesktop(),
   })
   const busyRef = useRef(false)
@@ -37,6 +38,7 @@ export function useGeolocation(t) {
       loading: false,
       error: '',
       denied: false,
+      servicesOff: false,
       isDesktop: isLikelyDesktop(),
     }
     setLoc(quick)
@@ -71,6 +73,7 @@ export function useGeolocation(t) {
         accuracy: null,
         loading: false,
         denied,
+        servicesOff: Boolean(err?.iosLocationOff),
         error: geoErrorMessage(err, t),
         isDesktop: isLikelyDesktop(),
       }
@@ -88,7 +91,10 @@ export function useGeolocation(t) {
       && (cur.denied || cur.lat == null || Boolean(cur.error))
     if (needsSettings) {
       pendingSettingsRetry.current = true
-      await openNativeLocationSettings({ denied: Boolean(cur.denied) })
+      await openNativeLocationSettings({
+        denied: Boolean(cur.denied),
+        servicesOff: Boolean(cur.servicesOff),
+      })
     }
     await request({ attempts: 3 })
   }, [request])

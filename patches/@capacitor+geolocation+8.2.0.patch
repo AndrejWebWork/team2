@@ -1,0 +1,25 @@
+diff --git a/node_modules/@capacitor/geolocation/ios/Sources/GeolocationPlugin/GeolocationPlugin.swift b/node_modules/@capacitor/geolocation/ios/Sources/GeolocationPlugin/GeolocationPlugin.swift
+index c9252d5..9ee74ba 100644
+--- a/node_modules/@capacitor/geolocation/ios/Sources/GeolocationPlugin/GeolocationPlugin.swift
++++ b/node_modules/@capacitor/geolocation/ios/Sources/GeolocationPlugin/GeolocationPlugin.swift
+@@ -176,7 +176,9 @@ private extension GeolocationPlugin {
+     }
+ 
+     func requestLocationAuthorisation(type requestType: IONGLOCAuthorisationRequestType) {
+-        DispatchQueue.global(qos: .background).async {
++        // Must be on main thread — otherwise iOS never shows the permission dialog
++        // and Location never appears under Settings → App → Permissions.
++        DispatchQueue.main.async {
+             guard self.checkIfLocationServicesAreEnabled() else { return }
+             self.locationService?.requestAuthorisation(withType: requestType)
+         }
+@@ -235,6 +237,9 @@ private extension GeolocationPlugin {
+         case .authorisedAlways, .authorisedWhenInUse: onLocationPermissionGranted()
+         case .denied: callbackManager?.sendError(.permissionDenied)
+         case .restricted: callbackManager?.sendError(.permissionRestricted)
++        case .notDetermined:
++            // Explicitly request — waiting only on the publisher can miss the dialog.
++            requestLocationAuthorisation(type: .whenInUse)
+         default: break
+         }
+     }

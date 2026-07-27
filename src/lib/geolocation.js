@@ -26,10 +26,29 @@ function sleep(ms) {
 /** Capacitor GPS на Android/iOS — поточен и со правилни дозволи. */
 async function getNativePosition(options) {
   const platform = Capacitor.getPlatform()
-  let perm = await Geolocation.checkPermissions()
-  // На iOS: prompt → барај дозвола; denied → фрли за да се отворат Settings.
+
+  // Прво експлицитно барај дозвола — инаку iOS не ја додава Location во Permissions.
+  let perm
+  try {
+    perm = await Geolocation.checkPermissions()
+  } catch (err) {
+    const msg = String(err?.message || err || '').toLowerCase()
+    if (msg.includes('disabled') || msg.includes('location services')) {
+      throw Object.assign(new Error('services_off'), { code: 1, iosLocationOff: true })
+    }
+    throw err
+  }
+
   if (perm.location !== 'granted' && perm.location !== 'limited') {
-    perm = await Geolocation.requestPermissions()
+    try {
+      perm = await Geolocation.requestPermissions()
+    } catch (err) {
+      const msg = String(err?.message || err || '').toLowerCase()
+      if (msg.includes('disabled') || msg.includes('location services')) {
+        throw Object.assign(new Error('services_off'), { code: 1, iosLocationOff: true })
+      }
+      throw err
+    }
   }
   if (perm.location === 'denied') {
     throw Object.assign(new Error('denied'), { code: 1 })
@@ -39,7 +58,7 @@ async function getNativePosition(options) {
     const pos = await Geolocation.getCurrentPosition({
       enableHighAccuracy: options.enableHighAccuracy ?? true,
       timeout: options.timeout ?? (platform === 'ios' ? 20000 : 10000),
-      maximumAge: options.maximumAge ?? 120000,
+      maximumAge: options.maximumAge ?? 0,
     })
     return {
       coords: {
@@ -50,10 +69,9 @@ async function getNativePosition(options) {
       timestamp: pos.timestamp,
     }
   } catch (err) {
-    // iOS често враќа грешка кога Location Services се исклучени.
     const msg = String(err?.message || err || '').toLowerCase()
-    if (platform === 'ios' && (msg.includes('denied') || msg.includes('disabled') || msg.includes('kclerror'))) {
-      throw Object.assign(new Error('denied'), { code: 1, iosLocationOff: true })
+    if (platform === 'ios' && (msg.includes('denied') || msg.includes('disabled') || msg.includes('kclerror') || msg.includes('location services'))) {
+      throw Object.assign(new Error('denied'), { code: 1, iosLocationOff: msg.includes('disabled') || msg.includes('location services') })
     }
     throw err
   }
@@ -164,30 +182,35 @@ export async function captureGeolocationWithRetries({
 /**
  * Отвори Settings за локација.
  *
- * iOS: секогаш App Settings (единствениот официјален URL) — таму се менува
- * Location за EkoSkopje. Неофицијалните App-prefs: линкови често не работат.
- * Android: ApplicationDetails (denied) или Location (GPS).
+ * iOS: App Settings (официјално) — таму се појавува Location откако апликацијата
+ * еднаш ќе ја побара дозволата. Ако Location Services се исклучени глобално,
+ * пробај и Privacy → Location Services.
  */
-export async function openNativeLocationSettings({ denied = false } = {}) {
+export async function openNativeLocationSettings({ denied = false, servicesOff = false } = {}) {
   if (!Capacitor.isNativePlatform()) return false
   const platform = Capacitor.getPlatform()
 
   if (platform === 'ios') {
-    // 1) capacitor-native-settings → App Settings
+    if (servicesOff) {
+      try {
+        const { NativeSettings, IOSSettings } = await import('capacitor-native-settings')
+        await NativeSettings.openIOS({ option: IOSSettings.LocationServices })
+        return true
+      } catch { /* падни на App Settings */ }
+    }
+
     try {
       const { NativeSettings, IOSSettings } = await import('capacitor-native-settings')
       const res = await NativeSettings.openIOS({ option: IOSSettings.App })
       if (res?.status !== false && res?.success !== false) return true
     } catch { /* пробај следен fallback */ }
 
-    // 2) Capacitor App.openUrl
     try {
       const { App } = await import('@capacitor/app')
       await App.openUrl({ url: 'app-settings:' })
       return true
     } catch { /* пробај следен fallback */ }
 
-    // 3) Директно во WebView (работи на повеќето Capacitor iOS билдови)
     try {
       window.location.href = 'app-settings:'
       return true
