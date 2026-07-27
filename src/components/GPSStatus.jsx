@@ -7,6 +7,7 @@ export function GPSStatus({ loc, onRetry, onRefresh, t }) {
   const lowAccuracy = loc.isDesktop && loc.accuracy != null && loc.accuracy > 400
   const native = Capacitor.isNativePlatform()
   const handleRefresh = onRefresh || onRetry
+  const openSettings = native && (loc.denied || loc.servicesOff)
 
   if (loc.loading) {
     return (
@@ -23,7 +24,6 @@ export function GPSStatus({ loc, onRetry, onRefresh, t }) {
   }
 
   if (loc.error) {
-    const openSettings = native && (loc.denied || loc.servicesOff)
     return (
       <div className='space-y-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3'>
         <div className='flex items-start gap-2 text-sm text-rose-700'>

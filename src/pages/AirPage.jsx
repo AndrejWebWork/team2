@@ -80,14 +80,9 @@ function makeAqiIcon(aqi) {
   return icon
 }
 
-import { findNearestAirSensor, haversineKm, resolveLocationLabel } from '../lib/geo'
-import {
-  captureGeolocation,
-  captureGeolocationWithRetries,
-  geoErrorMessage,
-  openNativeLocationSettings,
-} from '../lib/geolocation'
-import { Capacitor } from '@capacitor/core'
+import { findNearestAirSensor, haversineKm } from '../lib/geo'
+import { useGeolocation } from '../hooks/useGeolocation'
+
 function RecenterMap({ lat, lng }) {
   const map = useMap()
   const centered = useRef(false)
@@ -192,12 +187,13 @@ function SensorDetail({ sensor, onClose, t }) {
 
 export function AirPage() {
   const { sensors, setSensors, smellAlerts, auth, t } = useApp()
-  // Реалната GPS локација на корисникот. null додека не е добиена (или одбиена)
-  // — никогаш не се користи измислена/фиксна локација како замена.
-  const [userLocation, setUserLocation] = useState(null)
+  // Иста GPS логика како Home / пријави — useGeolocation насекаде.
+  const loc = useGeolocation(t)
+  const userLocation = loc.lat != null && loc.lng != null
+    ? { lat: loc.lat, lng: loc.lng }
+    : null
   const [sourceFilter, setSourceFilter] = useState('all')
   const [selectedSensor, setSelectedSensor] = useState(null)
-  const [gps, setGps] = useState({ lat: null, lng: null, label: '', loading: true, error: '', denied: false })
   // Нереферентни (граѓански) сензори: WAQI граѓански + Pulse.eco во живо.
   // Само реални податоци — почнува празно и се полни од API при првото вчитување.
   const [pulse, setPulse] = useState([])
@@ -273,50 +269,6 @@ export function AirPage() {
     }
   }, [setSensors])
 
-  async function requestGPS({ attempts = 1, openSettings = false } = {}) {
-    if (!navigator.geolocation && !Capacitor.isNativePlatform()) {
-      setGps({ lat: null, lng: null, label: '', loading: false, error: t('gps.notSupported'), denied: false })
-      return
-    }
-    if (openSettings && Capacitor.isNativePlatform() && gps.denied) {
-      await openNativeLocationSettings({ denied: true })
-    }
-    setGps((g) => ({ ...g, loading: true, error: '', denied: false }))
-    try {
-      const pos = attempts > 1
-        ? await captureGeolocationWithRetries({ attempts })
-        : await captureGeolocation({ maximumAge: 0 })
-      const lat = pos.coords.latitude
-      const lng = pos.coords.longitude
-      setUserLocation({ lat, lng })
-      setGps({
-        lat, lng,
-        label: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
-        loading: false,
-        error: '',
-        denied: false,
-      })
-      resolveLocationLabel(lat, lng).then((label) => {
-        if (!label) return
-        setGps((g) => (g.lat === lat && g.lng === lng ? { ...g, label } : g))
-      }).catch(() => {})
-    } catch (err) {
-      const denied = err?.code === 1
-      setGps({
-        lat: null, lng: null, label: '', loading: false, denied,
-        error: denied
-          ? (Capacitor.isNativePlatform() ? t('gps.deniedNative') : t('gps.deniedBrowser'))
-          : geoErrorMessage(err, t),
-      })
-    }
-  }
-
-  useEffect(() => {
-    const delayMs = Capacitor.getPlatform() === 'ios' ? 8000 : 0
-    const timer = setTimeout(() => { requestGPS({ attempts: 3 }) }, delayMs)
-    return () => clearTimeout(timer)
-  }, [])
-
   const allSensors = useMemo(() => [...sensors, ...pulse], [sensors, pulse])
 
   // Најблизок сензор по воздушна линија (Haversine) — сите референтни + граѓански.
@@ -375,16 +327,17 @@ export function AirPage() {
       </div>
 
       {/* Без реален GPS нема „најблизок сензор" — јасна порака наместо лажна близина. */}
-      {!userLocation && !gps.loading && (
+      {!userLocation && !loc.loading && (
         <div className='rounded-2xl border border-slate-200 bg-slate-50 p-5'>
           <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>{t('air.nearestSensor')}</p>
           <div className='mt-2 flex flex-wrap items-center gap-3'>
             <p className='flex items-center gap-2 text-sm text-slate-600'>
-              <XCircle className='h-4 w-4 shrink-0 text-slate-400' />{t('air.locationUnavailable')}
+              <XCircle className='h-4 w-4 shrink-0 text-slate-400' />
+              {loc.error || t('air.locationUnavailable')}
             </p>
             <button
               type='button'
-              onClick={() => requestGPS({ attempts: 3, openSettings: true })}
+              onClick={() => loc.retry()}
               className='ml-auto flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100'
             >
               <MapPin className='h-3.5 w-3.5' />{t('gps.retry2')}

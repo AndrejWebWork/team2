@@ -8,8 +8,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     var window: UIWindow?
 
-    /// Must be retained — if deallocated before the system dialog appears,
-    /// iOS silently never shows the Location permission prompt.
+    /// Retained until the user answers the location dialog.
     private var permissionLocationManager: CLLocationManager?
     private var didBootstrapPermissions = false
 
@@ -22,14 +21,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         bootstrapNativePermissionsIfNeeded()
     }
 
-    /// Ask Notifications first, then Location — never in parallel.
-    /// Simultaneous prompts cause iOS to suppress one or both dialogs.
+    /// Notifications first, then Location — never in parallel.
     private func bootstrapNativePermissionsIfNeeded() {
         guard !didBootstrapPermissions else { return }
         didBootstrapPermissions = true
 
-        // Window must be key/visible before system alerts.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.requestNotificationPermissionThenLocation()
         }
     }
@@ -48,7 +45,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
                                 UIApplication.shared.registerForRemoteNotifications()
                             }
                         }
-                        // Only after the user taps Allow/Don't Allow → ask location.
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                             self.requestLocationPermission()
                         }
@@ -77,55 +73,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
                 manager.requestWhenInUseAuthorization()
                 return
             }
-            if status == .authorizedWhenInUse || status == .authorizedAlways {
-                self.warmLocation(manager)
-            } else {
-                self.permissionLocationManager = nil
-            }
-        }
-    }
-
-    /// Start a short location update so iOS caches a fix for Capacitor.
-    private func warmLocation(_ manager: CLLocationManager) {
-        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
-        manager.distanceFilter = kCLDistanceFilterNone
-        manager.startUpdatingLocation()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in
-            manager.stopUpdatingLocation()
-            if self?.permissionLocationManager === manager {
-                self?.permissionLocationManager = nil
-            }
+            // Already decided — release; EkoLocationPlugin reads GPS.
+            self.permissionLocationManager = nil
         }
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        handleLocationAuthChange(manager)
-    }
-
-    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        handleLocationAuthChange(manager)
-    }
-
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard locations.last != nil else { return }
-        manager.stopUpdatingLocation()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
-            if self?.permissionLocationManager === manager {
-                self?.permissionLocationManager = nil
-            }
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        // Capacitor will request again — ignore warm-up failures.
-    }
-
-    private func handleLocationAuthChange(_ manager: CLLocationManager) {
-        let status = manager.authorizationStatus
-        guard status != .notDetermined else { return }
-        if status == .authorizedWhenInUse || status == .authorizedAlways {
-            warmLocation(manager)
-        } else {
+        if manager.authorizationStatus != .notDetermined {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 if self?.permissionLocationManager === manager {
                     self?.permissionLocationManager = nil
@@ -134,17 +88,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         }
     }
 
-    func applicationWillResignActive(_ application: UIApplication) {
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        locationManagerDidChangeAuthorization(manager)
     }
 
-    func applicationDidEnterBackground(_ application: UIApplication) {
-    }
-
-    func applicationWillEnterForeground(_ application: UIApplication) {
-    }
-
-    func applicationWillTerminate(_ application: UIApplication) {
-    }
+    func applicationWillResignActive(_ application: UIApplication) {}
+    func applicationDidEnterBackground(_ application: UIApplication) {}
+    func applicationWillEnterForeground(_ application: UIApplication) {}
+    func applicationWillTerminate(_ application: UIApplication) {}
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
@@ -161,7 +112,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
-
 }
 
 extension AppDelegate: UNUserNotificationCenterDelegate {

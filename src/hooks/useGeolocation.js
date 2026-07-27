@@ -29,7 +29,6 @@ export function useGeolocation(t) {
 
   const applyPosition = useCallback(async (pos) => {
     const { latitude: lat, longitude: lng, accuracy } = pos.coords
-    // Брзо прикажи координати; етикетата (Nominatim) во позадина.
     const quick = {
       lat,
       lng,
@@ -84,11 +83,10 @@ export function useGeolocation(t) {
     }
   }, [applyPosition, t])
 
-  /** Побарај повторно — Settings само ако е одбиена/исклучена дозвола. */
+  /** Settings само кога дозволата е одбиена/исклучена — исто за Home, Air, насекаде. */
   const retry = useCallback(async () => {
     const cur = locRef.current
-    const needsSettings = Capacitor.isNativePlatform()
-      && (cur.denied || cur.servicesOff)
+    const needsSettings = Capacitor.isNativePlatform() && (cur.denied || cur.servicesOff)
     if (needsSettings) {
       pendingSettingsRetry.current = true
       await openNativeLocationSettings({
@@ -99,12 +97,10 @@ export function useGeolocation(t) {
     await request({ attempts: 3 })
   }, [request])
 
-  /** Освежи локација без да се отвораат settings (кога веќе имаме GPS). */
   const refresh = useCallback(async () => {
     await request({ attempts: 1 })
   }, [request])
 
-  /** Пред submit — свежо мерење. Враќа { lat, lng, label } или null. */
   const ensureFresh = useCallback(async () => {
     if (busyRef.current) {
       const cur = locRef.current
@@ -125,16 +121,15 @@ export function useGeolocation(t) {
     }
   }, [applyPosition])
 
-  // iOS: почекај дозвола + краток native GPS warm-up пред Capacitor.
   useEffect(() => {
-    const delayMs = Capacitor.getPlatform() === 'ios' ? 8000 : 0
+    // iOS: кратка пауза додека AppDelegate ги покаже системските дијалози.
+    const delayMs = Capacitor.getPlatform() === 'ios' ? 2500 : 0
     const timer = setTimeout(() => {
       request({ attempts: 3 })
     }, delayMs)
     return () => clearTimeout(timer)
   }, [request])
 
-  // По враќање од Settings → повторно барај локација.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return undefined
     let handle
