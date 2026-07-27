@@ -12,8 +12,51 @@ const BOUNDS = { latMin: 41.85, latMax: 42.15, lngMin: 21.25, lngMax: 21.80 }
 const SC_AREA = 'https://data.sensor.community/airrohr/v1/filter/area=41.9981,21.4254,18'
 const UA = 'EkoSkopje/1.0 (Grad Skopje)'
 
+// Sensor.community не дава имиња — само координати. Името = најблиска населба/општина.
+const SKOPJE_AREAS = [
+  { name: 'Центар', lat: 41.9955, lng: 21.4315 },
+  { name: 'Карпош', lat: 42.0065, lng: 21.3880 },
+  { name: 'Влае', lat: 42.0040, lng: 21.3700 },
+  { name: 'Тафталиџе', lat: 42.0010, lng: 21.3920 },
+  { name: 'Гази Баба', lat: 42.0040, lng: 21.4640 },
+  { name: 'Автокоманда', lat: 42.0085, lng: 21.4520 },
+  { name: 'Маџари', lat: 42.0150, lng: 21.4900 },
+  { name: 'Аеродром', lat: 41.9830, lng: 21.4620 },
+  { name: 'Лисиче', lat: 41.9780, lng: 21.4700 },
+  { name: 'Кисела Вода', lat: 41.9780, lng: 21.4450 },
+  { name: 'Пржино', lat: 41.9680, lng: 21.4300 },
+  { name: 'Бутел', lat: 42.0300, lng: 21.4450 },
+  { name: 'Чаир', lat: 42.0160, lng: 21.4400 },
+  { name: 'Топанско Поле', lat: 42.0220, lng: 21.4280 },
+  { name: 'Ѓорче Петров', lat: 42.0070, lng: 21.3450 },
+  { name: 'Хром', lat: 42.0000, lng: 21.3550 },
+  { name: 'Сарај', lat: 41.9950, lng: 21.3000 },
+  { name: 'Шуто Оризари', lat: 42.0380, lng: 21.4250 },
+  { name: 'Радишани', lat: 42.0500, lng: 21.4500 },
+  { name: 'Драчево', lat: 41.9400, lng: 21.5200 },
+]
+
 function inSkopje(lat, lng) {
   return lat >= BOUNDS.latMin && lat <= BOUNDS.latMax && lng >= BOUNDS.lngMin && lng <= BOUNDS.lngMax
+}
+
+function dist2(aLat, aLng, bLat, bLng) {
+  const dLat = aLat - bLat
+  const dLng = aLng - bLng
+  return dLat * dLat + dLng * dLng
+}
+
+function nearestAreaName(lat, lng) {
+  let best = null
+  let bestD = Infinity
+  for (const a of SKOPJE_AREAS) {
+    const d = dist2(lat, lng, a.lat, a.lng)
+    if (d < bestD) {
+      bestD = d
+      best = a.name
+    }
+  }
+  return best || 'Скопје'
 }
 
 const PM25_BREAKPOINTS = [
@@ -195,21 +238,41 @@ async function fetchFromSensorCommunity(signal) {
     }
   }
 
-  const out = []
+  const candidates = []
   for (const entry of byId.values()) {
     const pm25 = entry.values.pm25 ?? null
     const pm10 = entry.values.pm10 ?? null
     if (pm25 == null && pm10 == null) continue
     if (entry.lat == null || entry.lng == null || !inSkopje(entry.lat, entry.lng)) continue
-    const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
-    const name = `Sensor.community ${entry.id}`
+    candidates.push({
+      ...entry,
+      pm25,
+      pm10,
+      areaName: nearestAreaName(entry.lat, entry.lng),
+    })
+  }
+
+  // Ако повеќе сензори се во иста населба → „Карпош 1“, „Карпош 2“…
+  const areaCounts = new Map()
+  for (const c of candidates) areaCounts.set(c.areaName, (areaCounts.get(c.areaName) || 0) + 1)
+  const areaIndex = new Map()
+
+  const out = []
+  for (const entry of candidates) {
+    const aqi = aqiFromPm25(entry.pm25) ?? (entry.pm10 != null ? aqiFromPm25(entry.pm10 * 0.6) : 0)
+    let name = entry.areaName
+    if ((areaCounts.get(entry.areaName) || 0) > 1) {
+      const n = (areaIndex.get(entry.areaName) || 0) + 1
+      areaIndex.set(entry.areaName, n)
+      name = `${entry.areaName} ${n}`
+    }
     out.push({
       id: `PULSE-SC-${entry.id}`,
       name,
-      area: name,
+      area: entry.areaName,
       aqi,
-      pm25,
-      pm10,
+      pm25: entry.pm25,
+      pm10: entry.pm10,
       status: statusFromAqi(aqi),
       lat: entry.lat,
       lng: entry.lng,
