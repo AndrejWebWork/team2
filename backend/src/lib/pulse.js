@@ -83,6 +83,17 @@ function aqiFromPm25(pm) {
   return 500
 }
 
+/** SDS011/граѓански често враќаат ~0 при грешка — тоа дава AQI 0/1 и изгледа скршено. */
+function hasUsablePm(pm25, pm10) {
+  return (pm25 != null && pm25 >= 1) || (pm10 != null && pm10 >= 1)
+}
+
+function aqiFromPm(pm25, pm10) {
+  if (pm25 != null && pm25 >= 1) return aqiFromPm25(pm25)
+  if (pm10 != null && pm10 >= 1) return aqiFromPm25(pm10 * 0.6)
+  return null
+}
+
 function statusFromAqi(aqi) {
   if (aqi == null) return null
   if (aqi >= 101) return 'unhealthy'
@@ -192,11 +203,11 @@ async function fetchFromPulseEco(signal) {
   for (const entry of byId.values()) {
     const pm25 = num(entry.values.pm25)
     const pm10 = num(entry.values.pm10)
-    if (pm25 == null && pm10 == null) continue
+    if (!hasUsablePm(pm25, pm10)) continue
     const meta = metaById.get(entry.sensorId)
     const { lat, lng } = parsePosition(entry.position || meta?.position)
     if (lat == null || lng == null || !inSkopje(lat, lng)) continue
-    const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
+    const aqi = aqiFromPm(pm25, pm10) ?? 0
     const rawName = meta?.name
     const name = (rawName && rawName.trim()) || `Граѓански сензор ${String(entry.sensorId).slice(0, 6)}`
     if (/^moepp/i.test(name)) continue
@@ -204,9 +215,9 @@ async function fetchFromPulseEco(signal) {
       id: `PULSE-${entry.sensorId}`,
       name,
       area: name,
-      aqi,
-      pm25,
-      pm10,
+      aqi: Math.max(1, aqi),
+      pm25: pm25 != null && pm25 >= 1 ? pm25 : null,
+      pm10: pm10 != null && pm10 >= 1 ? pm10 : null,
       status: statusFromAqi(aqi),
       lat,
       lng,
@@ -254,12 +265,12 @@ async function fetchFromSensorCommunity(signal) {
   for (const entry of byId.values()) {
     const pm25 = entry.values.pm25 ?? null
     const pm10 = entry.values.pm10 ?? null
-    if (pm25 == null && pm10 == null) continue
+    if (!hasUsablePm(pm25, pm10)) continue
     if (entry.lat == null || entry.lng == null || !inSkopje(entry.lat, entry.lng)) continue
     candidates.push({
       ...entry,
-      pm25,
-      pm10,
+      pm25: pm25 != null && pm25 >= 1 ? pm25 : null,
+      pm10: pm10 != null && pm10 >= 1 ? pm10 : null,
       areaName: nearestAreaName(entry.lat, entry.lng),
     })
   }
@@ -270,7 +281,8 @@ async function fetchFromSensorCommunity(signal) {
 
   const out = []
   for (const entry of candidates) {
-    const aqi = aqiFromPm25(entry.pm25) ?? (entry.pm10 != null ? aqiFromPm25(entry.pm10 * 0.6) : 0)
+    const aqi = aqiFromPm(entry.pm25, entry.pm10)
+    if (aqi == null) continue
     let name = entry.areaName
     if ((areaCounts.get(entry.areaName) || 0) > 1) {
       const n = (areaIndex.get(entry.areaName) || 0) + 1
@@ -281,7 +293,7 @@ async function fetchFromSensorCommunity(signal) {
       id: `PULSE-SC-${entry.id}`,
       name,
       area: entry.areaName,
-      aqi,
+      aqi: Math.max(1, aqi),
       pm25: entry.pm25,
       pm10: entry.pm10,
       status: statusFromAqi(aqi),

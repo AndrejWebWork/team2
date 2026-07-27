@@ -158,30 +158,33 @@ function SensorCard({ sensor, selected, onClick, t }) {
 function SensorDetail({ sensor, onClose, t }) {
   const c = aqiColor(sensor.aqi)
   return (
-    <div className='rounded-2xl border p-5 transition-all duration-200' style={{ background: c.bg, borderColor: c.border }}>
-      <div className='flex items-start justify-between'>
-        <div>
-          <p className='text-lg font-bold text-slate-900'>{sensorName(sensor, t)}</p>
-          <p className='text-sm text-slate-500'>{sensorName(sensor, t)}</p>
+    <div className='rounded-xl border p-3 transition-all duration-200' style={{ background: c.bg, borderColor: c.border }}>
+      <div className='flex items-start justify-between gap-2'>
+        <div className='min-w-0'>
+          <p className='text-sm font-bold text-slate-900 truncate'>{sensorName(sensor, t)}</p>
+          <p className='text-[11px] text-slate-500'>{t(`aqi.${c.key}`)}</p>
         </div>
-        <div className='text-right'>
-          <p className='text-4xl font-extrabold leading-none' style={{ color: c.text }}>{sensor.aqi}</p>
-          <p className='text-xs font-semibold' style={{ color: c.text }}>AQI · {t(`aqi.${c.key}`)}</p>
+        <div className='shrink-0 text-right'>
+          <p className='text-2xl font-extrabold leading-none' style={{ color: c.text }}>{sensor.aqi}</p>
+          <p className='text-[10px] font-semibold' style={{ color: c.text }}>AQI</p>
         </div>
       </div>
-      <div className='mt-4 grid grid-cols-2 gap-3'>
-        {[['PM2.5', sensor.pm25, 75, t('air.allowedPm25')], ['PM10', sensor.pm10, 150, t('air.allowedPm10')]].map(([label, val, max, hint]) => (
-          <div key={label} className='rounded-xl border bg-white p-3' style={{ borderColor: c.border }}>
-            <p className='text-xs font-semibold text-slate-500'>{label}</p>
-            <p className='mt-1 text-2xl font-bold text-slate-900'>{val} <span className='text-xs font-normal text-slate-400'>µg/m³</span></p>
-            <div className='mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100'>
-              <div className='h-full rounded-full' style={{ width: `${Math.min(val / max * 100, 100)}%`, background: c.bar }} />
-            </div>
-            <p className='mt-1 text-[10px] text-slate-400'>{hint}</p>
+      <div className='mt-2.5 grid grid-cols-2 gap-2'>
+        {[['PM2.5', sensor.pm25, 75], ['PM10', sensor.pm10, 150]].map(([label, val, max]) => (
+          <div key={label} className='rounded-lg border bg-white/80 px-2.5 py-2' style={{ borderColor: c.border }}>
+            <p className='text-[10px] font-semibold text-slate-500'>{label}</p>
+            <p className='text-base font-bold text-slate-900'>
+              {val ?? '—'} <span className='text-[10px] font-normal text-slate-400'>µg/m³</span>
+            </p>
+            {val != null && (
+              <div className='mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100'>
+                <div className='h-full rounded-full' style={{ width: `${Math.min(val / max * 100, 100)}%`, background: c.bar }} />
+              </div>
+            )}
           </div>
         ))}
       </div>
-      <button onClick={onClose} className='mt-3 text-xs text-slate-400 hover:text-slate-600'>{t('common.closeUp')}</button>
+      <button type='button' onClick={onClose} className='mt-2 text-[11px] text-slate-400 hover:text-slate-600'>{t('common.closeUp')}</button>
     </div>
   )
 }
@@ -526,12 +529,11 @@ export function AirPage() {
                   icon={makeAqiIcon(s.aqi)}
                   zIndexOffset={400}
                 >
-                  <Popup>
-                    <p className='font-bold'>{sensorName(s, t)}</p>
-                    <p className='text-xs'>{t('air.referentSource')}</p>
-                    <p className='text-xs'>AQI: <b>{s.aqi}</b> · {t(`aqi.${aqiColor(s.aqi).key}`)}</p>
-                    <p className='text-xs'>PM2.5: {s.pm25} µg/m³</p>
-                    <p className='text-xs'>PM10: {s.pm10} µg/m³</p>
+                  <Popup maxWidth={170} minWidth={110} autoPanPadding={[24, 24]}>
+                    <p className='text-[12px] font-bold leading-tight'>{sensorName(s, t)}</p>
+                    <p className='text-[10px] text-slate-500'>{t('air.referentSource')}</p>
+                    <p className='text-[11px]'>AQI <b>{s.aqi}</b> · {t(`aqi.${aqiColor(s.aqi).key}`)}</p>
+                    <p className='text-[10px] text-slate-600'>PM2.5 {s.pm25 ?? '—'} · PM10 {s.pm10 ?? '—'}</p>
                   </Popup>
                 </Marker>
               ))}
@@ -540,19 +542,16 @@ export function AirPage() {
                   key={s.id}
                   position={[Number(Number(s.lat).toFixed(5)), Number(Number(s.lng).toFixed(5))]}
                   icon={pulseIcon}
-                >                  <Popup>
-                    <p className='font-bold'>{sensorName(s, t)}</p>
-                    <p className='text-xs'>{t('air.pulseSensor')}</p>
-                    {s.aqi != null && <p className='text-xs'>AQI: <b>{s.aqi}</b> · {t(`aqi.${aqiColor(s.aqi).key}`)}</p>}
-                    {s.pm25 != null && <p className='text-xs'>PM2.5: {s.pm25} µg/m³</p>}
-                    {s.pm10 != null && <p className='text-xs'>PM10: {s.pm10} µg/m³</p>}
-                    {s.updatedAt && (
-                      <p className='text-[11px] text-slate-400'>
-                        {t('air.measuredAt', { time: new Date(s.updatedAt).toLocaleTimeString('mk-MK', { hour: '2-digit', minute: '2-digit' }) })}
-                      </p>
+                >                  <Popup maxWidth={170} minWidth={110} autoPanPadding={[24, 24]}>
+                    <p className='text-[12px] font-bold leading-tight'>{sensorName(s, t)}</p>
+                    <p className='text-[10px] text-slate-500'>{t('air.pulseSensor')}</p>
+                    {s.aqi != null && (
+                      <p className='text-[11px]'>AQI <b>{s.aqi}</b> · {t(`aqi.${aqiColor(s.aqi).key}`)}</p>
                     )}
-                    <p className='mt-2 border-t border-slate-200 pt-2 text-[10px] leading-snug text-slate-500'>
-                      {t('air.sensorDisclaimer1')}
+                    <p className='text-[10px] text-slate-600'>
+                      {[s.pm25 != null ? `PM2.5 ${s.pm25}` : null, s.pm10 != null ? `PM10 ${s.pm10}` : null]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
                     </p>
                   </Popup>
                 </Marker>
