@@ -22,6 +22,9 @@ async function refresh() {
   refreshing = (async () => {
     try {
       const data = await fetchPulseSensors()
+      // Не пребришувај добра снимка со празна ([] ) кога upstream е привремено паднат.
+      const prevHadData = snapshot?.body && snapshot.body !== '[]'
+      if (Array.isArray(data) && data.length === 0 && prevHadData) return
       const body = JSON.stringify(data)
       const etag = 'W/"' + crypto.createHash('sha1').update(body).digest('base64') + '"'
       snapshot = { body, etag, at: Date.now() }

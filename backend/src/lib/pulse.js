@@ -3,28 +3,23 @@ import { URL } from 'node:url'
 
 // ============================================================================
 // Pulse.eco — граѓанска (НЕРЕФЕРЕНТНА) мрежа сензори за Скопје, во живо.
-// WAQI ги дава само 6-те официјални МЖСПП станици; граѓанските нискобуџетни
-// сензори доаѓаат оттука. Го прокси-раме преку backend (CORS + кеш за скала).
-// Јавно API, без токен: /rest/current (мерења) и /rest/sensor (имиња/позиции).
+// Кога Pulse.eco API е паднат/празен (често при истечен TLS или празен /current),
+// паѓаме на Sensor.community во истиот регион — многу Pulse уреди се токму SC.
 // ============================================================================
 
 const BASE = 'https://skopje.pulse.eco/rest'
 const HEADERS = { 'User-Agent': 'EkoSkopje/1.0 (Grad Skopje)', Accept: 'application/json' }
 
-// skopje.pulse.eco моментално има ИСТЕЧЕН TLS сертификат (SEC_E_CERT_EXPIRED).
-// Без ова, Node/Vercel fetch паѓа и /api/air/pulse враќа [] → празна мапа на
-// телефоните. Податоците се јавни; го олабавуваме само за овој хост.
+// skopje.pulse.eco често има проблем со TLS сертификат.
 const pulseAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true })
 
-// Граници на Скопскиот регион — Pulse.eco повремено враќа сензори со сосема
-// погрешни координати (пр. уред регистриран во странство), па ги отфрламе.
 const BOUNDS = { latMin: 41.85, latMax: 42.15, lngMin: 21.25, lngMax: 21.80 }
+const SC_AREA = 'https://data.sensor.community/airrohr/v1/filter/area=41.9981,21.4254,18'
 
 function inSkopje(lat, lng) {
   return lat >= BOUNDS.latMin && lat <= BOUNDS.latMax && lng >= BOUNDS.lngMin && lng <= BOUNDS.lngMax
 }
 
-// US EPA AQI од PM2.5 (µg/m³) — стандардна конверзија со линеарна интерполација.
 const PM25_BREAKPOINTS = [
   [0.0, 12.0, 0, 50],
   [12.1, 35.4, 51, 100],
@@ -109,7 +104,6 @@ function getJson(url, signal) {
   })
 }
 
-// Имиња/позиции на сензорите ретко се менуваат → кеш 1 час.
 const META_TTL_MS = 60 * 60 * 1000
 let metaCache = { map: new Map(), at: 0 }
 
@@ -131,9 +125,7 @@ async function getSensorMeta(signal) {
   return map
 }
 
-// Ги враќа сите граѓански сензори што имаат мерење за PM2.5 или PM10, во истиот
-// облик како референтните (WAQI) сензори за директно спојување во клиентот.
-export async function fetchPulseSensors(signal) {
+async function fetchFromPulseEco(signal) {
   const [current, metaById] = await Promise.all([
     getJson(`${BASE}/current`, signal),
     getSensorMeta(signal),
@@ -179,6 +171,84 @@ export async function fetchPulseSensors(signal) {
       updatedAt: entry.stamp || null,
       sourceUrl: 'https://skopje.pulse.eco/',
     })
+  }
+  return out
+}
+
+/** Fallback кога Pulse.eco /current е празен или паднат. */
+async function fetchFromSensorCommunity(signal) {
+  const res = await fetch(SC_AREA, {
+    signal,
+    headers: { Accept: 'application/json', 'User-Agent': 'EkoSkopje/1.0 (Grad Skopje)' },
+  })
+  if (!res.ok) throw new Error(`Sensor.community HTTP ${res.status}`)
+  const rows = await res.json()
+  if (!Array.isArray(rows)) return []
+
+  const byId = new Map()
+  for (const row of rows) {
+    const id = row?.sensor?.id
+    if (id == null) continue
+    // Indoor сензори не се корисни за градска мапа.
+    if (Number(row?.location?.indoor) === 1) continue
+    let entry = byId.get(id)
+    if (!entry) {
+      entry = { id, lat: null, lng: null, values: {}, stamp: null }
+      byId.set(id, entry)
+    }
+    entry.lat = num(row.location?.latitude)
+    entry.lng = num(row.location?.longitude)
+    if (row.timestamp) entry.stamp = String(row.timestamp).replace(' ', 'T') + 'Z'
+    for (const v of row.sensordatavalues || []) {
+      const key = String(v.value_type || '')
+      const val = num(v.value)
+      if (val == null) continue
+      if (key === 'P2' || key === 'SDS_P2') entry.values.pm25 = val
+      if (key === 'P1' || key === 'SDS_P1') entry.values.pm10 = val
+    }
+  }
+
+  const out = []
+  for (const entry of byId.values()) {
+    const pm25 = entry.values.pm25 ?? null
+    const pm10 = entry.values.pm10 ?? null
+    if (pm25 == null && pm10 == null) continue
+    if (entry.lat == null || entry.lng == null || !inSkopje(entry.lat, entry.lng)) continue
+    const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
+    const name = `Sensor.community ${entry.id}`
+    out.push({
+      id: `PULSE-SC-${entry.id}`,
+      name,
+      area: name,
+      aqi,
+      pm25,
+      pm10,
+      status: statusFromAqi(aqi),
+      lat: entry.lat,
+      lng: entry.lng,
+      category: 'nonreferent',
+      source: 'Pulse.eco / Sensor.community',
+      updatedAt: entry.stamp || null,
+      sourceUrl: 'https://skopje.pulse.eco/',
+    })
+  }
+  return out
+}
+
+export async function fetchPulseSensors(signal) {
+  let out = []
+  try {
+    out = await fetchFromPulseEco(signal)
+  } catch {
+    out = []
+  }
+  // Pulse.eco често враќа [] или 500 — тогаш Sensor.community за истиот регион.
+  if (!out.length) {
+    try {
+      out = await fetchFromSensorCommunity(signal)
+    } catch {
+      out = []
+    }
   }
   return out
 }
