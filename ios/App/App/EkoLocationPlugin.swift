@@ -45,7 +45,7 @@ public class EkoLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDe
         }
     }
 
-    @objc func checkPermissions(_ call: CAPPluginCall) {
+    @objc public override func checkPermissions(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
             guard self.servicesEnabled() else {
                 call.reject("Location services are not enabled.", "services_off")
@@ -56,7 +56,7 @@ public class EkoLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDe
         }
     }
 
-    @objc func requestPermissions(_ call: CAPPluginCall) {
+    @objc public override func requestPermissions(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
             guard self.servicesEnabled() else {
                 call.reject("Location services are not enabled.", "services_off")
@@ -162,16 +162,21 @@ public class EkoLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDe
         timeoutWork?.cancel()
         timeoutWork = nil
         stopUpdates()
+        var coords: [String: Any] = [
+            "latitude": location.coordinate.latitude,
+            "longitude": location.coordinate.longitude,
+            "accuracy": location.horizontalAccuracy,
+            "altitude": location.altitude,
+            "altitudeAccuracy": location.verticalAccuracy,
+        ]
+        if location.speed >= 0 {
+            coords["speed"] = location.speed
+        }
+        if location.course >= 0 {
+            coords["heading"] = location.course
+        }
         call.resolve([
-            "coords": [
-                "latitude": location.coordinate.latitude,
-                "longitude": location.coordinate.longitude,
-                "accuracy": location.horizontalAccuracy,
-                "altitude": location.altitude,
-                "altitudeAccuracy": location.verticalAccuracy,
-                "speed": location.speed >= 0 ? location.speed : NSNull(),
-                "heading": location.course >= 0 ? location.course : NSNull(),
-            ],
+            "coords": coords,
             "timestamp": location.timestamp.timeIntervalSince1970 * 1000,
         ])
         bridge?.releaseCall(call)
