@@ -162,40 +162,48 @@ export async function captureGeolocationWithRetries({
 }
 
 /**
- * Отвори системски settings за локација / дозволи на апликацијата (iOS + Android).
- * Враќа true ако е отворено.
+ * Отвори Settings за локација.
  *
- * iOS:
- *  - denied → App Settings (дозвола за оваа апликација)
- *  - инаку → Location Services (главен GPS прекинувач)
- * Android останува како што беше.
+ * iOS: секогаш App Settings (единствениот официјален URL) — таму се менува
+ * Location за EkoSkopje. Неофицијалните App-prefs: линкови често не работат.
+ * Android: ApplicationDetails (denied) или Location (GPS).
  */
 export async function openNativeLocationSettings({ denied = false } = {}) {
   if (!Capacitor.isNativePlatform()) return false
   const platform = Capacitor.getPlatform()
+
+  if (platform === 'ios') {
+    // 1) capacitor-native-settings → App Settings
+    try {
+      const { NativeSettings, IOSSettings } = await import('capacitor-native-settings')
+      const res = await NativeSettings.openIOS({ option: IOSSettings.App })
+      if (res?.status !== false && res?.success !== false) return true
+    } catch { /* пробај следен fallback */ }
+
+    // 2) Capacitor App.openUrl
+    try {
+      const { App } = await import('@capacitor/app')
+      await App.openUrl({ url: 'app-settings:' })
+      return true
+    } catch { /* пробај следен fallback */ }
+
+    // 3) Директно во WebView (работи на повеќето Capacitor iOS билдови)
+    try {
+      window.location.href = 'app-settings:'
+      return true
+    } catch {
+      return false
+    }
+  }
+
   try {
     const { NativeSettings, AndroidSettings, IOSSettings } = await import('capacitor-native-settings')
-    if (platform === 'ios') {
-      await NativeSettings.open({
-        optionAndroid: AndroidSettings.Location,
-        optionIOS: denied ? IOSSettings.App : IOSSettings.LocationServices,
-      })
-      return true
-    }
     await NativeSettings.open({
       optionAndroid: denied ? AndroidSettings.ApplicationDetails : AndroidSettings.Location,
       optionIOS: IOSSettings.App,
     })
     return true
   } catch {
-    // Fallback: iOS app-settings URL (официјално поддржан)
-    try {
-      if (platform === 'ios') {
-        const { App } = await import('@capacitor/app')
-        await App.openUrl({ url: 'app-settings:' })
-        return true
-      }
-    } catch { /* ignore */ }
     return false
   }
 }

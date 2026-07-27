@@ -67,6 +67,10 @@
 	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>app-settings</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
