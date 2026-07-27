@@ -73,11 +73,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             self.permissionLocationManager = manager
 
             let status = manager.authorizationStatus
-            guard status == .notDetermined else {
-                self.permissionLocationManager = nil
+            if status == .notDetermined {
+                manager.requestWhenInUseAuthorization()
                 return
             }
-            manager.requestWhenInUseAuthorization()
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                self.warmLocation(manager)
+            } else {
+                self.permissionLocationManager = nil
+            }
+        }
+    }
+
+    /// Start a short location update so iOS caches a fix for Capacitor.
+    private func warmLocation(_ manager: CLLocationManager) {
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        manager.distanceFilter = kCLDistanceFilterNone
+        manager.startUpdatingLocation()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in
+            manager.stopUpdatingLocation()
+            if self?.permissionLocationManager === manager {
+                self?.permissionLocationManager = nil
+            }
         }
     }
 
@@ -89,12 +106,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
         handleLocationAuthChange(manager)
     }
 
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard locations.last != nil else { return }
+        manager.stopUpdatingLocation()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            if self?.permissionLocationManager === manager {
+                self?.permissionLocationManager = nil
+            }
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Capacitor will request again — ignore warm-up failures.
+    }
+
     private func handleLocationAuthChange(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
         guard status != .notDetermined else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            if self?.permissionLocationManager === manager {
-                self?.permissionLocationManager = nil
+        if status == .authorizedWhenInUse || status == .authorizedAlways {
+            warmLocation(manager)
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                if self?.permissionLocationManager === manager {
+                    self?.permissionLocationManager = nil
+                }
             }
         }
     }

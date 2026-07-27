@@ -23,6 +23,7 @@ export function GPSStatus({ loc, onRetry, onRefresh, t }) {
   }
 
   if (loc.error) {
+    const openSettings = native && (loc.denied || loc.servicesOff)
     return (
       <div className='space-y-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-3'>
         <div className='flex items-start gap-2 text-sm text-rose-700'>
@@ -32,7 +33,7 @@ export function GPSStatus({ loc, onRetry, onRefresh, t }) {
         {loc.isDesktop && !loc.denied && (
           <p className='text-xs text-rose-600/90'>{t('gps.desktopHint')}</p>
         )}
-        {native && (
+        {openSettings && (
           <p className='text-xs text-rose-600/90'>{t('gps.openSettingsHint')}</p>
         )}
         <button
@@ -40,8 +41,8 @@ export function GPSStatus({ loc, onRetry, onRefresh, t }) {
           onClick={onRetry}
           className='flex w-full items-center justify-center gap-2 rounded-lg border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50'
         >
-          {native ? <Settings className='h-4 w-4' /> : <MapPin className='h-4 w-4' />}
-          {native
+          {openSettings ? <Settings className='h-4 w-4' /> : <MapPin className='h-4 w-4' />}
+          {openSettings
             ? t('gps.retryOpenSettings')
             : (loc.denied ? t('gps.retryDenied') : t('gps.retry'))}
         </button>

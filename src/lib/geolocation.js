@@ -10,6 +10,10 @@ export function isLikelyDesktop() {
 
 function mapGeoError(err) {
   if (err?.code === 1) return { denied: true, key: 'gps.denied' }
+  const msg = String(err?.message || err || '').toLowerCase()
+  if (msg.includes('denied') || msg.includes('permission')) {
+    return { denied: true, key: 'gps.denied' }
+  }
   return { denied: false, key: 'gps.failed' }
 }
 
@@ -23,11 +27,86 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+function normalizePosition(pos) {
+  return {
+    coords: {
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+    },
+    timestamp: pos.timestamp,
+  }
+}
+
+function isPermissionDeniedError(err) {
+  if (err?.code === 1 || err?.iosLocationOff) return true
+  const msg = String(err?.message || err || '').toLowerCase()
+  const code = String(err?.code || '')
+  return (
+    msg.includes('denied')
+    || msg.includes('permission')
+    || msg.includes('disabled')
+    || msg.includes('location services')
+    || code === '3'
+    || code === 'OS-PLUG-GLOC-0003'
+    || code === 'OS-PLUG-GLOC-0007'
+  )
+}
+
+/** Еден обид преку Capacitor Geolocation. */
+async function tryCapacitorPosition({
+  enableHighAccuracy,
+  timeout,
+  maximumAge,
+}) {
+  const pos = await Geolocation.getCurrentPosition({
+    enableHighAccuracy,
+    timeout,
+    maximumAge,
+  })
+  return normalizePosition(pos)
+}
+
+/** watchPosition често успева на iOS кога getCurrentPosition timeout-ува. */
+function tryCapacitorWatch({ enableHighAccuracy, timeout }) {
+  return new Promise((resolve, reject) => {
+    let settled = false
+    let watchId = null
+    const finish = (fn) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      if (watchId != null) {
+        Geolocation.clearWatch({ id: watchId }).catch(() => {})
+      }
+      fn()
+    }
+    const timer = setTimeout(() => {
+      finish(() => reject(Object.assign(new Error('timeout'), { code: 2 })))
+    }, timeout)
+
+    Geolocation.watchPosition(
+      { enableHighAccuracy, timeout },
+      (pos, err) => {
+        if (err) {
+          finish(() => reject(err))
+          return
+        }
+        if (pos?.coords) finish(() => resolve(normalizePosition(pos)))
+      },
+    ).then((id) => {
+      watchId = id
+    }).catch((err) => {
+      finish(() => reject(err))
+    })
+  })
+}
+
 /** Capacitor GPS на Android/iOS — поточен и со правилни дозволи. */
 async function getNativePosition(options) {
   const platform = Capacitor.getPlatform()
+  const isIos = platform === 'ios'
 
-  // Прво експлицитно барај дозвола — инаку iOS не ја додава Location во Permissions.
   let perm
   try {
     perm = await Geolocation.checkPermissions()
@@ -54,27 +133,62 @@ async function getNativePosition(options) {
     throw Object.assign(new Error('denied'), { code: 1 })
   }
 
-  try {
-    const pos = await Geolocation.getCurrentPosition({
-      enableHighAccuracy: options.enableHighAccuracy ?? true,
-      timeout: options.timeout ?? (platform === 'ios' ? 20000 : 10000),
-      maximumAge: options.maximumAge ?? 0,
-    })
-    return {
-      coords: {
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        accuracy: pos.coords.accuracy,
-      },
-      timestamp: pos.timestamp,
+  const maxAge = options.maximumAge ?? (isIos ? 120000 : 0)
+  const attempts = isIos
+    ? [
+        // 1) Брз Wi‑Fi/cell fix (дозволата е OK — не чекај GPS сателити).
+        { enableHighAccuracy: false, timeout: 20000, maximumAge: Math.max(maxAge, 120000) },
+        // 2) Висока точност со подолг timeout.
+        { enableHighAccuracy: true, timeout: 45000, maximumAge: maxAge },
+        // 3) watchPosition fallback.
+        { watch: true, enableHighAccuracy: false, timeout: 25000 },
+        { watch: true, enableHighAccuracy: true, timeout: 35000 },
+      ]
+    : [
+        {
+          enableHighAccuracy: options.enableHighAccuracy ?? true,
+          timeout: options.timeout ?? 10000,
+          maximumAge: maxAge,
+        },
+      ]
+
+  let lastErr = null
+  for (const attempt of attempts) {
+    try {
+      if (attempt.watch) {
+        return await tryCapacitorWatch(attempt)
+      }
+      return await tryCapacitorPosition(attempt)
+    } catch (err) {
+      lastErr = err
+      if (isPermissionDeniedError(err)) {
+        const msg = String(err?.message || err || '').toLowerCase()
+        throw Object.assign(new Error('denied'), {
+          code: 1,
+          iosLocationOff: msg.includes('disabled') || msg.includes('location services'),
+        })
+      }
     }
-  } catch (err) {
-    const msg = String(err?.message || err || '').toLowerCase()
-    if (platform === 'ios' && (msg.includes('denied') || msg.includes('disabled') || msg.includes('kclerror') || msg.includes('location services'))) {
-      throw Object.assign(new Error('denied'), { code: 1, iosLocationOff: msg.includes('disabled') || msg.includes('location services') })
-    }
-    throw err
   }
+
+  // Последен обид: WKWebView navigator.geolocation (понекогаш работи кога plugin-от timeout-ува).
+  if (isIos && typeof navigator !== 'undefined' && navigator.geolocation) {
+    try {
+      const pos = await getWebCurrentPosition({
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 120000,
+      })
+      return normalizePosition(pos)
+    } catch (err) {
+      lastErr = err
+    }
+  }
+
+  if (lastErr && isPermissionDeniedError(lastErr)) {
+    throw Object.assign(new Error('denied'), { code: 1 })
+  }
+  throw lastErr || Object.assign(new Error('failed'), { code: 2 })
 }
 
 /**
@@ -91,7 +205,7 @@ export function captureGeolocation({
     return getNativePosition({
       enableHighAccuracy: true,
       maximumAge: maximumAge ?? 120000,
-      timeout: timeout ?? 10000,
+      timeout: timeout ?? (Capacitor.getPlatform() === 'ios' ? 30000 : 10000),
     })
   }
 
@@ -152,26 +266,27 @@ export function captureGeolocation({
  */
 export async function captureGeolocationWithRetries({
   attempts = 3,
-  delayMs = 1200,
+  delayMs = 1500,
 } = {}) {
   let lastErr = null
   for (let i = 0; i < attempts; i++) {
     try {
       return await captureGeolocation({
-        maximumAge: i === 0 ? 120000 : 0,
-        timeout: 10000,
+        maximumAge: i === 0 ? 180000 : 0,
+        timeout: Capacitor.getPlatform() === 'ios' ? 45000 : 12000,
       })
     } catch (err) {
       lastErr = err
-      // Ако е трајно одбиена дозвола — нема смисла да се обидуваме уште 2 пати.
-      if (err?.code === 1 && i === 0) {
-        // Уште еден обид по кратка пауза (корисникот може да кликне Allow).
-        await sleep(delayMs)
-        try {
-          return await captureGeolocation({ maximumAge: 0, timeout: 10000 })
-        } catch (err2) {
-          throw err2
+      if (err?.code === 1) {
+        if (i === 0) {
+          await sleep(delayMs)
+          try {
+            return await captureGeolocation({ maximumAge: 60000, timeout: 30000 })
+          } catch (err2) {
+            throw err2
+          }
         }
+        throw err
       }
       if (i < attempts - 1) await sleep(delayMs)
     }

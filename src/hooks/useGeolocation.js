@@ -84,11 +84,11 @@ export function useGeolocation(t) {
     }
   }, [applyPosition, t])
 
-  /** Побарај повторно — на native (кога нема локација) отвора settings, па пробува по враќање. */
+  /** Побарај повторно — Settings само ако е одбиена/исклучена дозвола. */
   const retry = useCallback(async () => {
     const cur = locRef.current
     const needsSettings = Capacitor.isNativePlatform()
-      && (cur.denied || cur.lat == null || Boolean(cur.error))
+      && (cur.denied || cur.servicesOff)
     if (needsSettings) {
       pendingSettingsRetry.current = true
       await openNativeLocationSettings({
@@ -125,10 +125,9 @@ export function useGeolocation(t) {
     }
   }, [applyPosition])
 
-  // Старт: автоматски до 3 обиди.
-  // iOS: почекај AppDelegate (notif → location) за да не се преклопат дијалозите.
+  // iOS: почекај дозвола + краток native GPS warm-up пред Capacitor.
   useEffect(() => {
-    const delayMs = Capacitor.getPlatform() === 'ios' ? 6000 : 0
+    const delayMs = Capacitor.getPlatform() === 'ios' ? 8000 : 0
     const timer = setTimeout(() => {
       request({ attempts: 3 })
     }, delayMs)

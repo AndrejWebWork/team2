@@ -312,7 +312,7 @@ export function AirPage() {
   }
 
   useEffect(() => {
-    const delayMs = Capacitor.getPlatform() === 'ios' ? 6000 : 0
+    const delayMs = Capacitor.getPlatform() === 'ios' ? 8000 : 0
     const timer = setTimeout(() => { requestGPS({ attempts: 3 }) }, delayMs)
     return () => clearTimeout(timer)
   }, [])
