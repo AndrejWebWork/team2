@@ -1,25 +1,22 @@
 import { Capacitor } from '@capacitor/core'
 
 /**
- * iOS: експлицитно барај дозволи од JS (дополнително на AppDelegate).
- * AppDelegate е примарниот извор — ова е backup ако native bootstrap веќе
- * ги побарал (тогаш iOS нема повторно да праша).
+ * Backup only — native AppDelegate owns the first prompts (sequential).
+ * Runs late so it does NOT race with the system dialogs on launch.
  */
 export async function bootstrapIosPermissions() {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'ios') return
 
-  // Кратка пауза — прозорецот мора да е активен за системскиот дијалог.
-  await new Promise((r) => setTimeout(r, 1500))
+  // AppDelegate asks at ~1.2s (notif → location). Wait until that chain can finish.
+  await new Promise((r) => setTimeout(r, 8000))
 
   try {
     const { LocalNotifications } = await import('@capacitor/local-notifications')
-    await LocalNotifications.requestPermissions()
-  } catch { /* plugin / веќе одлучено */ }
-
-  try {
-    const { PushNotifications } = await import('@capacitor/push-notifications')
-    await PushNotifications.requestPermissions()
-  } catch { /* Sideloadly / без APS — локалните се доволни за дијалог */ }
+    const current = await LocalNotifications.checkPermissions()
+    if (current.display === 'prompt' || current.display === 'prompt-with-rationale') {
+      await LocalNotifications.requestPermissions()
+    }
+  } catch { /* */ }
 
   try {
     const { Geolocation } = await import('@capacitor/geolocation')
@@ -27,5 +24,5 @@ export async function bootstrapIosPermissions() {
     if (perm.location === 'prompt' || perm.location === 'prompt-with-rationale') {
       await Geolocation.requestPermissions()
     }
-  } catch { /* AppDelegate веќе побарал / services off */ }
+  } catch { /* */ }
 }

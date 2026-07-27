@@ -304,7 +304,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "EkoSkopje го користи камерата за фотографии на пријави.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "EkoSkopje ја користи локацијата за пријави и најблискиот сензор.";
@@ -332,7 +332,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "EkoSkopje го користи камерата за фотографии на пријави.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "EkoSkopje ја користи локацијата за пријави и најблискиот сензор.";

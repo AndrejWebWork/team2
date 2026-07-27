@@ -97,8 +97,20 @@ export async function registerPushNotifications({ onToken, onReceived } = {}) {
   if (!isNativePlatform()) return
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications')
-    const perm = await PushNotifications.requestPermissions()
-    if (perm.receive !== 'granted') return
+    const platform = Capacitor.getPlatform()
+
+    // iOS: AppDelegate прв го покажува системскиот дијалог. Не барај паралелно.
+    if (platform === 'ios') {
+      await new Promise((r) => setTimeout(r, 5500))
+      let perm = await PushNotifications.checkPermissions()
+      if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
+        perm = await PushNotifications.requestPermissions()
+      }
+      if (perm.receive !== 'granted') return
+    } else {
+      const perm = await PushNotifications.requestPermissions()
+      if (perm.receive !== 'granted') return
+    }
 
     // Android 8+: канал со HIGH importance — инаку FCM може тивко да ги крие.
     try {

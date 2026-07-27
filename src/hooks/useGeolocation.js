@@ -126,8 +126,13 @@ export function useGeolocation(t) {
   }, [applyPosition])
 
   // Старт: автоматски до 3 обиди.
+  // iOS: почекај AppDelegate (notif → location) за да не се преклопат дијалозите.
   useEffect(() => {
-    request({ attempts: 3 })
+    const delayMs = Capacitor.getPlatform() === 'ios' ? 6000 : 0
+    const timer = setTimeout(() => {
+      request({ attempts: 3 })
+    }, delayMs)
+    return () => clearTimeout(timer)
   }, [request])
 
   // По враќање од Settings → повторно барај локација.

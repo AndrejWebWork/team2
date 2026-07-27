@@ -311,7 +311,11 @@ export function AirPage() {
     }
   }
 
-  useEffect(() => { requestGPS({ attempts: 3 }) }, [])
+  useEffect(() => {
+    const delayMs = Capacitor.getPlatform() === 'ios' ? 6000 : 0
+    const timer = setTimeout(() => { requestGPS({ attempts: 3 }) }, delayMs)
+    return () => clearTimeout(timer)
+  }, [])
 
   const allSensors = useMemo(() => [...sensors, ...pulse], [sensors, pulse])
 
