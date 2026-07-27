@@ -486,7 +486,7 @@ export function AirPage() {
         </CardHeader>
         <CardContent className='space-y-3'>
           <div className='flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1'>
-            {[['all', t('filter.all')], ['ministry', t('air.filterMinistry')], ['pulse', 'OpenAQ']].map(([val, label]) => (
+            {[['all', t('filter.all')], ['ministry', t('air.filterMinistry')], ['pulse', 'Pulse Eco']].map(([val, label]) => (
               <button
                 key={val}
                 type='button'

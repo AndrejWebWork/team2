@@ -1,9 +1,18 @@
+import https from 'node:https'
+import { URL } from 'node:url'
+
 // ============================================================================
 // Нереферентни (граѓански) сензори за Скопје.
-// Примарно: OpenAQ v3 (слободен API клуч: OPENAQ_API_KEY).
-// Fallback: Sensor.community (без клуч) кога OpenAQ нема клуч / враќа празно / паѓа.
+// 1) Pulse.eco — примарно (кога API работи)
+// 2) OpenAQ — ако Pulse е празен/паднат (OPENAQ_API_KEY)
+// 3) Sensor.community — последен fallback (без клуч)
 // Endpoint-от останува /api/air/pulse — клиентот не се менува.
 // ============================================================================
+
+const PULSE_BASE = 'https://skopje.pulse.eco/rest'
+const PULSE_HEADERS = { 'User-Agent': 'EkoSkopje/1.0 (Grad Skopje)', Accept: 'application/json' }
+// skopje.pulse.eco често има проблем со TLS сертификат.
+const pulseAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true })
 
 const OPENAQ_BASE = 'https://api.openaq.org/v3'
 const SKOPJE = { lat: 41.9981, lng: 21.4254 }
@@ -90,6 +99,130 @@ function num(v) {
   return Number.isFinite(n) ? n : null
 }
 
+function parsePosition(pos) {
+  const [lat, lng] = String(pos || '').split(',').map((x) => num(x))
+  return { lat: lat ?? null, lng: lng ?? null }
+}
+
+function getPulseJson(url, signal) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const req = https.get(
+      {
+        protocol: u.protocol,
+        hostname: u.hostname,
+        path: `${u.pathname}${u.search}`,
+        headers: PULSE_HEADERS,
+        agent: pulseAgent,
+        timeout: 20_000,
+      },
+      (res) => {
+        if (res.statusCode && res.statusCode >= 400) {
+          res.resume()
+          reject(new Error(`Pulse.eco HTTP ${res.statusCode}`))
+          return
+        }
+        const chunks = []
+        res.on('data', (c) => chunks.push(c))
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+          } catch (err) {
+            reject(err)
+          }
+        })
+      },
+    )
+    req.on('error', reject)
+    req.on('timeout', () => {
+      req.destroy()
+      reject(new Error('Pulse.eco timeout'))
+    })
+    if (signal) {
+      if (signal.aborted) {
+        req.destroy()
+        reject(new Error('aborted'))
+        return
+      }
+      signal.addEventListener('abort', () => {
+        req.destroy()
+        reject(new Error('aborted'))
+      }, { once: true })
+    }
+  })
+}
+
+const META_TTL_MS = 60 * 60 * 1000
+let metaCache = { map: new Map(), at: 0 }
+
+async function getSensorMeta(signal) {
+  if (Date.now() - metaCache.at < META_TTL_MS && metaCache.map.size) {
+    return metaCache.map
+  }
+  const sensors = await getPulseJson(`${PULSE_BASE}/sensor`, signal).catch(() => null)
+  if (!Array.isArray(sensors)) return metaCache.map
+  const map = new Map()
+  for (const s of sensors) {
+    if (!s?.sensorId) continue
+    map.set(s.sensorId, {
+      name: s.description || s.comments || null,
+      position: s.position || null,
+    })
+  }
+  metaCache = { map, at: Date.now() }
+  return map
+}
+
+async function fetchFromPulseEco(signal) {
+  const [current, metaById] = await Promise.all([
+    getPulseJson(`${PULSE_BASE}/current`, signal),
+    getSensorMeta(signal),
+  ])
+
+  const byId = new Map()
+  for (const r of Array.isArray(current) ? current : []) {
+    if (!r?.sensorId) continue
+    let entry = byId.get(r.sensorId)
+    if (!entry) {
+      entry = { sensorId: r.sensorId, position: r.position, stamp: r.stamp, values: {} }
+      byId.set(r.sensorId, entry)
+    }
+    entry.values[r.type] = r.value
+    if (r.stamp > entry.stamp) entry.stamp = r.stamp
+    if (!entry.position && r.position) entry.position = r.position
+  }
+
+  const out = []
+  for (const entry of byId.values()) {
+    const pm25 = num(entry.values.pm25)
+    const pm10 = num(entry.values.pm10)
+    if (pm25 == null && pm10 == null) continue
+    const meta = metaById.get(entry.sensorId)
+    const { lat, lng } = parsePosition(entry.position || meta?.position)
+    if (lat == null || lng == null || !inSkopje(lat, lng)) continue
+    const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
+    const rawName = meta?.name
+    const name = (rawName && rawName.trim()) || `Граѓански сензор ${String(entry.sensorId).slice(0, 6)}`
+    if (/^moepp/i.test(name)) continue
+    out.push({
+      id: `PULSE-${entry.sensorId}`,
+      name,
+      area: name,
+      aqi,
+      pm25,
+      pm10,
+      status: statusFromAqi(aqi),
+      lat,
+      lng,
+      category: 'nonreferent',
+      source: 'Pulse.eco (граѓански)',
+      updatedAt: entry.stamp || null,
+      sourceUrl: 'https://skopje.pulse.eco/',
+    })
+  }
+  return out
+}
+
 function openaqKey() {
   return (process.env.OPENAQ_API_KEY || '').trim()
 }
@@ -125,7 +258,6 @@ async function fetchFromOpenAQ(signal) {
     'X-API-Key': key,
   }
 
-  // Нереферентни: monitor=false (референтните МЖСПП се преку WAQI).
   const locUrl =
     `${OPENAQ_BASE}/locations` +
     `?coordinates=${SKOPJE.lat},${SKOPJE.lng}` +
@@ -137,7 +269,6 @@ async function fetchFromOpenAQ(signal) {
   const locations = Array.isArray(locData?.results) ? locData.results : []
   if (!locations.length) return []
 
-  // Само локации со PM сензор и свежи податоци (последни ~36ч).
   const minIso = new Date(Date.now() - 36 * 3600 * 1000).toISOString()
   const withPm = locations.filter((loc) => {
     const sensors = Array.isArray(loc?.sensors) ? loc.sensors : []
@@ -206,7 +337,6 @@ async function fetchFromOpenAQ(signal) {
   return rows.filter(Boolean)
 }
 
-/** Fallback кога OpenAQ нема клуч / е празен / паднат. */
 async function fetchFromSensorCommunity(signal) {
   const res = await fetch(SC_AREA, {
     signal,
@@ -252,7 +382,6 @@ async function fetchFromSensorCommunity(signal) {
     })
   }
 
-  // Ако повеќе сензори се во иста населба → „Карпош 1“, „Карпош 2“…
   const areaCounts = new Map()
   for (const c of candidates) areaCounts.set(c.areaName, (areaCounts.get(c.areaName) || 0) + 1)
   const areaIndex = new Map()
@@ -288,9 +417,16 @@ async function fetchFromSensorCommunity(signal) {
 export async function fetchPulseSensors(signal) {
   let out = []
   try {
-    out = await fetchFromOpenAQ(signal)
+    out = await fetchFromPulseEco(signal)
   } catch {
     out = []
+  }
+  if (!out.length) {
+    try {
+      out = await fetchFromOpenAQ(signal)
+    } catch {
+      out = []
+    }
   }
   if (!out.length) {
     try {
