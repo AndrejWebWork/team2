@@ -4,8 +4,7 @@ import { URL } from 'node:url'
 // ============================================================================
 // Нереферентни (граѓански) сензори за Скопје.
 // 1) Pulse.eco — примарно (кога API работи)
-// 2) OpenAQ — ако Pulse е празен/паднат (OPENAQ_API_KEY)
-// 3) Sensor.community — последен fallback (без клуч)
+// 2) Sensor.community — fallback кога Pulse е празен/паднат
 // Endpoint-от останува /api/air/pulse — клиентот не се менува.
 // ============================================================================
 
@@ -14,9 +13,6 @@ const PULSE_HEADERS = { 'User-Agent': 'EkoSkopje/1.0 (Grad Skopje)', Accept: 'ap
 // skopje.pulse.eco често има проблем со TLS сертификат.
 const pulseAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true })
 
-const OPENAQ_BASE = 'https://api.openaq.org/v3'
-const SKOPJE = { lat: 41.9981, lng: 21.4254 }
-const RADIUS_M = 25_000
 const BOUNDS = { latMin: 41.85, latMax: 42.15, lngMin: 21.25, lngMax: 21.80 }
 const SC_AREA = 'https://data.sensor.community/airrohr/v1/filter/area=41.9981,21.4254,18'
 const UA = 'EkoSkopje/1.0 (Grad Skopje)'
@@ -223,120 +219,6 @@ async function fetchFromPulseEco(signal) {
   return out
 }
 
-function openaqKey() {
-  return (process.env.OPENAQ_API_KEY || '').trim()
-}
-
-function paramKind(name) {
-  const n = String(name || '').toLowerCase().replace(/[\s._-]/g, '')
-  if (n === 'pm25' || n === 'pm25µg/m³' || n === 'pm2.5') return 'pm25'
-  if (n === 'pm10' || n === 'pm10µg/m³') return 'pm10'
-  return null
-}
-
-async function mapPool(items, concurrency, fn) {
-  const out = new Array(items.length)
-  let i = 0
-  async function worker() {
-    while (i < items.length) {
-      const idx = i++
-      out[idx] = await fn(items[idx], idx)
-    }
-  }
-  const n = Math.min(concurrency, Math.max(1, items.length))
-  await Promise.all(Array.from({ length: n }, () => worker()))
-  return out
-}
-
-async function fetchFromOpenAQ(signal) {
-  const key = openaqKey()
-  if (!key) throw new Error('OPENAQ_API_KEY missing')
-
-  const headers = {
-    Accept: 'application/json',
-    'User-Agent': UA,
-    'X-API-Key': key,
-  }
-
-  const locUrl =
-    `${OPENAQ_BASE}/locations` +
-    `?coordinates=${SKOPJE.lat},${SKOPJE.lng}` +
-    `&radius=${RADIUS_M}&limit=100&monitor=false`
-
-  const locRes = await fetch(locUrl, { headers, signal })
-  if (!locRes.ok) throw new Error(`OpenAQ locations HTTP ${locRes.status}`)
-  const locData = await locRes.json()
-  const locations = Array.isArray(locData?.results) ? locData.results : []
-  if (!locations.length) return []
-
-  const minIso = new Date(Date.now() - 36 * 3600 * 1000).toISOString()
-  const withPm = locations.filter((loc) => {
-    const sensors = Array.isArray(loc?.sensors) ? loc.sensors : []
-    return sensors.some((s) => paramKind(s?.parameter?.name || s?.name))
-  })
-
-  const rows = await mapPool(withPm.slice(0, 60), 6, async (loc) => {
-    try {
-      const url = `${OPENAQ_BASE}/locations/${loc.id}/latest?limit=100&datetime_min=${encodeURIComponent(minIso)}`
-      const res = await fetch(url, { headers, signal })
-      if (!res.ok) return null
-      const data = await res.json()
-      const latest = Array.isArray(data?.results) ? data.results : []
-      if (!latest.length) return null
-
-      const sensorById = new Map()
-      for (const s of loc.sensors || []) {
-        if (s?.id != null) sensorById.set(s.id, s)
-      }
-
-      let pm25 = null
-      let pm10 = null
-      let stamp = null
-      for (const row of latest) {
-        const sensor = sensorById.get(row.sensorsId)
-        const kind = paramKind(sensor?.parameter?.name || sensor?.name)
-        const val = num(row.value)
-        if (val == null || !kind) continue
-        if (kind === 'pm25') pm25 = val
-        if (kind === 'pm10') pm10 = val
-        const t = row.datetime?.utc || row.datetime?.local
-        if (t && (!stamp || t > stamp)) stamp = t
-      }
-      if (pm25 == null && pm10 == null) return null
-
-      const lat = num(loc.coordinates?.latitude)
-      const lng = num(loc.coordinates?.longitude)
-      if (lat == null || lng == null || !inSkopje(lat, lng)) return null
-
-      const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
-      const rawName = (loc.name || loc.locality || '').trim()
-      if (/^moepp/i.test(rawName)) return null
-      const name = rawName || `OpenAQ ${loc.id}`
-      const provider = loc.provider?.name ? String(loc.provider.name) : 'OpenAQ'
-
-      return {
-        id: `PULSE-OA-${loc.id}`,
-        name,
-        area: name,
-        aqi,
-        pm25,
-        pm10,
-        status: statusFromAqi(aqi),
-        lat,
-        lng,
-        category: 'nonreferent',
-        source: `OpenAQ (${provider})`,
-        updatedAt: stamp || loc.datetimeLast?.utc || null,
-        sourceUrl: 'https://openaq.org/',
-      }
-    } catch {
-      return null
-    }
-  })
-
-  return rows.filter(Boolean)
-}
-
 async function fetchFromSensorCommunity(signal) {
   const res = await fetch(SC_AREA, {
     signal,
@@ -420,13 +302,6 @@ export async function fetchPulseSensors(signal) {
     out = await fetchFromPulseEco(signal)
   } catch {
     out = []
-  }
-  if (!out.length) {
-    try {
-      out = await fetchFromOpenAQ(signal)
-    } catch {
-      out = []
-    }
   }
   if (!out.length) {
     try {
