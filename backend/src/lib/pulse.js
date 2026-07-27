@@ -1,20 +1,16 @@
-import https from 'node:https'
-import { URL } from 'node:url'
-
 // ============================================================================
-// Pulse.eco — граѓанска (НЕРЕФЕРЕНТНА) мрежа сензори за Скопје, во живо.
-// Кога Pulse.eco API е паднат/празен (често при истечен TLS или празен /current),
-// паѓаме на Sensor.community во истиот регион — многу Pulse уреди се токму SC.
+// Нереферентни (граѓански) сензори за Скопје.
+// Примарно: OpenAQ v3 (слободен API клуч: OPENAQ_API_KEY).
+// Fallback: Sensor.community (без клуч) кога OpenAQ нема клуч / враќа празно / паѓа.
+// Endpoint-от останува /api/air/pulse — клиентот не се менува.
 // ============================================================================
 
-const BASE = 'https://skopje.pulse.eco/rest'
-const HEADERS = { 'User-Agent': 'EkoSkopje/1.0 (Grad Skopje)', Accept: 'application/json' }
-
-// skopje.pulse.eco често има проблем со TLS сертификат.
-const pulseAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true })
-
+const OPENAQ_BASE = 'https://api.openaq.org/v3'
+const SKOPJE = { lat: 41.9981, lng: 21.4254 }
+const RADIUS_M = 25_000
 const BOUNDS = { latMin: 41.85, latMax: 42.15, lngMin: 21.25, lngMax: 21.80 }
 const SC_AREA = 'https://data.sensor.community/airrohr/v1/filter/area=41.9981,21.4254,18'
+const UA = 'EkoSkopje/1.0 (Grad Skopje)'
 
 function inSkopje(lat, lng) {
   return lat >= BOUNDS.latMin && lat <= BOUNDS.latMax && lng >= BOUNDS.lngMin && lng <= BOUNDS.lngMax
@@ -51,135 +47,127 @@ function num(v) {
   return Number.isFinite(n) ? n : null
 }
 
-function parsePosition(pos) {
-  const [lat, lng] = String(pos || '').split(',').map((x) => num(x))
-  return { lat: lat ?? null, lng: lng ?? null }
+function openaqKey() {
+  return (process.env.OPENAQ_API_KEY || '').trim()
 }
 
-function getJson(url, signal) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(url)
-    const req = https.get(
-      {
-        protocol: u.protocol,
-        hostname: u.hostname,
-        path: `${u.pathname}${u.search}`,
-        headers: HEADERS,
-        agent: pulseAgent,
-        timeout: 20_000,
-      },
-      (res) => {
-        if (res.statusCode && res.statusCode >= 400) {
-          res.resume()
-          reject(new Error(`Pulse.eco HTTP ${res.statusCode}`))
-          return
-        }
-        const chunks = []
-        res.on('data', (c) => chunks.push(c))
-        res.on('end', () => {
-          try {
-            resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
-          } catch (err) {
-            reject(err)
-          }
-        })
-      },
-    )
-    req.on('error', reject)
-    req.on('timeout', () => {
-      req.destroy()
-      reject(new Error('Pulse.eco timeout'))
-    })
-    if (signal) {
-      if (signal.aborted) {
-        req.destroy()
-        reject(new Error('aborted'))
-        return
-      }
-      signal.addEventListener('abort', () => {
-        req.destroy()
-        reject(new Error('aborted'))
-      }, { once: true })
+function paramKind(name) {
+  const n = String(name || '').toLowerCase().replace(/[\s._-]/g, '')
+  if (n === 'pm25' || n === 'pm25µg/m³' || n === 'pm2.5') return 'pm25'
+  if (n === 'pm10' || n === 'pm10µg/m³') return 'pm10'
+  return null
+}
+
+async function mapPool(items, concurrency, fn) {
+  const out = new Array(items.length)
+  let i = 0
+  async function worker() {
+    while (i < items.length) {
+      const idx = i++
+      out[idx] = await fn(items[idx], idx)
     }
-  })
-}
-
-const META_TTL_MS = 60 * 60 * 1000
-let metaCache = { map: new Map(), at: 0 }
-
-async function getSensorMeta(signal) {
-  if (Date.now() - metaCache.at < META_TTL_MS && metaCache.map.size) {
-    return metaCache.map
   }
-  const sensors = await getJson(`${BASE}/sensor`, signal).catch(() => null)
-  if (!Array.isArray(sensors)) return metaCache.map
-  const map = new Map()
-  for (const s of sensors) {
-    if (!s?.sensorId) continue
-    map.set(s.sensorId, {
-      name: s.description || s.comments || null,
-      position: s.position || null,
-    })
-  }
-  metaCache = { map, at: Date.now() }
-  return map
-}
-
-async function fetchFromPulseEco(signal) {
-  const [current, metaById] = await Promise.all([
-    getJson(`${BASE}/current`, signal),
-    getSensorMeta(signal),
-  ])
-
-  const byId = new Map()
-  for (const r of Array.isArray(current) ? current : []) {
-    if (!r?.sensorId) continue
-    let entry = byId.get(r.sensorId)
-    if (!entry) {
-      entry = { sensorId: r.sensorId, position: r.position, stamp: r.stamp, values: {} }
-      byId.set(r.sensorId, entry)
-    }
-    entry.values[r.type] = r.value
-    if (r.stamp > entry.stamp) entry.stamp = r.stamp
-    if (!entry.position && r.position) entry.position = r.position
-  }
-
-  const out = []
-  for (const entry of byId.values()) {
-    const pm25 = num(entry.values.pm25)
-    const pm10 = num(entry.values.pm10)
-    if (pm25 == null && pm10 == null) continue
-    const meta = metaById.get(entry.sensorId)
-    const { lat, lng } = parsePosition(entry.position || meta?.position)
-    if (lat == null || lng == null || !inSkopje(lat, lng)) continue
-    const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
-    const rawName = meta?.name
-    const name = (rawName && rawName.trim()) || `Граѓански сензор ${String(entry.sensorId).slice(0, 6)}`
-    if (/^moepp/i.test(name)) continue
-    out.push({
-      id: `PULSE-${entry.sensorId}`,
-      name,
-      area: name,
-      aqi,
-      pm25,
-      pm10,
-      status: statusFromAqi(aqi),
-      lat,
-      lng,
-      category: 'nonreferent',
-      source: 'Pulse.eco (граѓански)',
-      updatedAt: entry.stamp || null,
-      sourceUrl: 'https://skopje.pulse.eco/',
-    })
-  }
+  const n = Math.min(concurrency, Math.max(1, items.length))
+  await Promise.all(Array.from({ length: n }, () => worker()))
   return out
 }
 
-/** Fallback кога Pulse.eco /current е празен или паднат. */
+async function fetchFromOpenAQ(signal) {
+  const key = openaqKey()
+  if (!key) throw new Error('OPENAQ_API_KEY missing')
+
+  const headers = {
+    Accept: 'application/json',
+    'User-Agent': UA,
+    'X-API-Key': key,
+  }
+
+  // Нереферентни: monitor=false (референтните МЖСПП се преку WAQI).
+  const locUrl =
+    `${OPENAQ_BASE}/locations` +
+    `?coordinates=${SKOPJE.lat},${SKOPJE.lng}` +
+    `&radius=${RADIUS_M}&limit=100&monitor=false`
+
+  const locRes = await fetch(locUrl, { headers, signal })
+  if (!locRes.ok) throw new Error(`OpenAQ locations HTTP ${locRes.status}`)
+  const locData = await locRes.json()
+  const locations = Array.isArray(locData?.results) ? locData.results : []
+  if (!locations.length) return []
+
+  // Само локации со PM сензор и свежи податоци (последни ~36ч).
+  const minIso = new Date(Date.now() - 36 * 3600 * 1000).toISOString()
+  const withPm = locations.filter((loc) => {
+    const sensors = Array.isArray(loc?.sensors) ? loc.sensors : []
+    return sensors.some((s) => paramKind(s?.parameter?.name || s?.name))
+  })
+
+  const rows = await mapPool(withPm.slice(0, 60), 6, async (loc) => {
+    try {
+      const url = `${OPENAQ_BASE}/locations/${loc.id}/latest?limit=100&datetime_min=${encodeURIComponent(minIso)}`
+      const res = await fetch(url, { headers, signal })
+      if (!res.ok) return null
+      const data = await res.json()
+      const latest = Array.isArray(data?.results) ? data.results : []
+      if (!latest.length) return null
+
+      const sensorById = new Map()
+      for (const s of loc.sensors || []) {
+        if (s?.id != null) sensorById.set(s.id, s)
+      }
+
+      let pm25 = null
+      let pm10 = null
+      let stamp = null
+      for (const row of latest) {
+        const sensor = sensorById.get(row.sensorsId)
+        const kind = paramKind(sensor?.parameter?.name || sensor?.name)
+        const val = num(row.value)
+        if (val == null || !kind) continue
+        if (kind === 'pm25') pm25 = val
+        if (kind === 'pm10') pm10 = val
+        const t = row.datetime?.utc || row.datetime?.local
+        if (t && (!stamp || t > stamp)) stamp = t
+      }
+      if (pm25 == null && pm10 == null) return null
+
+      const lat = num(loc.coordinates?.latitude)
+      const lng = num(loc.coordinates?.longitude)
+      if (lat == null || lng == null || !inSkopje(lat, lng)) return null
+
+      const aqi = aqiFromPm25(pm25) ?? (pm10 != null ? aqiFromPm25(pm10 * 0.6) : 0)
+      const rawName = (loc.name || loc.locality || '').trim()
+      if (/^moepp/i.test(rawName)) return null
+      const name = rawName || `OpenAQ ${loc.id}`
+      const provider = loc.provider?.name ? String(loc.provider.name) : 'OpenAQ'
+
+      return {
+        id: `PULSE-OA-${loc.id}`,
+        name,
+        area: name,
+        aqi,
+        pm25,
+        pm10,
+        status: statusFromAqi(aqi),
+        lat,
+        lng,
+        category: 'nonreferent',
+        source: `OpenAQ (${provider})`,
+        updatedAt: stamp || loc.datetimeLast?.utc || null,
+        sourceUrl: 'https://openaq.org/',
+      }
+    } catch {
+      return null
+    }
+  })
+
+  return rows.filter(Boolean)
+}
+
+/** Fallback кога OpenAQ нема клуч / е празен / паднат. */
 async function fetchFromSensorCommunity(signal) {
   const res = await fetch(SC_AREA, {
     signal,
-    headers: { Accept: 'application/json', 'User-Agent': 'EkoSkopje/1.0 (Grad Skopje)' },
+    headers: { Accept: 'application/json', 'User-Agent': UA },
   })
   if (!res.ok) throw new Error(`Sensor.community HTTP ${res.status}`)
   const rows = await res.json()
@@ -189,7 +177,6 @@ async function fetchFromSensorCommunity(signal) {
   for (const row of rows) {
     const id = row?.sensor?.id
     if (id == null) continue
-    // Indoor сензори не се корисни за градска мапа.
     if (Number(row?.location?.indoor) === 1) continue
     let entry = byId.get(id)
     if (!entry) {
@@ -227,9 +214,9 @@ async function fetchFromSensorCommunity(signal) {
       lat: entry.lat,
       lng: entry.lng,
       category: 'nonreferent',
-      source: 'Pulse.eco / Sensor.community',
+      source: 'Sensor.community',
       updatedAt: entry.stamp || null,
-      sourceUrl: 'https://skopje.pulse.eco/',
+      sourceUrl: 'https://sensor.community/',
     })
   }
   return out
@@ -238,11 +225,10 @@ async function fetchFromSensorCommunity(signal) {
 export async function fetchPulseSensors(signal) {
   let out = []
   try {
-    out = await fetchFromPulseEco(signal)
+    out = await fetchFromOpenAQ(signal)
   } catch {
     out = []
   }
-  // Pulse.eco често враќа [] или 500 — тогаш Sensor.community за истиот регион.
   if (!out.length) {
     try {
       out = await fetchFromSensorCommunity(signal)

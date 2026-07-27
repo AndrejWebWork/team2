@@ -124,7 +124,7 @@ export const legalContent = {
           'Корисникот е одговорен за безбедноста на својата email сметка и не смее да го споделува reset линкот со други.',
         ] },
         { h: 'Одрекување одговорност', p: [
-          'Податоците за квалитет на воздухот доаѓаат од надворешни извори (WAQI, pulse.eco) и се прикажуваат информативно. Град Скопје не гарантира нивна апсолутна точност или достапност.',
+          'Податоците за квалитет на воздухот доаѓаат од надворешни извори (WAQI, OpenAQ) и се прикажуваат информативно. Град Скопје не гарантира нивна апсолутна точност или достапност.',
           'Услугата се обезбедува „како што е“, без гаранции за непрекинатост или отсуство на грешки.',
         ] },
         { h: 'Измени на условите', p: [
@@ -136,7 +136,7 @@ export const legalContent = {
       title: 'Извори на податоци и атрибуција',
       sections: [
         { h: 'Квалитет на воздух', p: [
-          'Податоците за квалитетот на воздухот се обезбедени од World Air Quality Index (WAQI) — waqi.info и од pulse.eco мрежата на сензори.',
+          'Податоците за квалитетот на воздухот се обезбедени од World Air Quality Index (WAQI) — waqi.info и од OpenAQ.',
           'Референтните мерења потекнуваат од официјалните станици на надлежните институции, додека нереферентните се од граѓански/приватни сензори и служат само информативно.',
           'Сензорните уреди не извршуваат мерења по референтни методи и податоците произлезени од иститите се исклучиво за првична проценка на квалитетот на амбиентниот воздух.',
           'За секоја подетална анализа и толкување на состојбите со амбиентниот воздух се потребни дополнителни мерења согласно законската регулатива од областа на амбиентниот воздух.',
@@ -268,7 +268,7 @@ export const legalContent = {
           'You are responsible for the security of your email account and must not share the reset link with others.',
         ] },
         { h: 'Disclaimer', p: [
-          'Air quality data comes from external sources (WAQI, pulse.eco) and is shown for information. The City of Skopje does not guarantee its absolute accuracy or availability.',
+          'Air quality data comes from external sources (WAQI, OpenAQ) and is shown for information. The City of Skopje does not guarantee its absolute accuracy or availability.',
           'The service is provided “as is”, without warranties of continuity or absence of errors.',
         ] },
         { h: 'Changes to the terms', p: [
@@ -280,7 +280,7 @@ export const legalContent = {
       title: 'Data sources & attribution',
       sections: [
         { h: 'Air quality', p: [
-          'Air quality data is provided by the World Air Quality Index (WAQI) — waqi.info and by the pulse.eco sensor network.',
+          'Air quality data is provided by the World Air Quality Index (WAQI) — waqi.info and by OpenAQ.',
           'Reference measurements come from official stations of the responsible institutions, while non-reference ones come from citizen/private sensors and are for information only.',
           'Sensor devices do not perform measurements using reference methods, and the data derived from them is exclusively for a preliminary assessment of ambient air quality.',
           'For any detailed analysis and interpretation of ambient air conditions, additional measurements are required in accordance with the legal regulations in the field of ambient air.',
@@ -411,7 +411,7 @@ export const legalContent = {
           'Përdoruesi është përgjegjës për sigurinë e llogarisë së email-it dhe nuk duhet ta ndajë lidhjen e reset-it me të tjerët.',
         ] },
         { h: 'Kufizimi i përgjegjësisë', p: [
-          'Të dhënat për cilësinë e ajrit vijnë nga burime të jashtme (WAQI, pulse.eco) dhe shfaqen për informim. Qyteti i Shkupit nuk garanton saktësinë ose disponueshmërinë absolute të tyre.',
+          'Të dhënat për cilësinë e ajrit vijnë nga burime të jashtme (WAQI, OpenAQ) dhe shfaqen për informim. Qyteti i Shkupit nuk garanton saktësinë ose disponueshmërinë absolute të tyre.',
           'Shërbimi ofrohet “ashtu siç është”, pa garanci vazhdimësie ose mungese gabimesh.',
         ] },
         { h: 'Ndryshimet e kushteve', p: [
@@ -423,7 +423,7 @@ export const legalContent = {
       title: 'Burimet e të dhënave dhe atribuimi',
       sections: [
         { h: 'Cilësia e ajrit', p: [
-          'Të dhënat për cilësinë e ajrit ofrohen nga World Air Quality Index (WAQI) — waqi.info dhe nga rrjeti i sensorëve pulse.eco.',
+          'Të dhënat për cilësinë e ajrit ofrohen nga World Air Quality Index (WAQI) — waqi.info dhe nga OpenAQ.',
           'Matjet referente vijnë nga stacionet zyrtare të institucioneve përgjegjëse, ndërsa ato jo-referente vijnë nga sensorë qytetarë/privatë dhe janë vetëm për informim.',
           'Pajisjet e sensorëve nuk kryejnë matje sipas metodave referente dhe të dhënat e nxjerra prej tyre janë ekskluzivisht për vlerësimin paraprak të cilësisë së ajrit ambient.',
           'Për çdo analizë dhe interpretim të detajuar të gjendjeve të ajrit ambient nevojiten matje shtesë sipas rregullores ligjore në fushën e ajrit ambient.',

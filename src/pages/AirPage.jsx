@@ -194,15 +194,15 @@ export function AirPage() {
   const [sourceFilter, setSourceFilter] = useState('all')
   const [selectedSensor, setSelectedSensor] = useState(null)
   const [gps, setGps] = useState({ lat: null, lng: null, label: '', loading: true, error: '', denied: false })
-  // Нереферентни (граѓански) сензори: WAQI граѓански + Pulse.eco во живо.
+  // Нереферентни (граѓански) сензори: WAQI граѓански + OpenAQ во живо.
   // Само реални податоци — почнува празно и се полни од API при првото вчитување.
   const [pulse, setPulse] = useState([])
   // Статус на живото вчитување: 'loading' | 'live' | 'offline'.
   const [airStatus, setAirStatus] = useState('loading')
 
-  // Реални мерења во живо од WAQI (aqicn.org) + Pulse.eco:
+  // Реални мерења во живо од WAQI (aqicn.org) + OpenAQ:
   //  • официјални/референтни (МЖСПП) → context `sensors`,
-  //  • информативни/нереферентни: граѓански (WAQI) + Pulse.eco → `pulse`.
+  //  • информативни/нереферентни: граѓански (WAQI) + OpenAQ → `pulse`.
   // Се освежува на ~3 мин и се паузира кога табот е скриен.
   useEffect(() => {
     let cancelled = false
@@ -215,7 +215,7 @@ export function AirPage() {
       loadInFlight = true
       try {
       // Трите извори се НЕЗАВИСНИ: пад на еден (пр. WAQI) не смее да ги блокира
-      // другите (Pulse.eco, Град Скопје). Секој се вчитува паралелно.
+      // другите (OpenAQ, Град Скопје). Секој се вчитува паралелно.
       const [waqiRes, pulseRes] = await Promise.allSettled([
         fetchSkopjeSensors(controller.signal),
         fetchPulseSensors(controller.signal),
@@ -440,7 +440,7 @@ export function AirPage() {
         </div>
       </section>
 
-      {/* Информативни / нереферентни сензори (Pulse Eco + граѓански WAQI) */}
+      {/* Информативни / нереферентни сензори (OpenAQ + граѓански WAQI) */}
       <section className='space-y-3'>
         <div className='flex items-center gap-2'>
           <span className='h-2.5 w-2.5 shrink-0 rounded-full border-2 border-emerald-500 bg-emerald-300' />
@@ -486,7 +486,7 @@ export function AirPage() {
         </CardHeader>
         <CardContent className='space-y-3'>
           <div className='flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1'>
-            {[['all', t('filter.all')], ['ministry', t('air.filterMinistry')], ['pulse', 'Pulse Eco']].map(([val, label]) => (
+            {[['all', t('filter.all')], ['ministry', t('air.filterMinistry')], ['pulse', 'OpenAQ']].map(([val, label]) => (
               <button
                 key={val}
                 type='button'

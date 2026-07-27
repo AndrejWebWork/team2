@@ -356,9 +356,9 @@ export async function fetchMyLeaderboardRank(email, _signal) {
   })
 }
 
-// ---- Воздух: нереферентни (граѓански) сензори од Pulse.eco (преку backend) ----
+// ---- Воздух: нереферентни (граѓански) сензори од OpenAQ (преку backend) ----
 
-// Ги враќа граѓанските сензори во живо. Ако backend/Pulse.eco е недостапен → [].
+// Ги враќа граѓанските сензори во живо. Ако backend/OpenAQ е недостапен → [].
 // dedupeGet + без AbortSignal: StrictMode/remount не откажуваат успешен snapshot повик.
 export async function fetchPulseSensors(_signal) {
   return dedupeGet('air:pulse', async () => {
