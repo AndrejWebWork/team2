@@ -153,6 +153,22 @@ export async function updateReportStatus(id, status, extra = {}, signal) {
   return data
 }
 
+export async function deleteReportApi(id, signal) {
+  const headers = {}
+  const adminToken = getAdminToken()
+  if (adminToken) headers['X-Admin-Token'] = adminToken
+  const res = await fetch(`${API_URL}/api/reports/${id}`, {
+    method: 'DELETE',
+    headers,
+    signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Бришењето на пријавата не успеа.')
+  clearConditionalEtag(`${API_URL}/api/reports`)
+  clearReportsEtag()
+  return data
+}
+
 // Креира пријава со слики во ЕДНО multipart барање. Сликите одат како бинарни
 // фајлови и backend-от ги складира како BYTEA во колоните photo_1..photo_6
 // (сликите остануваат во PostgreSQL база, без надворешен диск/storage).
@@ -619,5 +635,7 @@ export function serverToSmell(r) {
     createdAt: r.created_at,
     nearestSensorId: isAirSensor ? r.nearest_point_id : null,
     nearestSensorDistanceM: isAirSensor ? (r.nearest_point_distance_m ?? null) : null,
+    photos: photoUrls(r),
+    photo: photoUrls(r)[0] || '',
   }
 }

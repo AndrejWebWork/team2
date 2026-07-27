@@ -30,6 +30,7 @@ import {
   serverToWaste,
   signupEventApi,
   updateReportStatus,
+  deleteReportApi,
   getStoredAdminToken,
 } from '../lib/api'
 import { getDeviceId } from '../lib/device'
@@ -918,6 +919,40 @@ export function AppProvider({ children }) {
     }
   }
 
+  // Трајно бришење на пријава (админ) — ги отстранува и BYTEA сликите од базата.
+  function removeReportLocally(id, type) {
+    if (type === 'waste') {
+      setWasteReports((prev) => {
+        const next = prev.filter((r) => r.id !== id)
+        persistReportsCache(next, containersSnapRef.current, smellSnapRef.current)
+        return next
+      })
+    } else if (type === 'container') {
+      setContainers((prev) => {
+        const next = prev.filter((r) => r.id !== id)
+        persistReportsCache(wasteSnapRef.current, next, smellSnapRef.current)
+        return next
+      })
+    } else if (type === 'smell') {
+      setSmellAlerts((prev) => {
+        const next = prev.filter((r) => r.id !== id)
+        persistReportsCache(wasteSnapRef.current, containersSnapRef.current, next)
+        return next
+      })
+    }
+  }
+
+  async function deleteReport(id, type) {
+    try {
+      await deleteReportApi(id)
+      removeReportLocally(id, type)
+      refreshReports()
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  }
+
   // ---- Автентикација ----
 
   async function login({ email: e, password }) {
@@ -1027,6 +1062,8 @@ export function AppProvider({ children }) {
       logout,
       submitReport,
       changeReportStatus,
+      deleteReport,
+      removeReportLocally,
       login,
       register,
       createEvent,

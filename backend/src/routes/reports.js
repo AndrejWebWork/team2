@@ -300,3 +300,18 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
     res.json(rowToReport(rows[0]))
   } catch (err) { next(err) }
 })
+
+// DELETE /api/reports/:id — трајно бришење (админ). Ги отстранува и BYTEA сликите
+// од базата (ON DELETE CASCADE за историја; поените остануваат со report_id = NULL).
+reportsRouter.delete('/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `DELETE FROM reports WHERE id = $1 RETURNING id, type`,
+      [req.params.id],
+    )
+    if (rows.length === 0) return res.status(404).json({ error: 'Пријавата не постои.' })
+    invalidateCache('reports:')
+    invalidateCache('leaderboard:')
+    res.json({ ok: true, id: rows[0].id, type: rows[0].type })
+  } catch (err) { next(err) }
+})

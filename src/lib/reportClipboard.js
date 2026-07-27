@@ -28,7 +28,7 @@ function reportStatus(report, t) {
 }
 
 function reportPhotos(report) {
-  if (report.photos?.length) return report.photos
+  if (report.photos?.length) return report.photos.filter(Boolean)
   if (report.photo) return [report.photo]
   return []
 }
@@ -48,6 +48,25 @@ function row(label, value) {
 function plainRow(label, value) {
   if (value == null || value === '' || value === '—') return ''
   return `${label}: ${value}\n`
+}
+
+/** Fetch image → data URL so paste into email keeps photos (not just remote links). */
+async function embedPhotoAsDataUrl(src) {
+  if (!src || String(src).startsWith('data:')) return src
+  try {
+    const res = await fetch(src, { cache: 'force-cache' })
+    if (!res.ok) return src
+    const blob = await res.blob()
+    if (!blob.type.startsWith('image/') || blob.size > 4_500_000) return src
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(new Error('read failed'))
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return src
+  }
 }
 
 export function buildReportClipboardContent(report, t, extras = {}) {
@@ -103,7 +122,7 @@ export function buildReportClipboardContent(report, t, extras = {}) {
   }
 
   const photoHtml = photos.length
-    ? `<div style="margin:12px 0">${photos.map((src, idx) => `<div style="margin-bottom:8px"><img src="${src}" alt="${escapeHtml(t('photo.altPhotoFull', { n: idx + 1 }))}" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid #e2e8f0" /></div>`).join('')}</div>`
+    ? `<div style="margin:12px 0">${photos.map((src, idx) => `<div style="margin-bottom:8px"><img src="${src}" alt="${escapeHtml(t('photo.altPhotoFull', { n: idx + 1 }))}" style="max-width:100%;max-height:280px;border-radius:8px;border:1px solid #e2e8f0" /></div>`).join('')}</div>`
     : ''
 
   const html = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a;max-width:640px">
@@ -134,6 +153,7 @@ ${extraHtml}
     plainRow(t('admin.reportedBy'), reportedBy),
     plainRow(t('admin.date'), mkDate(report.createdAt)),
     extraPlain,
+    photos.length ? `${t('admin.photosCount', { n: photos.length })}\n` : '',
     `ID: ${report.id || '—'}`,
   ].join('\n').trim()
 
@@ -167,6 +187,12 @@ async function writeClipboard(html, plain) {
 }
 
 export async function copyReportToClipboard(report, t, extras = {}) {
-  const { html, plain } = buildReportClipboardContent(report, t, extras)
+  const originalPhotos = reportPhotos(report)
+  const embeddedPhotos = await Promise.all(originalPhotos.map(embedPhotoAsDataUrl))
+  const { html, plain } = buildReportClipboardContent(
+    { ...report, photos: embeddedPhotos, photo: embeddedPhotos[0] || '' },
+    t,
+    extras,
+  )
   await writeClipboard(html, plain)
 }

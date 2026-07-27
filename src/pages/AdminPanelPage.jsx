@@ -63,15 +63,35 @@ function urgencyScore(r, clusterCounts, sensors) {
   return 0
 }
 
-function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorName, onCopyFeedback }) {
+function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount, sensorName, onCopyFeedback }) {
   const { t } = useApp()
   const [pendingStatus, setPendingStatus] = useState(report.status)
   const [copying, setCopying] = useState(false)
-  const changed = pendingStatus !== report.status
+  const [deleting, setDeleting] = useState(false)
+  const changed = report.type !== 'smell' && pendingStatus !== report.status
 
   useEffect(() => {
     setPendingStatus(report.status)
   }, [report.id, report.status])
+
+  function requestClose() {
+    if (changed && !window.confirm(t('admin.unsavedStatusConfirm'))) return
+    onClose()
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(t('admin.deleteReportConfirm'))) return
+    setDeleting(true)
+    try {
+      const ok = await onDelete(report)
+      if (ok === false) onCopyFeedback(t('admin.deleteReportFailed'))
+      else onCopyFeedback(t('admin.deleteReportSuccess'))
+    } catch {
+      onCopyFeedback(t('admin.deleteReportFailed'))
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const statusFlow = [
     { key: 'pending',     label: t('status.pending') },
@@ -84,7 +104,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
   // го покрива целиот екран и се лизга од десно кон лево (како sidebar менито).
   return createPortal(
     <div className='fixed inset-0 z-[1200] flex'>
-      <div className='animate-drawer-overlay-in absolute inset-0 bg-slate-900/40' onClick={onClose} />
+      <div className='animate-drawer-overlay-in absolute inset-0 bg-slate-900/40' onClick={requestClose} />
       <aside className='animate-drawer-in-right relative ml-auto flex h-full w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-2xl'>
         {/* Header */}
         <div className='app-safe-drawer-head flex items-center justify-between border-b border-slate-200 px-5 pb-4'>
@@ -96,7 +116,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
             <Button
               size='sm'
               variant='outline'
-              disabled={copying}
+              disabled={copying || deleting}
               onClick={async () => {
                 setCopying(true)
                 try {
@@ -111,7 +131,14 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
             >
               <Copy className='h-3.5 w-3.5' />{t('admin.copyReport')}
             </Button>
-            <button onClick={onClose} className='rounded-lg p-1.5 text-slate-400 hover:bg-slate-100'><X className='h-5 w-5' /></button>
+            <button
+              type='button'
+              onClick={requestClose}
+              className='rounded-lg p-1.5 text-slate-400 hover:bg-slate-100'
+              aria-label={t('common.close')}
+            >
+              <X className='h-5 w-5' />
+            </button>
           </div>
         </div>
 
@@ -237,6 +264,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
                   return (
                     <button
                       key={s.key}
+                      type='button'
                       onClick={() => setPendingStatus(s.key)}
                       className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-all duration-150 ${
                         isCurrent
@@ -252,6 +280,20 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
               </div>
             </div>
           )}
+
+          {/* Delete invalid report */}
+          <div className='rounded-xl border border-rose-100 bg-rose-50/60 p-3'>
+            <Button
+              type='button'
+              variant='outline'
+              disabled={deleting || copying}
+              className='w-full justify-center gap-2 border-rose-200 text-rose-700 hover:bg-rose-100'
+              onClick={handleDelete}
+            >
+              <Trash2 className='h-4 w-4' />
+              {deleting ? '…' : t('admin.deleteReport')}
+            </Button>
+          </div>
         </div>
 
         {/* Footer save */}
@@ -259,7 +301,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
           <div className='app-safe-drawer-foot border-t border-slate-200 px-5 pt-4 flex gap-3'>
             <Button
               className='flex-1'
-              disabled={!changed}
+              disabled={!changed || deleting}
               onClick={async () => {
                 const ok = await onUpdateStatus(report, pendingStatus)
                 if (ok !== false) onClose()
@@ -267,12 +309,12 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
             >
               {t('admin.saveStatus')}
             </Button>
-            <Button variant='outline' onClick={onClose}>{t('common.cancel')}</Button>
+            <Button variant='outline' onClick={requestClose}>{t('common.cancel')}</Button>
           </div>
         )}
         {report.type === 'smell' && (
           <div className='app-safe-drawer-foot border-t border-slate-200 px-5 pt-4'>
-            <Button variant='outline' className='w-full' onClick={onClose}>{t('common.close')}</Button>
+            <Button variant='outline' className='w-full' onClick={requestClose}>{t('common.close')}</Button>
           </div>
         )}
       </aside>
@@ -282,7 +324,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, clusterCount, sensorNam
 }
 
 export function AdminPanelPage() {
-  const { auth, wasteReports, setWasteReports, smellAlerts, containers, setContainers, pushNotification, changeReportStatus, refreshData, t } = useApp()
+  const { auth, wasteReports, setWasteReports, smellAlerts, containers, setContainers, pushNotification, changeReportStatus, deleteReport, removeReportLocally, refreshData, t } = useApp()
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('pending')
   const [sortBy, setSortBy] = useState('date')
@@ -399,6 +441,17 @@ export function AdminPanelPage() {
       body: t('admin.statusUpdatedBody', { loc: location, status: statusLabel }),
     })
 
+    return true
+  }
+
+  async function handleDeleteReport(report) {
+    if (isServerReportId(report.id)) {
+      const result = await deleteReport(report.id, report.type)
+      if (!result.ok) return false
+    } else {
+      removeReportLocally(report.id, report.type)
+    }
+    setSelected(null)
     return true
   }
 
@@ -574,6 +627,7 @@ export function AdminPanelPage() {
           report={liveSelected}
           onClose={() => setSelected(null)}
           onUpdateStatus={updateStatus}
+          onDelete={handleDeleteReport}
           onCopyFeedback={setCopyToast}
           clusterCount={
             liveSelected.type === 'smell'
