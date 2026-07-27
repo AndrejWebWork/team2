@@ -88,11 +88,12 @@ function isPointsEligible(type) {
 // или од `has_photo_n` (во листата) или од самиот Buffer (кај RETURNING *).
 function rowToReport(r) {
   const photos = []
-  for (let n = 1; n <= config.maxPhotos; n++) {
-    const has = r[`has_photo_${n}`] != null ? r[`has_photo_${n}`] : r[`photo_${n}`] != null
-    // Релативна патека — работи на кој било домен (localhost, Vercel, LAN IP).
-    // Frontend-от ја претвора во апсолутна со својот API_URL.
-    if (has) photos.push(`/api/reports/${r.id}/photos/${n}`)
+  // Миризба: без слики во API одговорот (не се користат).
+  if (r.type !== 'smell') {
+    for (let n = 1; n <= config.maxPhotos; n++) {
+      const has = r[`has_photo_${n}`] != null ? r[`has_photo_${n}`] : r[`photo_${n}`] != null
+      if (has) photos.push(`/api/reports/${r.id}/photos/${n}`)
+    }
   }
   const rest = { ...r }
   for (let n = 1; n <= config.maxPhotos; n++) {
@@ -197,7 +198,8 @@ reportsRouter.post('/', upload.array('photos', config.maxPhotos), async (req, re
     const resolvedReporterId = reporterId || await resolveUserId(reporterEmail, reporterName)
 
     // Секоја слика (бинарно) оди во посебна колона (макс. 6); дополни со NULL.
-    const p = gatherPhotoBuffers(req)
+    // Пријавите за миризба НЕ чуваат слики — заштеда на меморија во базата.
+    const p = type === 'smell' ? [] : gatherPhotoBuffers(req)
     while (p.length < config.maxPhotos) p.push(null)
 
     const { rows } = await query(

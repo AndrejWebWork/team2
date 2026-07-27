@@ -28,6 +28,8 @@ function reportStatus(report, t) {
 }
 
 function reportPhotos(report) {
+  // Smell reports never include photos.
+  if (report.type === 'smell') return []
   if (report.photos?.length) return report.photos.filter(Boolean)
   if (report.photo) return [report.photo]
   return []

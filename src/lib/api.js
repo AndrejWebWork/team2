@@ -635,7 +635,5 @@ export function serverToSmell(r) {
     createdAt: r.created_at,
     nearestSensorId: isAirSensor ? r.nearest_point_id : null,
     nearestSensorDistanceM: isAirSensor ? (r.nearest_point_distance_m ?? null) : null,
-    photos: photoUrls(r),
-    photo: photoUrls(r)[0] || '',
   }
 }

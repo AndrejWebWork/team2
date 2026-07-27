@@ -144,17 +144,19 @@ function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount,
 
         {/* Content */}
         <div className='flex-1 overflow-y-auto app-scroll p-5 space-y-5'>
-          {/* Photos */}
-          {(report.photos?.length ? report.photos : report.photo ? [report.photo] : []).length > 0 ? (
-            <div className='grid grid-cols-2 gap-2'>
-              {(report.photos?.length ? report.photos : [report.photo]).map((src, idx) => (
-                <img key={idx} src={src} alt={t('photo.altPhotoFull', { n: idx + 1 })} className='w-full rounded-xl border border-slate-200 object-cover' style={{ maxHeight: 200 }} />
-              ))}
-            </div>
-          ) : (
-            <div className='flex h-32 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-300'>
-              <Camera className='h-8 w-8' />
-            </div>
+          {/* Photos — not used for smell reports */}
+          {report.type !== 'smell' && (
+            (report.photos?.length ? report.photos : report.photo ? [report.photo] : []).length > 0 ? (
+              <div className='grid grid-cols-2 gap-2'>
+                {(report.photos?.length ? report.photos : [report.photo]).map((src, idx) => (
+                  <img key={idx} src={src} alt={t('photo.altPhotoFull', { n: idx + 1 })} className='w-full rounded-xl border border-slate-200 object-cover' style={{ maxHeight: 200 }} />
+                ))}
+              </div>
+            ) : (
+              <div className='flex h-32 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-300'>
+                <Camera className='h-8 w-8' />
+              </div>
+            )
           )}
 
           {/* Location */}
