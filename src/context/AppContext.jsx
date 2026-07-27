@@ -568,13 +568,20 @@ export function AppProvider({ children }) {
   // Токенот се врзува за корисникот (ако е најавен) или за анонимниот уред.
   const pushTokenRef = useRef(null)
   const pushInitRef = useRef(false)
+  const authEmailRef = useRef(auth.email)
+  authEmailRef.current = auth.email
   useEffect(() => {
     if (auth.role === 'admin' || pushInitRef.current) return
     pushInitRef.current = true
     registerPushNotifications({
       onToken: (token) => {
         pushTokenRef.current = token
-        registerDeviceTokenApi({ token, email: auth.email || null, deviceId: DEVICE_ID, platform: Capacitor.getPlatform() }).catch(() => {})
+        registerDeviceTokenApi({
+          token,
+          email: authEmailRef.current || null,
+          deviceId: DEVICE_ID,
+          platform: Capacitor.getPlatform(),
+        }).catch(() => {})
       },
       onReceived: (n) => {
         const title = n?.title || n?.notification?.title || ''
@@ -584,7 +591,7 @@ export function AppProvider({ children }) {
         }
       },
     })
-  }, [auth.role, auth.email])
+  }, [auth.role])
 
   // Кога корисникот ќе се најави/одјави, повторно врзи го токенот за точниот идентитет.
   useEffect(() => {

@@ -91,12 +91,14 @@ app.use('/uploads', express.static(config.uploadDir, {
   immutable: true,
 }))
 
-// Здравствена проверка (и на базата)
+// Здравствена проверка (база + FCM push статус)
 app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1')
     void tickEventRemindersOnTraffic()
-    res.json({ ok: true, db: 'up' })
+    const { verifyPush } = await import('./lib/fcm.js')
+    const push = await verifyPush().catch(() => ({ configured: false, tokenOk: false, projectId: null }))
+    res.json({ ok: true, db: 'up', push })
   } catch {
     res.status(503).json({ ok: false, db: 'down' })
   }

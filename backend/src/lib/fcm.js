@@ -5,30 +5,43 @@ import { query } from '../db.js'
 
 // ============================================================================
 // Праќање push нотификации преку Firebase Cloud Messaging — HTTP v1 API.
-// (Стариот „legacy" API со сервер-клуч е исклучен од Google во јуни 2024.)
-//
-// Работи само ако е поставен FCM_SERVICE_ACCOUNT (env) — JSON од сервисен клуч
-// на Firebase проектот (Project settings → Service accounts → Generate key).
-// Може да биде или самиот JSON како стринг, или патека до .json фајлот.
-// Ако не е поставен → тивко noop (само локалните нотификации работат).
+// Работи само ако е поставен FCM_SERVICE_ACCOUNT (env).
 // ============================================================================
 
 const OAUTH_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging'
+/** Мора да се совпаѓа со createChannel() на клиентот (Android 8+). */
+export const PUSH_CHANNEL_ID = 'ekoskopje'
 
 let serviceAccount // undefined = уште не пробано, null = нема/неисправно
+
+function normalizePrivateKey(key) {
+  if (typeof key !== 'string') return key
+  // Vercel env често ги чува newline како литерал "\n".
+  return key.includes('\\n') ? key.replace(/\\n/g, '\n') : key
+}
+
+function parseServiceAccountRaw(raw) {
+  let text = String(raw || '').trim()
+  if (!text) return null
+  // Ако е патека до фајл.
+  if (!text.startsWith('{') && !text.startsWith('"')) {
+    text = fs.readFileSync(text, 'utf8')
+  }
+  // Ако целиот JSON е завиткан како JSON-стринг.
+  if (text.startsWith('"')) {
+    text = JSON.parse(text)
+  }
+  const parsed = typeof text === 'string' ? JSON.parse(text) : text
+  if (!parsed?.client_email || !parsed?.private_key || !parsed?.project_id) return null
+  parsed.private_key = normalizePrivateKey(parsed.private_key)
+  return parsed
+}
+
 function loadServiceAccount() {
   if (serviceAccount !== undefined) return serviceAccount
-  const raw = config.fcmServiceAccount
-  if (!raw) { serviceAccount = null; return serviceAccount }
   try {
-    const text = raw.trim().startsWith('{') ? raw : fs.readFileSync(raw, 'utf8')
-    const parsed = JSON.parse(text)
-    if (!parsed.client_email || !parsed.private_key || !parsed.project_id) {
-      serviceAccount = null
-    } else {
-      serviceAccount = parsed
-    }
+    serviceAccount = parseServiceAccountRaw(config.fcmServiceAccount)
   } catch {
     serviceAccount = null
   }
@@ -39,7 +52,6 @@ export function isPushConfigured() {
   return Boolean(loadServiceAccount())
 }
 
-// ---- OAuth2 access token (кеширан, се обновува пред истек) ----
 let cachedToken = null
 let cachedTokenExp = 0
 
@@ -77,8 +89,7 @@ async function getAccessToken() {
   return cachedToken
 }
 
-// Дијагностика: потврдува дека клучот е валиден и Google издава access token.
-// Враќа { configured, tokenOk, projectId }.
+/** Дијагностика: { configured, tokenOk, projectId }. */
 export async function verifyPush() {
   const acct = loadServiceAccount()
   if (!acct) return { configured: false, tokenOk: false, projectId: null }
@@ -86,15 +97,12 @@ export async function verifyPush() {
   return { configured: true, tokenOk: Boolean(token), projectId: acct.project_id }
 }
 
-// FCM HTTP v1 бара сите data вредности да се стрингови.
 function stringifyData(data = {}) {
   const out = {}
   for (const [k, v] of Object.entries(data)) out[k] = String(v)
   return out
 }
 
-// Праќа push до листа токени. Неуспесите се игнорираат (уредот е офлајн или
-// токенот е застарен). Застарените токени се бришат од базата (404/UNREGISTERED).
 export async function sendPushToTokens(tokens, { title, body, data = {} }) {
   const acct = loadServiceAccount()
   if (!acct || !Array.isArray(tokens) || tokens.length === 0) return 0
@@ -113,8 +121,18 @@ export async function sendPushToTokens(tokens, { title, body, data = {} }) {
             token,
             notification: { title, body },
             data: stringifyData(data),
-            android: { priority: 'high' },
-            apns: { headers: { 'apns-priority': '10' }, payload: { aps: { sound: 'default' } } },
+            android: {
+              priority: 'HIGH',
+              notification: {
+                channel_id: PUSH_CHANNEL_ID,
+                sound: 'default',
+                default_vibrate_timings: true,
+              },
+            },
+            apns: {
+              headers: { 'apns-priority': '10' },
+              payload: { aps: { sound: 'default', 'content-available': 1 } },
+            },
           },
         }),
       })
@@ -122,15 +140,18 @@ export async function sendPushToTokens(tokens, { title, body, data = {} }) {
         ok += 1
         return
       }
+      // Невалиден / одјавен токен — исчисти.
       if (res.status === 404 || res.status === 400) {
-        await query('DELETE FROM device_tokens WHERE token = $1', [token]).catch(() => {})
+        const errBody = await res.text().catch(() => '')
+        if (/UNREGISTERED|INVALID_ARGUMENT|NOT_FOUND/i.test(errBody) || res.status === 404) {
+          await query('DELETE FROM device_tokens WHERE token = $1', [token]).catch(() => {})
+        }
       }
-    } catch { /* мрежна грешка — игнорирај */ }
+    } catch { /* мрежна грешка */ }
   }))
   return ok
 }
 
-// Праќа push до сите уреди на даден корисник (по user_id).
 export async function sendPushToUser(userId, payload) {
   if (!isPushConfigured() || !userId) return 0
   try {
@@ -141,7 +162,6 @@ export async function sendPushToUser(userId, payload) {
   }
 }
 
-// Праќа push до анонимен уред (по device_id од локалниот идентитет).
 export async function sendPushToDevice(deviceId, payload) {
   if (!isPushConfigured() || !deviceId) return 0
   try {

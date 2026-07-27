@@ -4,4 +4,5 @@
     <string name="title_activity_main">EkoSkopje</string>
     <string name="package_name">mk.gov.skopje.ekoskopje</string>
     <string name="custom_url_scheme">mk.gov.skopje.ekoskopje</string>
+    <string name="default_notification_channel_id">ekoskopje</string>
 </resources>

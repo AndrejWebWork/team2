@@ -290,10 +290,19 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
             `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
             [rows[0].reporter_id, title, body],
           ).catch(() => {})
-          sendPushToUser(rows[0].reporter_id, { title, body }).catch(() => {})
+          // await — инаку на Vercel push се прекинува пред да стигне.
+          await sendPushToUser(rows[0].reporter_id, {
+            title,
+            body,
+            data: { type: 'report_status', reportId: String(rows[0].id), status },
+          }).catch(() => {})
         }
       } else if (rows[0].reporter_device_id) {
-        sendPushToDevice(rows[0].reporter_device_id, { title, body }).catch(() => {})
+        await sendPushToDevice(rows[0].reporter_device_id, {
+          title,
+          body,
+          data: { type: 'report_status', reportId: String(rows[0].id), status },
+        }).catch(() => {})
       }
       invalidateCache('notifications:')
     }

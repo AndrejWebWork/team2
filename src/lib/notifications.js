@@ -23,6 +23,17 @@ export async function scheduleLocalNotification({ title, body }) {
       localPermissionAsked = true
       const perm = await LocalNotifications.requestPermissions()
       if (perm.display !== 'granted') return
+      try {
+        await LocalNotifications.createChannel({
+          id: 'ekoskopje',
+          name: 'EkoSkopje',
+          description: 'Известувања за настани и пријави',
+          importance: 5,
+          visibility: 1,
+          sound: 'default',
+          vibration: true,
+        })
+      } catch { /* iOS */ }
     }
     await LocalNotifications.schedule({
       notifications: [{
@@ -30,11 +41,22 @@ export async function scheduleLocalNotification({ title, body }) {
         title,
         body: body || '',
         schedule: { at: new Date(Date.now() + 150) },
+        channelId: 'ekoskopje',
       }],
     })
   } catch {
     /* plugin недостапен / одбиена дозвола — тивко игнорирај */
   }
+}
+
+const PUSH_CHANNEL = {
+  id: 'ekoskopje',
+  name: 'EkoSkopje',
+  description: 'Известувања за настани и пријави',
+  importance: 5,
+  visibility: 1,
+  sound: 'default',
+  vibration: true,
 }
 
 // Регистрира push (FCM) и го враќа токенот преку onToken. Слуша и за примени
@@ -45,6 +67,11 @@ export async function registerPushNotifications({ onToken, onReceived } = {}) {
     const { PushNotifications } = await import('@capacitor/push-notifications')
     const perm = await PushNotifications.requestPermissions()
     if (perm.receive !== 'granted') return
+
+    // Android 8+: канал со HIGH importance — инаку FCM може тивко да ги крие.
+    try {
+      await PushNotifications.createChannel(PUSH_CHANNEL)
+    } catch { /* iOS нема канали */ }
 
     PushNotifications.addListener('registration', (token) => {
       if (onToken && token?.value) onToken(token.value)

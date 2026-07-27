@@ -373,23 +373,25 @@ eventsRouter.post('/:id/remind', async (req, res, next) => {
     }
 
     let sent = 0
+    let pushed = 0
     await Promise.all(signups.map(async (row) => {
       await query(
         `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3)`,
         [row.user_id, title, bodyInApp],
       ).catch(() => {})
       // Мора await — на Vercel serverless инаку push се прекинува пред да стигне.
-      await sendPushToUser(row.user_id, {
+      const n = await sendPushToUser(row.user_id, {
         title,
         body: bodyPush,
         data: { type: 'event_reminder', eventId: String(event.id) },
-      }).catch(() => {})
+      }).catch(() => 0)
+      pushed += Number(n) || 0
       sent += 1
     }))
 
     invalidateCache('notifications:')
     invalidateCache('events:')
-    res.json({ ok: true, sent })
+    res.json({ ok: true, sent, pushed })
   } catch (err) { next(err) }
 })
 
