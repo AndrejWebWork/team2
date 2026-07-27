@@ -110,7 +110,7 @@ const dict = {
       waitingLocation: 'Се чека локација...', locationUnavailable: 'Локацијата не е достапна. Дозволете GPS.',
       enterDescription: 'Внесете опис.', institutionLabel: 'Надлежна институција / сектор',
       institutionHint: 'Пријавата се насочува директно до избраниот сектор.',
-      smellIntensity: 'Интензитет на миризба', smellPlaceholder: 'Опишете ја миризбата...',
+      smellIntensity: 'Интензитет на миризба', smellPlaceholder: 'Опишете ја миризбата (опционално)...',
       smellSent: 'Пријавата за миризба е испратена.',
       reportReceivedTitle: 'Пријавата е примена',
       reportReceivedBody: 'Ти благодариме! Твојата пријава ({loc}) е испратена до надлежните.',
@@ -135,7 +135,7 @@ const dict = {
     },
     deponija: {
       photoRequired: 'Потребна е барем една фотографија.', descMin: 'Внесете опис (мин. 8 карактери).',
-      descPlaceholder: 'Опишете ја состојбата...', newReportTitle: 'Нова пријава за депонија',
+      descPlaceholder: 'Опишете ја состојбата (опционално)...', newReportTitle: 'Нова пријава за депонија',
       newReportBody: 'Пријавата за {loc} е испратена.', sent: 'Пријавата е испратена.',
     },
     container: {
@@ -476,7 +476,7 @@ const dict = {
       waitingLocation: 'Waiting for location...', locationUnavailable: 'Location unavailable. Please allow GPS.',
       enterDescription: 'Please enter a description.', institutionLabel: 'Responsible institution / sector',
       institutionHint: 'The report is routed directly to the selected sector.',
-      smellIntensity: 'Smell intensity', smellPlaceholder: 'Describe the smell...',
+      smellIntensity: 'Smell intensity', smellPlaceholder: 'Describe the smell (optional)...',
       smellSent: 'Smell report submitted.',
       reportReceivedTitle: 'Report received',
       reportReceivedBody: 'Thank you! Your report ({loc}) has been sent to the authorities.',
@@ -501,7 +501,7 @@ const dict = {
     },
     deponija: {
       photoRequired: 'At least one photo is required.', descMin: 'Enter a description (min. 8 characters).',
-      descPlaceholder: 'Describe the situation...', newReportTitle: 'New dump report',
+      descPlaceholder: 'Describe the situation (optional)...', newReportTitle: 'New dump report',
       newReportBody: 'The report for {loc} has been submitted.', sent: 'Report submitted.',
     },
     container: {
@@ -842,7 +842,7 @@ const dict = {
       waitingLocation: 'Duke pritur vendndodhjen...', locationUnavailable: 'Vendndodhja nuk është e disponueshme. Lejoni GPS-in.',
       enterDescription: 'Shkruani një përshkrim.', institutionLabel: 'Institucioni / sektori përgjegjës',
       institutionHint: 'Raporti drejtohet direkt te sektori i zgjedhur.',
-      smellIntensity: 'Intensiteti i erës', smellPlaceholder: 'Përshkruani erën...',
+      smellIntensity: 'Intensiteti i erës', smellPlaceholder: 'Përshkruani erën (opsionale)...',
       smellSent: 'Raporti për erën u dërgua.',
       reportReceivedTitle: 'Raporti u pranua',
       reportReceivedBody: 'Faleminderit! Raporti yt ({loc}) u dërgua te autoritetet.',

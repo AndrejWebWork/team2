@@ -200,7 +200,6 @@ function SmellForm({ submitReport, onDone, loc, t }) {
     if (loc.loading) return setToast(t('form.waitingLocation'))
     const coords = await loc.ensureFresh()
     if (!coords?.lat) return setToast(t('form.locationUnavailable'))
-    if (!description.trim()) return setToast(t('form.enterDescription'))
     setBusy(true)
     await submitReport({
       type: 'smell',
@@ -262,7 +261,6 @@ function DeponijForm({ submitReport, onDone, loc, t }) {
     const coords = await loc.ensureFresh()
     if (!coords?.lat) return setToast(t('form.locationUnavailable'))
     if (photos.length === 0) return setToast(t('deponija.photoRequired'))
-    if (description.trim().length < 8) return setToast(t('deponija.descMin'))
     setBusy(true)
     await submitReport({
       type: 'waste',
@@ -302,6 +300,7 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
     if (loc.loading) return setToast(t('form.waitingLocation'))
     const coords = await loc.ensureFresh()
     if (!coords?.lat) return setToast(t('form.locationUnavailable'))
+    if (photos.length === 0) return setToast(t('deponija.photoRequired'))
     setBusy(true)
     await submitReport({
       type: 'container',
@@ -345,7 +344,7 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
         </select>
       </div>
 
-      <PhotoCapture photos={photos} setPhotos={setPhotos} required={false} t={t} />
+      <PhotoCapture photos={photos} setPhotos={setPhotos} required t={t} />
 
       <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('container.descPlaceholder')} className='min-h-16' />
       <Button type='submit' className='w-full' disabled={loc.loading || busy}>{t('common.submitReport')}</Button>
