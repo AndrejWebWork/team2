@@ -5,8 +5,8 @@ import { resolveUserId } from '../services/users.js'
 export const devicesRouter = Router()
 
 // POST /api/devices/token  { token, email?, deviceId?, platform? }
-// Зачувува/освежува FCM токен за push. Врзан за корисник (ако е најавен) или за
-// анонимен уред. Админ уреди не праќаат токен (се решава на клиент).
+// Зачувува/освежува FCM токен за push. Врзан за корисник (ако е најавен,
+// вклучително админ улоги) или за анонимен уред.
 devicesRouter.post('/token', async (req, res, next) => {
   try {
     const { token, email = null, deviceId = null, platform = null } = req.body

@@ -18,8 +18,7 @@ leaderboardRouter.get('/', async (req, res, next) => {
           `SELECT user_id, display_name, email, points
            FROM leaderboard_monthly
            WHERE points > 0
-           ORDER BY points DESC
-           LIMIT 100`,
+           ORDER BY points DESC`,
         )
         return rows.map((r) => ({
           userId: r.email || r.user_id,

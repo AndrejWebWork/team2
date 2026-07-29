@@ -4,6 +4,7 @@ import { config } from '../config.js'
 import { query } from '../db.js'
 import { extractClientPasswordHash, hashForStorage, verifyClientPassword } from '../lib/clientPassword.js'
 import { isEmailConfigured, sendPasswordResetEmail } from '../lib/brevo.js'
+import { isAdminRole } from '../lib/roles.js'
 
 export const authRouter = Router()
 
@@ -84,7 +85,7 @@ authRouter.post('/login', async (req, res, next) => {
     // за заштитените операции (менување статус, community корисници). Така
     // токенот не се вградува во јавниот frontend build.
     const payload = publicUser(user)
-    if (user.role === 'admin' && config.adminToken) payload.adminToken = config.adminToken
+    if (isAdminRole(user.role) && config.adminToken) payload.adminToken = config.adminToken
     res.json(payload)
   } catch (err) { next(err) }
 })
@@ -185,8 +186,8 @@ authRouter.delete('/account', async (req, res, next) => {
     const ok = await verifyClientPassword(passwordHash, user.password_hash)
     if (!ok) return res.status(401).json({ error: 'Погрешна е-пошта или лозинка.' })
 
-    // Админ сметката не смее да се избрише самата себеси од апликацијата.
-    if (user.role === 'admin') return res.status(403).json({ error: 'Админ сметката не може да се избрише од апликацијата.' })
+    // Админ сметките не смеат да се бришат од апликацијата.
+    if (isAdminRole(user.role)) return res.status(403).json({ error: 'Админ сметката не може да се избрише од апликацијата.' })
 
     await query('DELETE FROM users WHERE id = $1', [user.id])
     res.json({ ok: true })

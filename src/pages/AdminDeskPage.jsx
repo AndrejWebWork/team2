@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
 import { updateReportStatus, serverToContainer, serverToWaste } from '../lib/api'
+import { canAccessReportType, isAdminRole } from '../lib/roles'
 import { fetchAllAirSensors, groupSmellsBySensor } from '../lib/smellSensor'
 function mkDate(iso) {
   if (!iso) return ''
@@ -186,15 +187,31 @@ export function AdminDeskPage() {
     return () => controller.abort()
   }, [smellAlerts.length])
 
+  const canSmell = canAccessReportType(auth.role, 'smell')
+  const canWaste = canAccessReportType(auth.role, 'waste')
+  const canContainer = canAccessReportType(auth.role, 'container')
+  const visibleSmellAlerts = canSmell ? smellAlerts : []
+
   const smellGroups = useMemo(
-    () => groupSmellsBySensor(smellAlerts, airSensors),
-    [smellAlerts, airSensors],
+    () => groupSmellsBySensor(visibleSmellAlerts, airSensors),
+    [visibleSmellAlerts, airSensors],
   )
 
-  if (auth.role !== 'admin') return <Navigate to='/air' replace />
+  if (!isAdminRole(auth.role)) return <Navigate to='/air' replace />
 
-  const unresolvedWaste = wasteReports.filter((r) => r.status !== 'resolved')
-  const openContainers = containers.filter((c) => c.issueOpen)
+  const visibleTabs = TABS.filter((tabItem) => {
+    const type = tabItem.key === 'containers' ? 'container' : tabItem.key
+    return canAccessReportType(auth.role, type)
+  })
+  const defaultTab = visibleTabs[0]?.key || 'waste'
+  const activeTab = visibleTabs.some((x) => x.key === tab) ? tab : defaultTab
+
+  const unresolvedWaste = canWaste
+    ? wasteReports.filter((r) => r.status !== 'resolved')
+    : []
+  const openContainers = canContainer
+    ? containers.filter((c) => c.issueOpen)
+    : []
 
   // Промената прво се потврдува на backend; при одбивање (пр. невалиден админ
   // токен) не се прикажува лажен успех. Поените ги доделува ИСКЛУЧИВО backend.
@@ -256,11 +273,11 @@ export function AdminDeskPage() {
   }
 
   const stats = [
-    { label: t('desk.statSmell'), value: smellAlerts.length, icon: Siren, accent: 'bg-rose-50 text-rose-600 border-rose-100' },
-    { label: t('desk.statWaste'), value: wasteReports.length, icon: Trash2, accent: 'bg-amber-50 text-amber-600 border-amber-100' },
-    { label: t('desk.statContainers'), value: openContainers.length, icon: Recycle, accent: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
-    { label: t('desk.statUnresolved'), value: unresolvedWaste.length, icon: AlertTriangle, accent: 'bg-slate-50 text-slate-600 border-slate-200' },
-  ]
+    canSmell && { label: t('desk.statSmell'), value: visibleSmellAlerts.length, icon: Siren, accent: 'bg-rose-50 text-rose-600 border-rose-100' },
+    canWaste && { label: t('desk.statWaste'), value: wasteReports.length, icon: Trash2, accent: 'bg-amber-50 text-amber-600 border-amber-100' },
+    canContainer && { label: t('desk.statContainers'), value: openContainers.length, icon: Recycle, accent: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
+    { label: t('desk.statUnresolved'), value: unresolvedWaste.length + openContainers.length + visibleSmellAlerts.length, icon: AlertTriangle, accent: 'bg-slate-50 text-slate-600 border-slate-200' },
+  ].filter(Boolean)
 
   return (
     <div className='space-y-6'>
@@ -288,22 +305,22 @@ export function AdminDeskPage() {
       <Card>
         <CardHeader className='pb-0 pt-4 px-4'>
           <div className='flex gap-1 border-b border-slate-100 pb-0'>
-            {TABS.map((tabItem) => {
-              const count = tabItem.key === 'waste' ? unresolvedWaste.length : tabItem.key === 'smell' ? smellAlerts.length : openContainers.length
+            {visibleTabs.map((tabItem) => {
+              const count = tabItem.key === 'waste' ? unresolvedWaste.length : tabItem.key === 'smell' ? visibleSmellAlerts.length : openContainers.length
               return (
                 <button
                   key={tabItem.key}
                   type='button'
                   onClick={() => setTab(tabItem.key)}
                   className={`relative px-4 py-2.5 text-sm font-semibold transition-colors ${
-                    tab === tabItem.key
+                    activeTab === tabItem.key
                       ? 'text-emerald-700 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emerald-600'
                       : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
                   {t(tabItem.labelKey)}
                   {count > 0 && (
-                    <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tab === tabItem.key ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${activeTab === tabItem.key ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                       {count}
                     </span>
                   )}
@@ -313,17 +330,17 @@ export function AdminDeskPage() {
           </div>
         </CardHeader>
         <CardContent className='px-4 py-2'>
-          {tab === 'waste' && (
+          {activeTab === 'waste' && (
             unresolvedWaste.length === 0
               ? <SectionEmpty text={t('desk.emptyWaste')} />
               : unresolvedWaste.map((r) => <WasteRow key={r.id} report={r} onStatus={updateWasteStatus} />)
           )}
-          {tab === 'smell' && (
-            smellAlerts.length === 0
+          {activeTab === 'smell' && (
+            visibleSmellAlerts.length === 0
               ? <SectionEmpty text={t('desk.emptySmell')} />
               : smellGroups.map((group) => <SmellClusterBlock key={group.sensorId} group={group} />)
           )}
-          {tab === 'containers' && (
+          {activeTab === 'containers' && (
             openContainers.length === 0
               ? <SectionEmpty text={t('desk.emptyContainers')} />
               : openContainers.map((c) => <ContainerRow key={c.id} container={c} onReset={resetContainer} />)

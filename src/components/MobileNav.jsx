@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { navItems } from './navConfig'
 import { cx } from '../utils/ui'
 import { useApp } from '../context/AppContext'
+import { isAdminRole, isSuperAdmin } from '../lib/roles'
 
 function clearTapFocus(e) {
   const el = e.currentTarget
@@ -13,8 +14,9 @@ export function MobileNav({ role }) {
   const navigate = useNavigate()
   const location = useLocation()
   const visible = navItems.filter((item) => {
-    if (item.adminOnly && role !== 'admin') return false
-    if (item.hideForAdmin && role === 'admin') return false
+    if (item.superAdminOnly && !isSuperAdmin(role)) return false
+    if (item.adminOnly && !isAdminRole(role)) return false
+    if (item.hideForAdmin && isAdminRole(role) && !(item.allowSuperAdmin && isSuperAdmin(role))) return false
     if (item.hideFromMobile) return false
     return true
   })

@@ -2,7 +2,9 @@ import { Router } from 'express'
 import { config } from '../config.js'
 import { query } from '../db.js'
 import { sendPushToUser } from '../lib/fcm.js'
+import { canApproveEvents, isSuperAdmin } from '../lib/roles.js'
 import { invalidateCache, serveCachedJson, serveFreshJson } from '../lib/responseCache.js'
+import { requireEventApprover } from '../middleware/requireAdmin.js'
 import { resolveUserId } from '../services/users.js'
 import { tickEventRemindersOnTraffic } from '../services/eventReminders.js'
 
@@ -45,6 +47,8 @@ function rowToEvent(r) {
     location: r.location,
     seats: r.seats,
     status: r.status,
+    approvalStatus: r.approval_status || 'approved',
+    rejectionReason: r.rejection_reason || null,
     organizer: r.organizer_name,
     organizerEmail: r.organizer_email || null,
     organizerInstagram: r.organizer_instagram || null,
@@ -53,6 +57,12 @@ function rowToEvent(r) {
     joined: Boolean(r.joined),
     createdAt: r.created_at,
   }
+}
+
+async function resolveViewerRole(email) {
+  if (!email) return null
+  const { rows } = await query('SELECT role FROM users WHERE lower(email) = lower($1)', [email])
+  return rows[0]?.role || null
 }
 
 function todayIso() {
@@ -71,7 +81,10 @@ async function assertOrganizerOrAdmin(eventId, email, adminToken) {
   const orgEmail = rows[0].organizer_email
   const isOrganizer = email && orgEmail
     && String(email).toLowerCase() === String(orgEmail).toLowerCase()
-  const isAdmin = config.adminToken && adminToken === config.adminToken
+  const tokenOk = !config.adminToken || (adminToken && adminToken === config.adminToken)
+  const viewerRole = tokenOk ? await resolveViewerRole(email) : null
+  // Само Супер Админ (не специјализирани админи) смее како админ.
+  const isAdmin = tokenOk && isSuperAdmin(viewerRole)
   if (!isOrganizer && !isAdmin) {
     return { ok: false, status: 403, error: 'Само организаторот може да ги види пријавените.' }
   }
@@ -80,11 +93,17 @@ async function assertOrganizerOrAdmin(eventId, email, adminToken) {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// GET /api/events?email=  → сите настани (јавни) + дали тековниот корисник е пријавен
+// GET /api/events?email=  → јавни (approved) + сопствени на организаторот;
+// Супер Админ гледа сè (вкл. pending/rejected).
 eventsRouter.get('/', async (req, res, next) => {
   try {
     void tickEventRemindersOnTraffic()
     const email = req.query.email || null
+    const adminToken = req.get('x-admin-token') || ''
+    const viewerRole = await resolveViewerRole(email)
+    const tokenOk = !config.adminToken || adminToken === config.adminToken
+    const isApprover = canApproveEvents(viewerRole) && tokenOk
+
     const producer = async () => {
       const { rows } = await query(
         `SELECT e.*,
@@ -98,8 +117,13 @@ eventsRouter.get('/', async (req, res, next) => {
            ) AS joined
          FROM events e
          LEFT JOIN users ou ON ou.id = e.organizer_id
+         WHERE (
+           e.approval_status = 'approved'
+           OR $2::boolean = TRUE
+           OR ($1::text IS NOT NULL AND lower(ou.email) = lower($1::text))
+         )
          ORDER BY e.event_date ASC`,
-        [email],
+        [email, isApprover],
       )
       return rows.map(rowToEvent)
     }
@@ -108,7 +132,7 @@ eventsRouter.get('/', async (req, res, next) => {
       return
     }
     await serveCachedJson(req, res, {
-      key: `events:${email || 'anon'}`,
+      key: `events:${email || 'anon'}:${isApprover ? 'sa' : 'pub'}`,
       ttlMs: EVENTS_TTL_MS,
       producer,
     })
@@ -124,13 +148,14 @@ eventsRouter.post('/', async (req, res, next) => {
       reminderMessage = null,
     } = req.body
     if (!title || !date) return res.status(400).json({ error: 'Недостасува наслов или датум.' })
+    let organizerRole = null
     if (organizerEmail) {
       const { rows: orgRows } = await query(
         `SELECT role FROM users WHERE email = $1`,
         [organizerEmail],
       )
-      const role = orgRows[0]?.role
-      if (role && role !== 'organization' && role !== 'admin') {
+      organizerRole = orgRows[0]?.role || null
+      if (organizerRole && organizerRole !== 'organization' && !isSuperAdmin(organizerRole)) {
         return res.status(403).json({ error: 'Само community корисници можат да креираат настани.' })
       }
     }
@@ -144,10 +169,12 @@ eventsRouter.post('/', async (req, res, next) => {
     }
     const reminder = reminderMessage != null ? String(reminderMessage).trim().slice(0, 500) : null
     const organizerId = await resolveUserId(organizerEmail, organizerName)
+    // Супер Админ → веднаш approved; community → pending до одобрување.
+    const approvalStatus = isSuperAdmin(organizerRole) ? 'approved' : 'pending'
     const { rows } = await query(
-      `INSERT INTO events (title, description, event_date, event_time, location, seats, organizer_id, organizer_name, reminder_message)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [title, description, isoDate, eventTime, location, seats, organizerId, organizerName || organizerEmail, reminder || null],
+      `INSERT INTO events (title, description, event_date, event_time, location, seats, organizer_id, organizer_name, reminder_message, approval_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [title, description, isoDate, eventTime, location, seats, organizerId, organizerName || organizerEmail, reminder || null, approvalStatus],
     )
     let organizerInstagram = null
     if (organizerId) {
@@ -181,12 +208,13 @@ eventsRouter.delete('/:id', async (req, res, next) => {
     const event = rows[0]
     const organizerEmail = event.organizer_email
     const isOrganizer = email && organizerEmail && String(email).toLowerCase() === String(organizerEmail).toLowerCase()
-    // Ако адмн токен не е поставен → отворено (локален развој), инаку мора да се совпаѓа.
     const provided = req.get('x-admin-token') || ''
-    const isAdmin = !config.adminToken || provided === config.adminToken
+    const viewerRole = await resolveViewerRole(email)
+    const tokenOk = !config.adminToken || provided === config.adminToken
+    const isAdmin = canApproveEvents(viewerRole) && tokenOk
 
     if (!isOrganizer && !isAdmin) {
-      return res.status(403).json({ error: 'Само организаторот или админ може да го откаже настанот.' })
+      return res.status(403).json({ error: 'Само организаторот или Супер Админ може да го откаже настанот.' })
     }
 
     // Земи ги пријавените ПРЕД бришење (CASCADE ги брише signups).
@@ -269,13 +297,16 @@ eventsRouter.post('/:id/signup', async (req, res, next) => {
     }
 
     const { rows: eventRows } = await query(
-      `SELECT e.event_date, ou.email AS organizer_email
+      `SELECT e.event_date, e.approval_status, ou.email AS organizer_email
          FROM events e
          LEFT JOIN users ou ON ou.id = e.organizer_id
         WHERE e.id = $1`,
       [req.params.id],
     )
     if (!eventRows[0]) return res.status(404).json({ error: 'Настанот не постои.' })
+    if (eventRows[0].approval_status !== 'approved') {
+      return res.status(400).json({ error: 'Настанот сè уште не е одобрен за пријавување.' })
+    }
 
     const eventDate = eventRows[0].event_date instanceof Date
       ? eventRows[0].event_date.toISOString().slice(0, 10)
@@ -395,6 +426,51 @@ eventsRouter.post('/:id/remind', async (req, res, next) => {
     invalidateCache('notifications:')
     invalidateCache('events:')
     res.json({ ok: true, sent })
+  } catch (err) { next(err) }
+})
+
+// PATCH /api/events/:id/approval  { status: 'approved'|'rejected', reason? }
+// Само Супер Админ — одобрува или одбива community настан.
+eventsRouter.patch('/:id/approval', requireEventApprover, async (req, res, next) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ error: 'Невалиден настан.' })
+    }
+    const status = String(req.body?.status || '').trim()
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Невалиден статус на одобрување.' })
+    }
+    const reason = status === 'rejected'
+      ? String(req.body?.reason || '').trim().slice(0, 500) || null
+      : null
+
+    const { rows } = await query(
+      `UPDATE events
+          SET approval_status = $1,
+              rejection_reason = $2,
+              updated_at = now()
+        WHERE id = $3
+        RETURNING *`,
+      [status, reason, req.params.id],
+    )
+    if (!rows[0]) return res.status(404).json({ error: 'Настанот не постои.' })
+
+    const ig = rows[0].organizer_id
+      ? await query('SELECT email, instagram_handle FROM users WHERE id = $1', [rows[0].organizer_id])
+      : { rows: [] }
+    const signupCount = await query(
+      'SELECT COUNT(*)::int AS n FROM event_signups WHERE event_id = $1',
+      [rows[0].id],
+    )
+
+    invalidateCache('events:')
+    res.json(rowToEvent({
+      ...rows[0],
+      organizer_email: ig.rows[0]?.email || null,
+      organizer_instagram: ig.rows[0]?.instagram_handle || null,
+      signup_count: signupCount.rows[0]?.n || 0,
+      joined: false,
+    }))
   } catch (err) { next(err) }
 })
 

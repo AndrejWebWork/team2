@@ -53,7 +53,7 @@ export function ResetPasswordPage() {
       <div className='w-full max-w-md rounded-3xl border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/80 sm:p-10'>
         <div className='mb-8 flex justify-center'>
           <span className='inline-flex items-center justify-center rounded-2xl bg-white p-2 shadow-md ring-1 ring-slate-100'>
-            <img src={LOGO_SRC} alt='EkoSkopje' className='h-12 w-auto object-contain' />
+            <img src={LOGO_SRC} alt='Еко Скопје' className='h-12 w-auto object-contain' />
           </span>
         </div>
 

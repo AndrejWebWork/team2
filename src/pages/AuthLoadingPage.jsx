@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
+import { isAdminRole } from '../lib/roles'
 
 export function AuthLoadingPage() {
   const navigate = useNavigate()
@@ -14,7 +15,7 @@ export function AuthLoadingPage() {
     const t2 = setTimeout(() => {
       // Осигурај се дека сесијата е автентицирана (спречува redirect-loop назад тука).
       setAuth((prev) => ({ ...prev, isAuthenticated: true, isAnonymous: false }))
-      if (auth.role === 'admin') return navigate('/admin-desk', { replace: true })
+      if (isAdminRole(auth.role)) return navigate('/admin-desk', { replace: true })
       if (auth.role === 'organization') return navigate('/community', { replace: true })
       return navigate('/home', { replace: true })
     }, 1700)
@@ -31,7 +32,7 @@ export function AuthLoadingPage() {
           <div className='mx-auto mb-2 inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-sky-100 text-emerald-700'>
             <Leaf className='h-6 w-6' />
           </div>
-          <CardTitle className='font-display text-4xl'>EkoSkopje</CardTitle>
+          <CardTitle className='font-display text-4xl'>Еко Скопје</CardTitle>
         </CardHeader>
         <CardContent className='text-center'>
           <p className='text-base text-slate-600'>{t(`auth.${step}`)}</p>

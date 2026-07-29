@@ -4,7 +4,8 @@ import { config } from '../config.js'
 import { query } from '../db.js'
 import { sendPushToDevice, sendPushToUser } from '../lib/fcm.js'
 import { invalidateCache, serveCachedJson, serveFreshJson } from '../lib/responseCache.js'
-import { requireAdmin } from '../middleware/requireAdmin.js'
+import { assertReportTypeAccess, requireAdmin } from '../middleware/requireAdmin.js'
+import { notifyAdminsOfNewReport } from '../services/adminReportNotify.js'
 import { resolveUserId } from '../services/users.js'
 
 export const reportsRouter = Router()
@@ -226,6 +227,13 @@ reportsRouter.post('/', upload.array('photos', config.maxPhotos), async (req, re
     if (isPointsEligible(type)) {
       await awardPointsOnce(resolvedReporterId, 1, 'report_submitted', rows[0].id)
     }
+
+    // Push + in-app до Супер Админ и надлежниот специјализиран админ.
+    // Best-effort — не смее да го сруши одговорот кон граѓанинот.
+    try {
+      await notifyAdminsOfNewReport(rows[0])
+    } catch { /* ignore */ }
+
     // Свежи податоци веднаш за сите (не чекај TTL).
     invalidateCache('reports:')
     invalidateCache('leaderboard:')
@@ -240,8 +248,9 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
     if (!['pending', 'in_progress', 'resolved'].includes(status)) {
       return res.status(400).json({ error: 'Невалиден статус.' })
     }
-    const existing = await query('SELECT status FROM reports WHERE id = $1', [req.params.id])
+    const existing = await query('SELECT status, type FROM reports WHERE id = $1', [req.params.id])
     if (existing.rowCount === 0) return res.status(404).json({ error: 'Пријавата не постои.' })
+    if (!assertReportTypeAccess(req, res, existing.rows[0].type)) return
 
     const oldStatus = existing.rows[0].status
     const resolvedAt = status === 'resolved' ? new Date().toISOString() : null
@@ -318,6 +327,10 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
 // од базата (ON DELETE CASCADE за историја; поените остануваат со report_id = NULL).
 reportsRouter.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
+    const existing = await query('SELECT id, type FROM reports WHERE id = $1', [req.params.id])
+    if (existing.rowCount === 0) return res.status(404).json({ error: 'Пријавата не постои.' })
+    if (!assertReportTypeAccess(req, res, existing.rows[0].type)) return
+
     const { rows } = await query(
       `DELETE FROM reports WHERE id = $1 RETURNING id, type`,
       [req.params.id],

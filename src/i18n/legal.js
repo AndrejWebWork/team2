@@ -1,4 +1,4 @@
-// Правни текстови за EkoSkopje — Приватност, Услови и Атрибуција.
+// Правни текстови за Еко Скопје — Приватност, Услови и Атрибуција.
 // Покриваат веб, Android (Google Play), iOS (App Store), дозволи на уредот,
 // push известувања, бришење сметка и store transparency (Data safety / App Privacy).
 
@@ -15,11 +15,11 @@ export const legalContent = {
       title: 'Политика за приватност',
       sections: [
         { h: 'Вовед', p: [
-          'Оваа Политика за приватност објаснува како апликацијата „EkoSkopje“ ги собира, користи, чува и заштитува вашите лични податоци — на веб, на Android (Google Play Store) и на iOS (Apple App Store). Оператор на обработката е Град Скопје. Обработката се врши во согласност со Законот за заштита на личните податоци и начелата на Општата регулатива за заштита на податоци (GDPR).',
+          'Оваа Политика за приватност објаснува како апликацијата „Еко Скопје“ ги собира, користи, чува и заштитува вашите лични податоци — на веб, на Android (Google Play Store) и на iOS (Apple App Store). Оператор на обработката е Град Скопје. Обработката се врши во согласност со Законот за заштита на личните податоци и начелата на Општата регулатива за заштита на податоци (GDPR).',
           'Со користење на апликацијата (преку прелистувач, преку Google Play или App Store) потврдувате дека сте ја прочитале оваа политика. Ако не се согласувате, може да ја користите апликацијата анонимно или да престанете со користење.',
         ] },
         { h: 'Платформи и дистрибуција', p: [
-          'EkoSkopje е достапна како веб-aplikacija во интернет-прелистувач и како мобилна апликација за Android (Google Play Store) и iOS (Apple App Store), изградена со Capacitor (веб-содржина во заштитена мобилна обвивка).',
+          'Еко Скопје е достапна како веб-aplikacija во интернет-прелистувач и како мобилна апликација за Android (Google Play Store) и iOS (Apple App Store), изградена со Capacitor (веб-содржина во заштитена мобилна обвивка).',
           'Идентификатор на пакетот (bundle ID): mk.gov.skopje.ekoskopje. Оваа политика важи за сите верзии — веб, Android и iOS — освен ако е изрично наведено поинаку.',
           'Инсталирање или користење преку продавница за апликации значи дека дополнително важат и условите на Google Play / Apple App Store и на производителот на вашиот уред.',
         ] },
@@ -67,7 +67,7 @@ export const legalContent = {
           'Не продаваме, не изнајмувааме и не споделуваме лични податоци за маркетинг или рекламно таргетирање на трети страни.',
         ] },
         { h: 'Без реклами и следење', p: [
-          'EkoSkopje не прикажува реклами и не користи идентификатори за следење низ апликации или веб-страници од други компании (нема персонализирани реклами, нема App Tracking Transparency за маркетинг).',
+          'Еко Скопје не прикажува реклами и не користи идентификатори за следење низ апликации или веб-страници од други компании (нема персонализирани реклами, нема App Tracking Transparency за маркетинг).',
           'Google Firebase се користи исклучиво за техничко работење и испорака на push известувања, не за рекламни мрежи.',
           'Emails за ресетирање на лозинка се сервисни (transactional) пораки — не промоционални — и се праќаат само по ваше барање.',
         ] },
@@ -94,18 +94,18 @@ export const legalContent = {
       title: 'Услови за користење',
       sections: [
         { h: 'Прифаќање на условите', p: [
-          'Со користење на апликацијата „EkoSkopje“ (преку веб, Google Play или App Store) се согласувате со овие Услови за користење. Ако не се согласувате, ве молиме не ја користете апликацијата.',
+          'Со користење на апликацијата „Еко Скопје“ (преку веб, Google Play или App Store) се согласувате со овие Услови за користење. Ако не се согласувате, ве молиме не ја користете апликацијата.',
         ] },
         { h: 'Намена на услугата', p: [
-          'EkoSkopje е граѓанска платформа за пријавување еколошки проблеми (диви депонии, контејнери, загадување) и следење на квалитетот на воздухот на подрачјето на Град Скопје.',
+          'Еко Скопје е граѓанска платформа за пријавување еколошки проблеми (диви депонии, контејнери, загадување) и следење на квалитетот на воздухот на подрачјето на Град Скопје.',
         ] },
         { h: 'Платформи и достапност', p: [
-          'Услугата се користи преку веб-прелистувач или преку официјалната мобилна апликација EkoSkopje на Google Play Store и Apple App Store. Функционалноста може да се разликува по платформа и верзија на оперативен систем.',
+          'Услугата се користи преку веб-прелистувач или преку официјалната мобилна апликација Еко Скопје на Google Play Store и Apple App Store. Функционалноста може да се разликува по платформа и верзија на оперативен систем.',
           'Потребна е активна интернет-врска. Локацијата, камерата и известувањата се опционални, но се препорачани за полна функционалност.',
         ] },
         { h: 'Услови на продавниците за апликации', p: [
           'При преземање преку Google Play Store или Apple App Store дополнително важат условите и политиките на Google LLC, Apple Inc. и на продавницата во вашата земја.',
-          'EkoSkopje е бесплатна граѓанска услуга; евентуални надоместоци или наплата преку продавницата се регулираат само таму.',
+          'Еко Скопје е бесплатна граѓанска услуга; евентуални надоместоци или наплата преку продавницата се регулираат само таму.',
         ] },
         { h: 'Обврски на корисникот', p: [
           'Пријавите мора да бидат вистинити и добронамерни. Забрането е поднесување лажни, навредливи, заведувачки или злонамерни пријави.',
@@ -159,11 +159,11 @@ export const legalContent = {
       title: 'Privacy Policy',
       sections: [
         { h: 'Introduction', p: [
-          'This Privacy Policy explains how the “EkoSkopje” app collects, uses, stores and protects your personal data — on the web, on Android (Google Play Store) and on iOS (Apple App Store). The data controller is the City of Skopje. Processing is carried out in accordance with the Law on Personal Data Protection and the principles of the General Data Protection Regulation (GDPR).',
+          'This Privacy Policy explains how the “Еко Скопје” app collects, uses, stores and protects your personal data — on the web, on Android (Google Play Store) and on iOS (Apple App Store). The data controller is the City of Skopje. Processing is carried out in accordance with the Law on Personal Data Protection and the principles of the General Data Protection Regulation (GDPR).',
           'By using the app (via browser, Google Play or App Store) you confirm you have read this policy. If you do not agree, you may use the app anonymously or stop using it.',
         ] },
         { h: 'Platforms and distribution', p: [
-          'EkoSkopje is available as a web app in a browser and as a native mobile app for Android (Google Play Store) and iOS (Apple App Store), built with Capacitor.',
+          'Еко Скопје is available as a web app in a browser and as a native mobile app for Android (Google Play Store) and iOS (Apple App Store), built with Capacitor.',
           'Bundle ID: mk.gov.skopje.ekoskopje. This policy applies to all versions — web, Android and iOS — unless stated otherwise.',
           'Installing or using the app via an app store also means Google Play / Apple App Store terms and your device manufacturer terms apply additionally.',
         ] },
@@ -211,7 +211,7 @@ export const legalContent = {
           'We do not sell, rent or share personal data with third parties for marketing or ad targeting.',
         ] },
         { h: 'No ads or tracking', p: [
-          'EkoSkopje shows no ads and does not use cross-app or cross-site tracking identifiers for marketing (no personalized ads, no App Tracking Transparency for marketing).',
+          'Еко Скопје shows no ads and does not use cross-app or cross-site tracking identifiers for marketing (no personalized ads, no App Tracking Transparency for marketing).',
           'Google Firebase is used only for technical operation and push delivery, not ad networks.',
           'Password-reset emails are service (transactional) messages — not promotional — and are sent only at your request.',
         ] },
@@ -238,18 +238,18 @@ export const legalContent = {
       title: 'Terms of Service',
       sections: [
         { h: 'Acceptance of terms', p: [
-          'By using the “EkoSkopje” app you agree to these Terms of Service. If you do not agree, please do not use the app.',
+          'By using the “Еко Скопје” app you agree to these Terms of Service. If you do not agree, please do not use the app.',
         ] },
         { h: 'Purpose of the service', p: [
-          'EkoSkopje is a civic platform for reporting environmental issues (illegal dumping, containers, pollution) and monitoring air quality in the City of Skopje.',
+          'Еко Скопје is a civic platform for reporting environmental issues (illegal dumping, containers, pollution) and monitoring air quality in the City of Skopje.',
         ] },
         { h: 'Platforms and availability', p: [
-          'The service is used via a web browser or the official EkoSkopje mobile app on Google Play and Apple App Store. Features may vary by platform and OS version.',
+          'The service is used via a web browser or the official Еко Скопје mobile app on Google Play and Apple App Store. Features may vary by platform and OS version.',
           'An active internet connection is required. Location, camera and notifications are optional but recommended for full functionality.',
         ] },
         { h: 'App store terms', p: [
           'When downloading via Google Play or Apple App Store, the terms and policies of Google LLC, Apple Inc. and your regional store also apply.',
-          'EkoSkopje is a free civic service; any charges via the store are governed only there.',
+          'Еко Скопје is a free civic service; any charges via the store are governed only there.',
         ] },
         { h: 'User obligations', p: [
           'Reports must be truthful and in good faith. Submitting false, offensive, misleading or malicious reports is prohibited.',
@@ -303,11 +303,11 @@ export const legalContent = {
       title: 'Politika e privatësisë',
       sections: [
         { h: 'Hyrje', p: [
-          'Kjo Politikë e privatësisë shpjegon si aplikacioni “EkoSkopje” i mbledh, përdor, ruan dhe mbron të dhënat tuaja personale — në web, Android (Google Play Store) dhe iOS (Apple App Store). Kontrolluesi i të dhënave është Qyteti i Shkupit. Përpunimi kryhet në përputhje me Ligjin për mbrojtjen e të dhënave personale dhe parimet e Rregullores së Përgjithshme për Mbrojtjen e të Dhënave (GDPR).',
+          'Kjo Politikë e privatësisë shpjegon si aplikacioni “Еко Скопје” i mbledh, përdor, ruan dhe mbron të dhënat tuaja personale — në web, Android (Google Play Store) dhe iOS (Apple App Store). Kontrolluesi i të dhënave është Qyteti i Shkupit. Përpunimi kryhet në përputhje me Ligjin për mbrojtjen e të dhënave personale dhe parimet e Rregullores së Përgjithshme për Mbrojtjen e të Dhënave (GDPR).',
           'Duke përdorur aplikacionin, konfirmoni se e keni lexuar këtë politikë. Nëse nuk pajtoheni, mund ta përdorni aplikacionin në mënyrë anonime ose të ndaloni përdorimin.',
         ] },
         { h: 'Platformat dhe shpërndarja', p: [
-          'EkoSkopje është e disponueshme si aplikacion web në shfletues dhe si aplikacion mobil native për Android (Google Play Store) dhe iOS (Apple App Store), e ndërtuar me Capacitor.',
+          'Еко Скопје është e disponueshme si aplikacion web në shfletues dhe si aplikacion mobil native për Android (Google Play Store) dhe iOS (Apple App Store), e ndërtuar me Capacitor.',
           'Bundle ID: mk.gov.skopje.ekoskopje. Kjo politikë vlen për të gjitha versionet — web, Android dhe iOS — përveç nëse thuhet ndryshe.',
           'Instalimi përmes dyqanit të aplikacioneve nënkupton gjithashtu kushtet e Google Play / Apple App Store.',
         ] },
@@ -354,7 +354,7 @@ export const legalContent = {
           'Nuk shesim, nuk japim me qira dhe nuk ndajmë të dhëna personale për marketing ose reklama të synuara.',
         ] },
         { h: 'Pa reklama dhe pa ndjekje', p: [
-          'EkoSkopje nuk shfaq reklama dhe nuk përdor identifikues ndjekjeje ndër-aplikacionesh për marketing.',
+          'Еко Скопје nuk shfaq reklama dhe nuk përdor identifikues ndjekjeje ndër-aplikacionesh për marketing.',
           'Google Firebase përdoret vetëm për funksionim teknik dhe njoftime push, jo për rrjete reklamash.',
           'Email-et për rivendosje fjalëkalimi janë mesazhe shërbimi (transactional) — jo promocionale — dhe dërgohen vetëm me kërkesën tuaj.',
         ] },
@@ -381,18 +381,18 @@ export const legalContent = {
       title: 'Kushtet e përdorimit',
       sections: [
         { h: 'Pranimi i kushteve', p: [
-          'Duke përdorur aplikacionin “EkoSkopje” pajtoheni me këto Kushte të përdorimit. Nëse nuk pajtoheni, ju lutemi mos e përdorni aplikacionin.',
+          'Duke përdorur aplikacionin “Еко Скопје” pajtoheni me këto Kushte të përdorimit. Nëse nuk pajtoheni, ju lutemi mos e përdorni aplikacionin.',
         ] },
         { h: 'Qëllimi i shërbimit', p: [
-          'EkoSkopje është platformë qytetare për raportimin e problemeve mjedisore (deponi ilegale, kontejnerë, ndotje) dhe monitorimin e cilësisë së ajrit në Qytetin e Shkupit.',
+          'Еко Скопје është platformë qytetare për raportimin e problemeve mjedisore (deponi ilegale, kontejnerë, ndotje) dhe monitorimin e cilësisë së ajrit në Qytetin e Shkupit.',
         ] },
         { h: 'Platformat dhe disponueshmëria', p: [
-          'Shërbimi përdoret përmes shfletuesit web ose aplikacionit zyrtar mobil EkoSkopje në Google Play dhe App Store.',
+          'Shërbimi përdoret përmes shfletuesit web ose aplikacionit zyrtar mobil Еко Скопје në Google Play dhe App Store.',
           'Kërkohet lidhje aktive interneti. Vendndodhja, kamera dhe njoftimet janë opsionale por të rekomanduara.',
         ] },
         { h: 'Kushtet e dyqanit të aplikacioneve', p: [
           'Kur shkarkoni përmes Google Play ose App Store, vlejnë gjithashtu kushtet e Google LLC dhe Apple Inc.',
-          'EkoSkopje është shërbim qytetar falas.',
+          'Еко Скопје është shërbim qytetar falas.',
         ] },
         { h: 'Detyrimet e përdoruesit', p: [
           'Raportet duhet të jenë të vërteta dhe me qëllim të mirë. Ndalohet paraqitja e raporteve të rreme, fyese, mashtruese ose keqdashëse.',

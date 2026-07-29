@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { query } from '../db.js'
 import { extractClientPasswordHash, hashForStorage } from '../lib/clientPassword.js'
-import { requireAdmin } from '../middleware/requireAdmin.js'
+import { requireSuperAdmin } from '../middleware/requireAdmin.js'
 
 export const usersRouter = Router()
 
@@ -63,8 +63,8 @@ usersRouter.get('/', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// GET /api/users/community — листа на сите influencer/community корисници (само админ)
-usersRouter.get('/community', requireAdmin, async (req, res, next) => {
+// GET /api/users/community — листа на сите influencer/community корисници (само Супер Админ)
+usersRouter.get('/community', requireSuperAdmin, async (req, res, next) => {
   try {
     const { rows } = await query(
       `SELECT id, email, display_name, organization_name, instagram_handle, role, language, created_at
@@ -75,7 +75,7 @@ usersRouter.get('/community', requireAdmin, async (req, res, next) => {
 })
 
 // POST /api/users/community  { email, displayName, organizationName?, passwordHash?, language? }
-usersRouter.post('/community', requireAdmin, async (req, res, next) => {
+usersRouter.post('/community', requireSuperAdmin, async (req, res, next) => {
   try {
     const { email, displayName = null, organizationName = null, instagramHandle = null, language = 'mk' } = req.body
     const clientHash = extractClientPasswordHash(req.body)
@@ -120,8 +120,8 @@ usersRouter.post('/community', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// DELETE /api/users/community/:email — симни улога назад на обичен 'user' (само админ)
-usersRouter.delete('/community/:email', requireAdmin, async (req, res, next) => {
+// DELETE /api/users/community/:email — симни улога назад на обичен 'user' (само Супер Админ)
+usersRouter.delete('/community/:email', requireSuperAdmin, async (req, res, next) => {
   try {
     const email = req.params.email
     const { rows } = await query(

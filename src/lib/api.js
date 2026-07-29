@@ -1,4 +1,4 @@
-// Клиент за EkoSkopje backend API-то (заедничко за веб + мобилни клиенти).
+// Клиент за Еко Скопје backend API-то (заедничко за веб + мобилни клиенти).
 // Веб prod (Vercel): релативни /api патеки. Capacitor: мора апсолутен URL.
 import { Capacitor } from '@capacitor/core'
 import { hashPasswordForTransit } from './password'
@@ -18,12 +18,20 @@ const API_URL = resolveApiUrl()
 // Backend-от го враќа при успешна админ најава; се памети локално по сесија.
 // VITE_ADMIN_TOKEN останува како fallback за локален развој.
 const ADMIN_TOKEN_KEY = 'ekoskopje.adminToken'
+const ADMIN_EMAIL_KEY = 'ekoskopje.adminEmail'
 
 export function setStoredAdminToken(token) {
   try {
     if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token)
     else localStorage.removeItem(ADMIN_TOKEN_KEY)
   } catch { /* localStorage недостапен — тивко игнорирај */ }
+}
+
+export function setStoredAdminEmail(email) {
+  try {
+    if (email) localStorage.setItem(ADMIN_EMAIL_KEY, String(email).trim().toLowerCase())
+    else localStorage.removeItem(ADMIN_EMAIL_KEY)
+  } catch { /* ignore */ }
 }
 
 function getAdminToken() {
@@ -34,8 +42,25 @@ function getAdminToken() {
   return (import.meta.env.VITE_ADMIN_TOKEN || '').trim()
 }
 
+function getAdminEmail() {
+  try {
+    return (localStorage.getItem(ADMIN_EMAIL_KEY) || '').trim()
+  } catch {
+    return ''
+  }
+}
+
 export function getStoredAdminToken() {
   return getAdminToken()
+}
+
+function adminHeaders(extra = {}) {
+  const headers = { ...extra }
+  const token = getAdminToken()
+  if (token) headers['X-Admin-Token'] = token
+  const email = getAdminEmail()
+  if (email) headers['X-Admin-Email'] = email
+  return headers
 }
 
 // Го брише кешираниот ETag за условно GET — по мутации (пр. статус) да се врати свеж одговор.
@@ -70,8 +95,8 @@ function dedupeGet(key, fn) {
 }
 
 // GET со условно барање: праќа If-None-Match; при 304 враќа NOT_MODIFIED.
-async function conditionalGet(url, signal, errorMsg) {
-  const headers = {}
+async function conditionalGet(url, signal, errorMsg, extraHeaders = {}) {
+  const headers = { ...extraHeaders }
   const prev = etagStore.get(url)
   if (prev) headers['If-None-Match'] = prev
   const res = await fetch(url, { headers, signal })
@@ -138,12 +163,9 @@ export function clearReportsEtag() {
 }
 
 export async function updateReportStatus(id, status, extra = {}, signal) {
-  const headers = { 'Content-Type': 'application/json' }
-  const adminToken = getAdminToken()
-  if (adminToken) headers['X-Admin-Token'] = adminToken
   const res = await fetch(`${API_URL}/api/reports/${id}/status`, {
     method: 'PATCH',
-    headers,
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ status, ...extra }),
     signal,
   })
@@ -154,12 +176,9 @@ export async function updateReportStatus(id, status, extra = {}, signal) {
 }
 
 export async function deleteReportApi(id, signal) {
-  const headers = {}
-  const adminToken = getAdminToken()
-  if (adminToken) headers['X-Admin-Token'] = adminToken
   const res = await fetch(`${API_URL}/api/reports/${id}`, {
     method: 'DELETE',
-    headers,
+    headers: adminHeaders(),
     signal,
   })
   const data = await res.json().catch(() => ({}))
@@ -206,7 +225,12 @@ export function clearEventsEtags(email) {
 }
 
 export async function fetchEvents(email, signal) {
-  return conditionalGet(eventsApiUrl(email), signal, 'Вчитувањето на настаните не успеа.')
+  return conditionalGet(
+    eventsApiUrl(email),
+    signal,
+    'Вчитувањето на настаните не успеа.',
+    adminHeaders(),
+  )
 }
 
 export async function createEventApi(payload, signal) {
@@ -243,7 +267,7 @@ export async function leaveEventApi(id, email, signal) {
 export async function fetchEventSignupsApi(eventId, email, signal) {
   const res = await fetch(
     `${API_URL}/api/events/${eventId}/signups?email=${encodeURIComponent(email)}`,
-    { signal, cache: 'no-store' },
+    { headers: adminHeaders(), signal, cache: 'no-store' },
   )
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Вчитувањето на пријавените не успеа.')
@@ -252,12 +276,9 @@ export async function fetchEventSignupsApi(eventId, email, signal) {
 
 // Организатор праќа рачен потсетник до сите пријавени (in-app + push).
 export async function sendEventReminderApi(id, { email, message }, signal) {
-  const headers = { 'Content-Type': 'application/json' }
-  const adminToken = getAdminToken()
-  if (adminToken) headers['X-Admin-Token'] = adminToken
   const res = await fetch(`${API_URL}/api/events/${id}/remind`, {
     method: 'POST',
-    headers,
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ email, message }),
     signal,
   })
@@ -267,12 +288,26 @@ export async function sendEventReminderApi(id, { email, message }, signal) {
   return data
 }
 
+// Супер Админ: одобри / одбиј community настан.
+export async function reviewEventApi(id, { status, reason = null }, signal) {
+  const res = await fetch(`${API_URL}/api/events/${id}/approval`, {
+    method: 'PATCH',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ status, reason }),
+    signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Одобрувањето на настанот не успеа.')
+  clearEventsEtags()
+  return data
+}
+
 // Откажување/бришење на цел настан (организатор или админ) — исчезнува за сите.
 export async function deleteEventApi(id, email, signal) {
   const qs = email ? `?email=${encodeURIComponent(email)}` : ''
   const res = await fetch(`${API_URL}/api/events/${id}${qs}`, {
     method: 'DELETE',
-    headers: getAdminToken() ? { 'X-Admin-Token': getAdminToken() } : {},
+    headers: adminHeaders(),
     signal,
   })
   if (!res.ok) throw new Error('Откажувањето на настанот не успеа.')
@@ -414,7 +449,7 @@ export async function fetchContainerPoints(signal) {
 
 // ---- Push токени на уреди ----
 
-// Го зачувува FCM токенот на уредот на backend (по корисник/уред).
+// Го зачувува FCM токенот на уредот на backend (по корисник/уред, вкл. админ).
 export async function registerDeviceTokenApi({ token, email, deviceId, platform }, signal) {
   const res = await fetch(`${API_URL}/api/devices/token`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -424,6 +459,19 @@ export async function registerDeviceTokenApi({ token, email, deviceId, platform 
   return res.json()
 }
 
+// Отповикува FCM токен (пр. при одјава) — спречува push до погрешна сметка.
+export async function unregisterDeviceTokenApi(token, signal) {
+  if (!token) return { ok: true }
+  const res = await fetch(`${API_URL}/api/devices/token`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+    signal,
+  })
+  if (!res.ok) throw new Error('Отповикувањето на токенот не успеа.')
+  return res.json().catch(() => ({ ok: true }))
+}
+
 // ---- Автентикација (регистрација / најава со лозинка) ----
 
 // Регистрира нов корисник со лозинка. Враќа {id,email,role,displayName,language}.
@@ -431,7 +479,7 @@ export async function registerDeviceTokenApi({ token, email, deviceId, platform 
 export async function fetchCommunityUsersApi(signal) {
   return dedupeGet('community-users', async () => {
     const res = await fetch(`${API_URL}/api/users/community`, {
-      headers: getAdminToken() ? { 'X-Admin-Token': getAdminToken() } : {},
+      headers: adminHeaders(),
       signal,
     })
     const data = await res.json().catch(() => ({}))
@@ -440,15 +488,13 @@ export async function fetchCommunityUsersApi(signal) {
   })
 }
 
-// Админ: додади/унапреди influencer/community корисник (улога 'organization').
+// Супер Админ: додади/унапреди influencer/community корисник (улога 'organization').
 export async function addCommunityUserApi({ email, displayName, organizationName, instagramHandle, password, language }, signal) {
-  const headers = { 'Content-Type': 'application/json' }
-  const adminToken = getAdminToken()
-  if (adminToken) headers['X-Admin-Token'] = adminToken
   const payload = { email, displayName, organizationName, instagramHandle, language }
   if (password) payload.passwordHash = await hashPasswordForTransit(password)
   const res = await fetch(`${API_URL}/api/users/community`, {
-    method: 'POST', headers,
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload), signal,
   })
   const data = await res.json().catch(() => ({}))
@@ -456,11 +502,11 @@ export async function addCommunityUserApi({ email, displayName, organizationName
   return data
 }
 
-// Админ: симни community корисник назад на обичен корисник.
+// Супер Админ: симни community корисник назад на обичен корисник.
 export async function removeCommunityUserApi(email, signal) {
   const res = await fetch(`${API_URL}/api/users/community/${encodeURIComponent(email)}`, {
     method: 'DELETE',
-    headers: getAdminToken() ? { 'X-Admin-Token': getAdminToken() } : {},
+    headers: adminHeaders(),
     signal,
   })
   const data = await res.json().catch(() => ({}))

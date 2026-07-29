@@ -1,5 +1,5 @@
 -- ==========================================================================
--- EkoSkopje — PostgreSQL шема
+-- Еко Скопје — PostgreSQL шема
 -- --------------------------------------------------------------------------
 -- Една база за СИТЕ клиенти: веб апликација + Android + iOS.
 -- Сите тие ја користат истата REST/JSON backend услуга, која се поврзува на
@@ -24,7 +24,14 @@ CREATE EXTENSION IF NOT EXISTS "citext";    -- email без разлика на 
 -- ----------------------------------------------------------------------------
 -- ENUM типови
 -- ----------------------------------------------------------------------------
-CREATE TYPE user_role        AS ENUM ('user', 'organization', 'admin');
+CREATE TYPE user_role        AS ENUM (
+  'user',
+  'organization',
+  'admin',                 -- Супер Админ
+  'admin_inspection',      -- Комунална Инспекција (диви депонии)
+  'admin_environment',     -- Животна Средина (воздух / миризби)
+  'admin_hygiene'          -- Комунална Хигиена (контејнери)
+);
 CREATE TYPE report_type      AS ENUM ('smell', 'waste', 'container');
 CREATE TYPE report_status    AS ENUM ('pending', 'in_progress', 'resolved');
 CREATE TYPE report_visibility AS ENUM ('admin', 'public');
@@ -218,7 +225,11 @@ CREATE TABLE events (
   event_time         TIME,                            -- час на одржување (опционално)
   location           TEXT,
   seats              INTEGER NOT NULL DEFAULT 0,
-  status             TEXT NOT NULL DEFAULT 'open',   -- 'open' | 'few_left' | 'closed'
+  status             TEXT NOT NULL DEFAULT 'open',   -- 'open' | 'few_left' | 'closed' (места)
+  -- Одобрување од Супер Админ пред јавна видливост
+  approval_status    TEXT NOT NULL DEFAULT 'pending'
+                       CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+  rejection_reason   TEXT,
   organizer_id       UUID REFERENCES users(id) ON DELETE SET NULL,
   organizer_name     TEXT,
   reminder_message   TEXT,                            -- порака за рачен потсетник од организаторот
@@ -232,6 +243,7 @@ CREATE TRIGGER trg_events_updated
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE INDEX idx_events_date ON events(event_date ASC);
+CREATE INDEX idx_events_approval_status ON events(approval_status);
 
 -- Пријави на граѓани за настани (формата собира име/е-пошта/напомена)
 CREATE TABLE event_signups (
@@ -265,8 +277,8 @@ CREATE INDEX idx_notifications_created ON notifications(created_at DESC);
 
 -- ============================================================================
 -- ТОКЕНИ НА УРЕДИ (за push нотификации преку FCM)
--- Секој телефон што дозволил push има токен. Врзан е за корисник (ако е најавен)
--- или за анониминот уред (device_id). Админ уреди не се регистрираат.
+-- Секој телефон што дозволил push има токен. Врзан е за корисник (ако е најавен,
+-- вклучително админ улоги) или за анонимниот уред (device_id).
 -- ============================================================================
 CREATE TABLE device_tokens (
   token        TEXT PRIMARY KEY,

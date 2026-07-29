@@ -12,6 +12,7 @@ import { useApp } from '../context/AppContext'
 import { useGeolocation } from '../hooks/useGeolocation'
 import { LOGO_SRC } from '../lib/brand'
 import { isValidReportType } from '../lib/reportTypes'
+import { isAdminRole } from '../lib/roles'
 
 const MAX_PHOTOS = 6
 
@@ -371,7 +372,7 @@ function HeroSection({ t }) {
         </div>
         <img
           src={LOGO_SRC}
-          alt='EkoSkopje'
+          alt='Еко Скопје'
           className='relative h-20 w-auto shrink-0 rounded-2xl bg-white px-4 py-3 object-contain sm:h-32 sm:px-5 sm:py-4'
         />
       </div>
@@ -405,7 +406,7 @@ export function HomePage() {
     }
   }, [searchParams])
 
-  if (auth.role === 'admin') return <Navigate to='/admin-panel' replace />
+  if (isAdminRole(auth.role)) return <Navigate to='/admin-panel' replace />
 
   const handleDone = useCallback(() => setSubmitted(true), [])
   const navAir = useCallback(() => navigate('/air'), [navigate])

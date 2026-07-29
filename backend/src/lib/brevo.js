@@ -9,22 +9,22 @@ export function isEmailConfigured() {
 // Plain transactional copy — без marketing стил (Gmail Promotions таб).
 const RESET_COPY = {
   mk: {
-    subject: 'Барање за ресетирање на лозинка — EkoSkopje',
-    intro: 'Применивме барање за нова лозинка за вашата EkoSkopje сметка.',
+    subject: 'Барање за ресетирање на лозинка — Еко Скопје',
+    intro: 'Применивме барање за нова лозинка за вашата Еко Скопје сметка.',
     linkLabel: 'Отворете ја следната адреса за да зададете нова лозинка:',
     expiry: 'Линкот важи 1 час.',
     ignore: 'Ако не сте го побарале ова, игнорирајте ја пораката.',
   },
   en: {
-    subject: 'Password reset request — EkoSkopje',
-    intro: 'We received a request to reset the password for your EkoSkopje account.',
+    subject: 'Password reset request — Еко Скопје',
+    intro: 'We received a request to reset the password for your Еко Скопје account.',
     linkLabel: 'Open this link to set a new password:',
     expiry: 'This link expires in 1 hour.',
     ignore: 'If you did not request this, you can ignore this email.',
   },
   sq: {
-    subject: 'Kërkesë për rivendosje fjalëkalimi — EkoSkopje',
-    intro: 'Kemi marrë një kërkesë për të rivendosur fjalëkalimin e llogarisë suaj EkoSkopje.',
+    subject: 'Kërkesë për rivendosje fjalëkalimi — Еко Скопје',
+    intro: 'Kemi marrë një kërkesë për të rivendosur fjalëkalimin e llogarisë suaj Еко Скопје.',
     linkLabel: 'Hapni këtë lidhje për të vendosur fjalëkalim të ri:',
     expiry: 'Lidhja vlen 1 orë.',
     ignore: 'Nëse nuk e keni kërkuar këtë, injorojeni email-in.',
@@ -34,7 +34,7 @@ const RESET_COPY = {
 function resetEmailText({ resetUrl, language }) {
   const copy = RESET_COPY[language] || RESET_COPY.mk
   return [
-    'EkoSkopje',
+    'Еко Скопје',
     '',
     copy.intro,
     '',
@@ -45,7 +45,7 @@ function resetEmailText({ resetUrl, language }) {
     '',
     copy.ignore,
     '',
-    '— EkoSkopje',
+    '— Еко Скопје',
   ].join('\n')
 }
 

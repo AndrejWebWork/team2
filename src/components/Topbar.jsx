@@ -52,7 +52,14 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
     setOpenMenu(false)
   }
 
-  const roleLabel = role === 'admin' ? t('role.adminShort') : role === 'organization' ? t('role.organization') : t('role.user')
+  const roleLabel = (() => {
+    if (role === 'organization') return t('role.organization')
+    if (role === 'admin') return t('role.adminShort')
+    if (role === 'admin_inspection') return t('role.adminInspectionShort')
+    if (role === 'admin_environment') return t('role.adminEnvironmentShort')
+    if (role === 'admin_hygiene') return t('role.adminHygieneShort')
+    return t('role.user')
+  })()
 
   return (
     <>

@@ -31,7 +31,7 @@ export const config = {
   // API key од Brevo → SMTP & API → API keys. Sender мора да е верификуван во Brevo.
   brevoApiKey: (process.env.BREVO_API_KEY || '').trim(),
   brevoSenderEmail: (process.env.BREVO_SENDER_EMAIL || '').trim(),
-  brevoSenderName: (process.env.BREVO_SENDER_NAME || 'EkoSkopje').trim(),
+  brevoSenderName: (process.env.BREVO_SENDER_NAME || 'Еко Скопје').trim(),
   // Јавна адреса на frontend-от (за reset линк). Во prod: https://team2-zeta.vercel.app
   appPublicUrl: (process.env.APP_PUBLIC_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:5173').replace(/\/$/, ''),
 }

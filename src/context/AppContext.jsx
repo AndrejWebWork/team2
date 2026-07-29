@@ -23,8 +23,10 @@ import {
   persistReportWithPhotos,
   registerApi,
   registerDeviceTokenApi,
+  unregisterDeviceTokenApi,
   saveUserLanguage,
   setStoredAdminToken,
+  setStoredAdminEmail,
   serverToContainer,
   serverToSmell,
   serverToWaste,
@@ -34,6 +36,7 @@ import {
   getStoredAdminToken,
 } from '../lib/api'
 import { getDeviceId } from '../lib/device'
+import { isAdminRole } from '../lib/roles'
 import { isMyReport, reportsIdentity } from '../lib/reportOwnership'
 import { resolveLocationInfo, findNearestContainerPoint } from '../lib/geo'
 import { fetchAllAirSensors, findNearestSensor } from '../lib/smellSensor'
@@ -58,7 +61,10 @@ function readStoredAuth() {
     const data = raw ? JSON.parse(raw) : null
     if (data && data.email && !data.isAnonymous) {
       // Врати го админ токенот при рестарт — потребен за PATCH статус без повторна најава.
-      if (data.role === 'admin' && data.adminToken) setStoredAdminToken(data.adminToken)
+      if (isAdminRole(data.role) && data.adminToken) {
+        setStoredAdminToken(data.adminToken)
+        setStoredAdminEmail(data.email)
+      }
       return {
         isAuthenticated: true,
         role: data.role || 'user',
@@ -378,7 +384,7 @@ export function AppProvider({ children }) {
     let syncInFlight = false
 
     function notifyAnonymousReportResolved(report) {
-      if (auth.role === 'admin' || email) return
+      if (isAdminRole(auth.role) || email) return
       const key = String(report.id)
       if (notifiedResolvedRef.current.has(key)) return
       notifiedResolvedRef.current.add(key)
@@ -401,7 +407,7 @@ export function AppProvider({ children }) {
     }
 
     function detectAnonymousResolved(prevWaste, nextWaste, prevContainers, nextContainers) {
-      if (auth.role === 'admin' || email) return
+      if (isAdminRole(auth.role) || email) return
       for (const r of nextWaste) {
         if (!isMyReport(r, auth, DEVICE_ID)) continue
         const prev = prevWaste.find((p) => p.id === r.id)
@@ -470,7 +476,7 @@ export function AppProvider({ children }) {
       }
     }
 
-    const pollMs = auth.role === 'admin' ? ADMIN_POLL_INTERVAL_MS : POLL_INTERVAL_MS
+    const pollMs = isAdminRole(auth.role) ? ADMIN_POLL_INTERVAL_MS : POLL_INTERVAL_MS
 
     const scheduleNext = () => {
       if (cancelled) return
@@ -517,6 +523,8 @@ export function AppProvider({ children }) {
     clearAllConditionalEtags()
     setRefreshKey((k) => k + 1)
   }
+  const refreshDataRef = useRef(refreshData)
+  refreshDataRef.current = refreshData
 
   // Само настани — побрз refresh без да ги повторува reports/leaderboard.
   const refreshEvents = useCallback(async () => {
@@ -552,11 +560,33 @@ export function AppProvider({ children }) {
     }
   }, [reportsIdentityKey])
 
+  const pushTokenRef = useRef(null)
+  const pushInitRef = useRef(false)
+  const authEmailRef = useRef(auth.email)
+  const authRoleRef = useRef(auth.role)
+  authEmailRef.current = auth.email
+  authRoleRef.current = auth.role
+
   const logout = useCallback(() => {
+    const token = pushTokenRef.current
     setStoredAdminToken('')
+    setStoredAdminEmail('')
     setPointsLedger({})
     setPointsEvents([])
     setAuth(ANON_AUTH)
+    // Одјава: отстрани admin врска, па врзи го токенот како анонимен уред.
+    if (token) {
+      unregisterDeviceTokenApi(token)
+        .catch(() => {})
+        .finally(() => {
+          registerDeviceTokenApi({
+            token,
+            email: null,
+            deviceId: DEVICE_ID,
+            platform: Capacitor.getPlatform(),
+          }).catch(() => {})
+        })
+    }
   }, [])
 
   // Анонимните известувања се чуваат локално по уред (за да преживеат освежување).
@@ -564,14 +594,9 @@ export function AppProvider({ children }) {
     if (!email) writeCachedNotifications(DEVICE_ID, notifications)
   }, [notifications, email])
 
-  // Push (FCM) регистрација — само на телефон и само за не-админ корисници.
-  // Токенот се врзува за корисникот (ако е најавен) или за анонимниот уред.
-  const pushTokenRef = useRef(null)
-  const pushInitRef = useRef(false)
-  const authEmailRef = useRef(auth.email)
-  authEmailRef.current = auth.email
+  // Push (FCM) регистрација на телефон — за граѓани И админи (нови пријави).
   useEffect(() => {
-    if (auth.role === 'admin' || pushInitRef.current) return
+    if (pushInitRef.current) return
     pushInitRef.current = true
     registerPushNotifications({
       onToken: (token) => {
@@ -586,17 +611,44 @@ export function AppProvider({ children }) {
       onReceived: (n) => {
         const title = n?.title || n?.notification?.title || ''
         const body = n?.body || n?.notification?.body || ''
-        if (title) {
-          setNotifications((prev) => [{ id: `push-${Date.now()}`, title, body, group: 'Денес', read: false, createdAt: new Date().toISOString() }, ...prev])
+        const data = n?.data || {}
+        if (!title) return
+        setNotifications((prev) => [{
+          id: `push-${Date.now()}`,
+          title,
+          body,
+          group: 'Денес',
+          read: false,
+          createdAt: new Date().toISOString(),
+        }, ...prev])
+        // Foreground: системски banner и за админи (инаку FCM само ја полни листата).
+        if (data.type === 'report_created' || isAdminRole(authRoleRef.current)) {
+          scheduleLocalNotification({ title, body }).catch(() => {})
+        }
+        // Веднаш освежи пријави/известувања за админ панелот.
+        if (data.type === 'report_created') {
+          try { refreshDataRef.current() } catch { /* ignore */ }
         }
       },
+      onAction: (data) => {
+        if (data?.type !== 'report_created') return
+        const path = isAdminRole(authRoleRef.current) ? '/admin-panel' : '/home'
+        try { sessionStorage.setItem('ekoskopje.pushNav', path) } catch { /* ignore */ }
+        window.dispatchEvent(new CustomEvent('ekoskopje:push-nav', { detail: path }))
+        try { refreshDataRef.current() } catch { /* ignore */ }
+      },
     })
-  }, [auth.role])
+  }, [])
 
   // Кога корисникот ќе се најави/одјави, повторно врзи го токенот за точниот идентитет.
   useEffect(() => {
-    if (auth.role === 'admin' || !pushTokenRef.current) return
-    registerDeviceTokenApi({ token: pushTokenRef.current, email: auth.email || null, deviceId: DEVICE_ID, platform: Capacitor.getPlatform() }).catch(() => {})
+    if (!pushTokenRef.current) return
+    registerDeviceTokenApi({
+      token: pushTokenRef.current,
+      email: auth.email || null,
+      deviceId: DEVICE_ID,
+      platform: Capacitor.getPlatform(),
+    }).catch(() => {})
   }, [auth.email, auth.role])
 
   // Ја чуваме сесијата локално за да преживее рестарт (анонимен = избришано).
@@ -604,9 +656,10 @@ export function AppProvider({ children }) {
     try {
       if (auth.email && !auth.isAnonymous) {
         const payload = { role: auth.role, email: auth.email, displayName: auth.displayName || '', userId: auth.userId || '', isAnonymous: false }
-        if (auth.role === 'admin') {
+        if (isAdminRole(auth.role)) {
           const token = getStoredAdminToken()
           if (token) payload.adminToken = token
+          setStoredAdminEmail(auth.email)
         }
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload))
       } else {
@@ -614,7 +667,10 @@ export function AppProvider({ children }) {
       }
     } catch { /* localStorage недостапен — тивко игнорирај */ }
     // Одјава/не-админ сесија → админ токенот не смее да остане на уредот.
-    if (auth.role !== 'admin') setStoredAdminToken('')
+    if (!isAdminRole(auth.role)) {
+      setStoredAdminToken('')
+      setStoredAdminEmail('')
+    }
   }, [auth.email, auth.role, auth.displayName, auth.isAnonymous])
 
   // Го применуваме избраниот јазик на <html lang> (пристапност + SEO).
@@ -707,12 +763,12 @@ export function AppProvider({ children }) {
     const optimistic = { id: `local-${Date.now()}`, title, body, group: 'Денес', read: false, createdAt: new Date().toISOString() }
     setNotifications((prev) => [optimistic, ...prev])
     if (email) createNotificationApi({ title, body, email }).catch(() => {})
-    if (auth.role !== 'admin') scheduleLocalNotification({ title, body })
+    if (!isAdminRole(auth.role)) scheduleLocalNotification({ title, body })
   }
 
   // AQI > 100 → in-app известување (само ако notif_air е вклучено; без FCM/push).
   useEffect(() => {
-    if (auth.role === 'admin' || !notifAir) return undefined
+    if (isAdminRole(auth.role) || !notifAir) return undefined
 
     let cancelled = false
     let timer = null
@@ -964,8 +1020,10 @@ export function AppProvider({ children }) {
 
   async function login({ email: e, password }) {
     const user = await loginApi({ email: e, password })
-    // Админ токен за заштитените операции — backend го враќа само за админ.
+    // Админ токен за заштитените операции — backend го враќа само за админ улоги.
     setStoredAdminToken(user.adminToken || '')
+    if (isAdminRole(user.role)) setStoredAdminEmail(user.email || e)
+    else setStoredAdminEmail('')
     setAuth({
       isAuthenticated: true,
       role: user.role || 'user',

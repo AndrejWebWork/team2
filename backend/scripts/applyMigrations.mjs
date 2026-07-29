@@ -64,5 +64,17 @@ if (!(await colType('events', 'event_time'))) {
   console.log('011 already applied')
 }
 
+// 012 — admin roles + event approval
+if (!(await colType('events', 'approval_status'))) {
+  console.log('Applying 012_admin_roles_and_event_approval.sql ...')
+  await client.query(readFileSync(join(root, 'db/migrations/012_admin_roles_and_event_approval.sql'), 'utf8'))
+  console.log('  done')
+} else {
+  // Улогите може да недостасуваат иако колоната постои — примени enum дел повторно (идемпотентно).
+  console.log('012 column present — ensuring enum values ...')
+  await client.query(readFileSync(join(root, 'db/migrations/012_admin_roles_and_event_approval.sql'), 'utf8'))
+  console.log('012 already applied')
+}
+
 await client.end()
 console.log('All migrations up to date.')

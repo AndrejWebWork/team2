@@ -1,5 +1,5 @@
-﻿import { useLayoutEffect } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+﻿import { useEffect, useLayoutEffect } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CookieConsent } from './components/CookieConsent'
 import { Layout } from './components/Layout'
 import { useApp } from './context/AppContext'
@@ -30,10 +30,37 @@ function ScrollToTop() {
   return null
 }
 
+function PushNavListener() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    function go(path) {
+      if (typeof path === 'string' && path.startsWith('/')) navigate(path)
+    }
+    function onEvent(e) {
+      go(e.detail)
+    }
+    window.addEventListener('ekoskopje:push-nav', onEvent)
+    try {
+      const pending = sessionStorage.getItem('ekoskopje.pushNav')
+      if (pending) {
+        sessionStorage.removeItem('ekoskopje.pushNav')
+        go(pending)
+      }
+    } catch { /* ignore */ }
+    return () => window.removeEventListener('ekoskopje:push-nav', onEvent)
+  }, [navigate])
+  return null
+}
+
 function ProtectedLayout() {
   const { auth } = useApp()
   if (!auth.isAuthenticated) return <Navigate to='/auth-loading' replace />
-  return <Layout />
+  return (
+    <>
+      <PushNavListener />
+      <Layout />
+    </>
+  )
 }
 
 export default function App() {

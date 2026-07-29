@@ -129,7 +129,7 @@ export function buildReportClipboardContent(report, t, extras = {}) {
 
   const html = `<div style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a;max-width:640px">
 <h2 style="margin:0 0 8px;font-size:18px">${escapeHtml(typeLabel)} · ${escapeHtml(statusLabel)}</h2>
-<p style="margin:0 0 12px;font-size:13px;color:#64748b">EkoSkopje · ${mkDate(report.createdAt)}</p>
+<p style="margin:0 0 12px;font-size:13px;color:#64748b">Еко Скопје · ${mkDate(report.createdAt)}</p>
 ${photoHtml}
 <table style="border-collapse:collapse;width:100%">
 ${row(t('table.location'), escapeHtml(location))}
@@ -146,7 +146,7 @@ ${extraHtml}
 
   const plain = [
     `${typeLabel} · ${statusLabel}`,
-    `EkoSkopje · ${mkDate(report.createdAt)}`,
+    `Еко Скопје · ${mkDate(report.createdAt)}`,
     '',
     plainRow(t('table.location'), location),
     plainRow(t('admin.municipality'), municipality),

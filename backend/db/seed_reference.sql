@@ -33,7 +33,10 @@ INSERT INTO sensors (id, name, area, category, source, lat, lng, source_url) VAL
   ('WAQI-8108', 'Миладиновци', 'Миладиновци',  'referent', 'МЖСПП (WAQI)', 41.987456, 21.652478, 'https://air.moepp.gov.mk/')
 ON CONFLICT (id) DO NOTHING;
 
--- Администраторска сметка за Град Скопје (лозинката се поставува од backend со bcrypt hash)
+-- Администраторски сметки (лозинката се поставува од backend со bcrypt hash)
 INSERT INTO users (email, display_name, role, is_anonymous) VALUES
-  ('admin@ekoskopje.mk', 'Администратор', 'admin', FALSE)
+  ('admin@ekoskopje.mk', 'Супер Админ', 'admin', FALSE),
+  ('inspekcija@ekoskopje.mk', 'Комунална Инспекција', 'admin_inspection', FALSE),
+  ('sredina@ekoskopje.mk', 'Животна Средина', 'admin_environment', FALSE),
+  ('higiena@ekoskopje.mk', 'Комунална Хигиена', 'admin_hygiene', FALSE)
 ON CONFLICT (email) DO NOTHING;

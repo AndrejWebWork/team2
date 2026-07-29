@@ -1,6 +1,6 @@
 {
   "appId": "mk.gov.skopje.ekoskopje",
-  "appName": "EkoSkopje",
+  "appName": "Еко Скопје",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"

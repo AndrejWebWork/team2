@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button'
 import { usePagination } from '../hooks/usePagination'
 import { useApp } from '../context/AppContext'
 import { copyReportToClipboard } from '../lib/reportClipboard'
+import { canAccessReportType, isAdminRole, reportTypesForRole } from '../lib/roles'
 import { buildSmellClusterCounts, fetchAllAirSensors, resolveSmellSensor, smellUrgencyWithCluster } from '../lib/smellSensor'
 function mkDate(iso) {
   if (!iso) return '—'
@@ -351,21 +352,27 @@ export function AdminPanelPage() {
     [smellAlerts, airSensors],
   )
 
-  if (auth.role !== 'admin') return <Navigate to='/home' replace />
+  const allowedTypes = reportTypesForRole(auth.role)
 
-  // Merge all reports into unified list
+  // Merge all reports into unified list (филтрирани според улога)
   const allReports = useMemo(() => {
-    const waste = wasteReports.map((r) => ({ ...r, type: 'waste', status: r.status || 'pending' }))
-    const smell = smellAlerts.map((r) => ({ ...r, type: 'smell', status: 'pending', location: r.location || '—' }))
-    const cont = containers.map((c) => ({
-      ...c,
-      type: 'container',
-      status: containerStatus(c),
-      location: c.area,
-      createdAt: c.createdAt || '',
-    }))
+    const waste = canAccessReportType(auth.role, 'waste')
+      ? wasteReports.map((r) => ({ ...r, type: 'waste', status: r.status || 'pending' }))
+      : []
+    const smell = canAccessReportType(auth.role, 'smell')
+      ? smellAlerts.map((r) => ({ ...r, type: 'smell', status: 'pending', location: r.location || '—' }))
+      : []
+    const cont = canAccessReportType(auth.role, 'container')
+      ? containers.map((c) => ({
+        ...c,
+        type: 'container',
+        status: containerStatus(c),
+        location: c.area,
+        createdAt: c.createdAt || '',
+      }))
+      : []
     return [...waste, ...smell, ...cont]
-  }, [wasteReports, smellAlerts, containers])
+  }, [wasteReports, smellAlerts, containers, auth.role])
 
   const liveSelected = useMemo(() => {
     if (!selected) return null
@@ -396,6 +403,23 @@ export function AdminPanelPage() {
     from,
     to,
   } = usePagination(filtered, ADMIN_PAGE_SIZE, paginationKey)
+
+  const activeReports = useMemo(
+    () => allReports.filter((r) => r.status !== 'resolved'),
+    [allReports],
+  )
+
+  const counts = useMemo(() => ({
+    all: activeReports.length,
+    waste: activeReports.filter((r) => r.type === 'waste').length,
+    smell: activeReports.filter((r) => r.type === 'smell').length,
+    container: activeReports.filter((r) => r.type === 'container').length,
+    pending: activeReports.filter((r) => r.status === 'pending').length,
+    in_progress: activeReports.filter((r) => r.status === 'in_progress').length,
+    resolved: allReports.filter((r) => r.status === 'resolved').length,
+  }), [allReports, activeReports])
+
+  if (!isAdminRole(auth.role)) return <Navigate to='/home' replace />
 
   function toggleSort(col) {
     if (sortBy === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc')
@@ -457,21 +481,6 @@ export function AdminPanelPage() {
     return true
   }
 
-  const activeReports = useMemo(
-    () => allReports.filter((r) => r.status !== 'resolved'),
-    [allReports],
-  )
-
-  const counts = useMemo(() => ({
-    all: activeReports.length,
-    waste: activeReports.filter((r) => r.type === 'waste').length,
-    smell: activeReports.filter((r) => r.type === 'smell').length,
-    container: activeReports.filter((r) => r.type === 'container').length,
-    pending: activeReports.filter((r) => r.status === 'pending').length,
-    in_progress: activeReports.filter((r) => r.status === 'in_progress').length,
-    resolved: allReports.filter((r) => r.status === 'resolved').length,
-  }), [allReports, activeReports])
-
   return (
     <div className='space-y-4'>
       <div>
@@ -482,11 +491,12 @@ export function AdminPanelPage() {
       {/* Statistics row */}
       <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
         {[
-          { label: t('admin.statActiveDumps'), value: counts.waste, icon: Trash2, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-          { label: t('admin.statFullContainers'), value: counts.container, icon: Recycle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+          canAccessReportType(auth.role, 'waste') && { label: t('admin.statActiveDumps'), value: counts.waste, icon: Trash2, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+          canAccessReportType(auth.role, 'smell') && { label: t('type.smell'), value: counts.smell, icon: Wind, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
+          canAccessReportType(auth.role, 'container') && { label: t('admin.statFullContainers'), value: counts.container, icon: Recycle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
           { label: t('admin.statResolved'), value: counts.resolved, icon: Siren, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200' },
           { label: t('admin.statUnresolved'), value: counts.pending + counts.in_progress, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
-        ].map((s) => (
+        ].filter(Boolean).map((s) => (
           <div key={s.label} className={`rounded-2xl border ${s.border} ${s.bg} p-4`}>
             <div className='flex items-center justify-between'>
               <p className='text-xs font-medium text-slate-500'>{s.label}</p>
@@ -504,7 +514,7 @@ export function AdminPanelPage() {
           { key: 'waste', label: t('desk.tabsWaste'), count: counts.waste },
           { key: 'smell', label: t('type.smell'), count: counts.smell },
           { key: 'container', label: t('nav.containers'), count: counts.container },
-        ].map((f) => (
+        ].filter((f) => f.key === 'all' || allowedTypes === null || allowedTypes.includes(f.key)).map((f) => (
           <button
             key={f.key}
             onClick={() => setTypeFilter(f.key)}

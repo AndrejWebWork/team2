@@ -28,7 +28,7 @@ export async function requestNotificationPermissions() {
       try {
         await LocalNotifications.createChannel({
           id: 'ekoskopje',
-          name: 'EkoSkopje',
+          name: 'Еко Скопје',
           description: 'Известувања за настани и пријави',
           importance: 5,
           visibility: 1,
@@ -58,7 +58,7 @@ export async function scheduleLocalNotification({ title, body }) {
       try {
         await LocalNotifications.createChannel({
           id: 'ekoskopje',
-          name: 'EkoSkopje',
+          name: 'Еко Скопје',
           description: 'Известувања за настани и пријави',
           importance: 5,
           visibility: 1,
@@ -83,7 +83,7 @@ export async function scheduleLocalNotification({ title, body }) {
 
 const PUSH_CHANNEL = {
   id: 'ekoskopje',
-  name: 'EkoSkopje',
+  name: 'Еко Скопје',
   description: 'Известувања за настани и пријави',
   importance: 5,
   visibility: 1,
@@ -92,8 +92,8 @@ const PUSH_CHANNEL = {
 }
 
 // Регистрира push (FCM) и го враќа токенот преку onToken. Слуша и за примени
-// нотификации додека апликацијата е отворена. На веб: noop.
-export async function registerPushNotifications({ onToken, onReceived } = {}) {
+// нотификации додека апликацијата е отворена / при тап. На веб: noop.
+export async function registerPushNotifications({ onToken, onReceived, onAction } = {}) {
   if (!isNativePlatform()) return
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications')
@@ -123,6 +123,12 @@ export async function registerPushNotifications({ onToken, onReceived } = {}) {
     PushNotifications.addListener('registrationError', () => { /* игнорирај */ })
     if (onReceived) {
       PushNotifications.addListener('pushNotificationReceived', (n) => onReceived(n))
+    }
+    if (onAction) {
+      PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+        const data = action?.notification?.data || {}
+        onAction(data)
+      })
     }
     await PushNotifications.register()
   } catch {

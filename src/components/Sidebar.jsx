@@ -3,10 +3,18 @@ import { navItems } from './navConfig'
 import { cx } from '../utils/ui'
 import { useApp } from '../context/AppContext'
 import { BRAND_SRC } from '../lib/brand'
+import { isAdminRole, isSuperAdmin } from '../lib/roles'
 
 function clearTapFocus(e) {
   const el = e.currentTarget
   requestAnimationFrame(() => el.blur())
+}
+
+function isNavVisible(item, role) {
+  if (item.superAdminOnly && !isSuperAdmin(role)) return false
+  if (item.adminOnly && !isAdminRole(role)) return false
+  if (item.hideForAdmin && isAdminRole(role) && !(item.allowSuperAdmin && isSuperAdmin(role))) return false
+  return true
 }
 
 export function Sidebar({ role }) {
@@ -14,12 +22,11 @@ export function Sidebar({ role }) {
   const navigate = useNavigate()
   const location = useLocation()
   const main = navItems.filter((item) => {
-    if (item.adminOnly && role !== 'admin') return false
-    if (item.hideForAdmin && role === 'admin') return false
+    if (!isNavVisible(item, role)) return false
     if (item.hideFromMobile) return false
     return true
   })
-  const bottom = navItems.filter((item) => item.hideFromMobile)
+  const bottom = navItems.filter((item) => item.hideFromMobile && isNavVisible(item, role))
 
   function NavButton({ item }) {
     const isActive = location.pathname === item.to
@@ -60,7 +67,7 @@ export function Sidebar({ role }) {
           />
           <div className='absolute inset-0 bg-gradient-to-t from-emerald-950/85 via-emerald-900/35 to-transparent' />
           <div className='absolute inset-x-0 bottom-0 px-4 pb-3'>
-            <p className='font-display text-xl font-bold leading-tight tracking-tight text-white drop-shadow-sm'>EkoSkopje</p>
+            <p className='font-display text-xl font-bold leading-tight tracking-tight text-white drop-shadow-sm'>Еко Скопје</p>
             <p className='text-[11px] font-medium text-emerald-50/90'>{t('brand.tagline')}</p>
           </div>
         </div>

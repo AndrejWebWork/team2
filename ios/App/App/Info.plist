@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>EkoSkopje</string>
+        <string>Еко Скопје</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -62,15 +62,15 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>EkoSkopje го користи камерата за фотографии на пријави.</string>
+	<string>Еко Скопје го користи камерата за фотографии на пријави.</string>
 	<key>NSLocationUsageDescription</key>
-	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
+	<string>Еко Скопје ја користи локацијата за пријави и најблискиот сензор.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
+	<string>Еко Скопје ја користи локацијата за пријави и најблискиот сензор.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
+	<string>Еко Скопје ја користи локацијата за пријави и најблискиот сензор.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>EkoSkopje ја користи локацијата за пријави и најблискиот сензор.</string>
+	<string>Еко Скопје ја користи локацијата за пријави и најблискиот сензор.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>app-settings</string>

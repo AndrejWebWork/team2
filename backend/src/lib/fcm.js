@@ -162,6 +162,22 @@ export async function sendPushToUser(userId, payload) {
   }
 }
 
+/** Ефикасен fan-out до повеќе корисници (еден SELECT за сите токени). */
+export async function sendPushToUsers(userIds, payload) {
+  if (!isPushConfigured() || !Array.isArray(userIds) || userIds.length === 0) return 0
+  try {
+    const unique = [...new Set(userIds.filter(Boolean))]
+    if (unique.length === 0) return 0
+    const { rows } = await query(
+      'SELECT DISTINCT token FROM device_tokens WHERE user_id = ANY($1::uuid[])',
+      [unique],
+    )
+    return await sendPushToTokens(rows.map((r) => r.token), payload)
+  } catch {
+    return 0
+  }
+}
+
 export async function sendPushToDevice(deviceId, payload) {
   if (!isPushConfigured() || !deviceId) return 0
   try {

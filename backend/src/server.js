@@ -4,5 +4,5 @@ import { app } from './app.js'
 import { config } from './config.js'
 
 app.listen(config.port, () => {
-  console.log(`EkoSkopje API слуша на ${config.publicBaseUrl} (порта ${config.port})`)
+  console.log(`Еко Скопје API слуша на ${config.publicBaseUrl} (порта ${config.port})`)
 })

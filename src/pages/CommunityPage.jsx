@@ -1,7 +1,7 @@
 import { Bell, CalendarDays, ChevronLeft, Clock, Loader2, MapPin, Trash2, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { InstagramIcon } from '../components/InstagramIcon'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { CenteredOverlay } from '../components/CenteredOverlay'
 import { EmptyState } from '../components/EmptyState'
 import { EventDatePicker } from '../components/EventDatePicker'
@@ -11,10 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
-import { createEventApi, deleteEventApi, fetchEventSignupsApi, leaveEventApi, sendEventReminderApi, signupEventApi } from '../lib/api'
+import { createEventApi, deleteEventApi, fetchEventSignupsApi, leaveEventApi, reviewEventApi, sendEventReminderApi, signupEventApi } from '../lib/api'
 import { loginNavState } from '../lib/authNav'
 import { formatDisplayDate, isTodayOrFuture, todayIso } from '../lib/dates'
 import { instagramProfileUrl, normalizeInstagramHandle } from '../lib/instagram'
+import { canApproveEvents, isAdminRole, isSuperAdmin } from '../lib/roles'
 
 const STATUS_META = {
   open:     { key: 'event.open',    cls: 'bg-emerald-100 text-emerald-700' },
@@ -333,17 +334,56 @@ export function CommunityPage() {
     return () => clearInterval(timer)
   }, [refreshEvents])
 
-  const today = todayStr()
-  // Претстојни (денес и понатаму) наспроти изминати акции.
-  const upcoming = events.filter((e) => (e.date || '') >= today)
-  const past = events.filter((e) => (e.date || '') < today)
+  // Специјализираните админи немаат пристап до Заедница (само Супер Админ).
+  if (isAdminRole(auth.role) && !isSuperAdmin(auth.role)) {
+    return <Navigate to='/admin-panel' replace />
+  }
 
-  // Организаторот на настанот или админ може да го откаже (исчезнува за сите).
+  const today = todayStr()
+  const isApprover = canApproveEvents(auth.role)
+  const pendingEvents = isApprover
+    ? events.filter((e) => (e.approvalStatus || 'approved') === 'pending')
+    : []
+  // Јавни претстојни: само approved. Организаторот/супер админ ги гледа и своите pending/rejected.
+  const upcoming = events.filter((e) => {
+    if ((e.date || '') < today) return false
+    const appr = e.approvalStatus || 'approved'
+    if (appr === 'approved') return true
+    if (isApprover) return appr !== 'pending' // pending се во посебна секција
+    const orgEmail = (e.organizerEmail || '').toLowerCase()
+    return Boolean(auth.email && orgEmail === auth.email.toLowerCase())
+  })
+  const past = events.filter((e) => {
+    if ((e.date || '') >= today) return false
+    const appr = e.approvalStatus || 'approved'
+    if (appr === 'approved') return true
+    if (isApprover) return true
+    const orgEmail = (e.organizerEmail || '').toLowerCase()
+    return Boolean(auth.email && orgEmail === auth.email.toLowerCase())
+  })
+
+  // Организаторот на настанот или Супер Админ може да го откаже (исчезнува за сите).
   function canManage(event) {
     if (auth.isAnonymous) return false
-    if (auth.role === 'admin') return true
+    if (isSuperAdmin(auth.role)) return true
     const orgEmail = (event.organizerEmail || event.organizer || '').toLowerCase()
     return Boolean(auth.email && orgEmail === auth.email.toLowerCase())
+  }
+
+  async function reviewEvent(event, status) {
+    let reason = null
+    if (status === 'rejected') {
+      reason = window.prompt(t('comm.rejectReasonPh'), '') 
+      if (reason === null) return
+    }
+    try {
+      const updated = await reviewEventApi(event.id, { status, reason })
+      setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, ...updated } : e)))
+      setToast(status === 'approved' ? t('comm.approveSuccess') : t('comm.rejectSuccess'))
+      refreshEvents()
+    } catch (err) {
+      setToast(err.message || t('comm.reviewFailed'))
+    }
   }
 
   function isOrganizer(event) {
@@ -361,6 +401,9 @@ export function CommunityPage() {
     if (!requireRegistered()) return
     if (isOrganizer(event)) return setToast(t('comm.organizerCannotSignup'))
     if (String(event.id).startsWith('local-')) return setToast(t('comm.eventStillSaving'))
+    if ((event.approvalStatus || 'approved') !== 'approved') {
+      return setToast(t('comm.awaitingApprovalHint'))
+    }
     setSignUpEvent(event)
   }
 
@@ -433,7 +476,8 @@ export function CommunityPage() {
 
     const tempId = `local-${Date.now()}`
     const optimistic = {
-      id: tempId, title: newEvent.title, date: iso, time: newEvent.time, status: 'open', signupCount: 0, joined: false,
+      id: tempId, title: newEvent.title, date: iso, time: newEvent.time, status: 'open',
+      approvalStatus: 'pending', signupCount: 0, joined: false,
       organizer: auth.displayName || auth.email || t('comm.orgFallback'),
       organizerEmail: auth.email || null,
       location: newEvent.location, description: newEvent.description,
@@ -472,10 +516,24 @@ export function CommunityPage() {
           <div className='flex-1 min-w-0'>
             <div className='flex flex-wrap items-center gap-2'>
               <p className='font-semibold text-slate-900'>{event.title}</p>
-              {isPast ? <TimeBadge kind='past' /> : isToday ? <TimeBadge kind='today' /> : <EventBadge status={event.status} />}
+              {(event.approvalStatus || 'approved') === 'pending' && (
+                <span className='rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700'>{t('comm.pendingApproval')}</span>
+              )}
+              {(event.approvalStatus || 'approved') === 'rejected' && (
+                <span className='rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700'>{t('comm.rejected')}</span>
+              )}
+              {(event.approvalStatus || 'approved') === 'approved' && (
+                isPast ? <TimeBadge kind='past' /> : isToday ? <TimeBadge kind='today' /> : <EventBadge status={event.status} />
+              )}
               {!isPast && event.joined && <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700'>{t('comm.joined')}</span>}
               {!isPast && organizerOwns && <span className='rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700'>{t('comm.organizerBadge')}</span>}
             </div>
+            {(event.approvalStatus || 'approved') === 'pending' && organizerOwns && (
+              <p className='mt-1 text-xs text-amber-600'>{t('comm.awaitingApprovalHint')}</p>
+            )}
+            {(event.approvalStatus || 'approved') === 'rejected' && event.rejectionReason && (
+              <p className='mt-1 text-xs text-rose-600'>{event.rejectionReason}</p>
+            )}
             <div className='mt-1.5 flex flex-wrap gap-x-4 gap-y-1'>
               <span className='flex items-center gap-1.5 text-xs text-slate-500'><CalendarDays className='h-3.5 w-3.5' />{formatDisplayDate(event.date)}</span>
               {event.time && <span className='flex items-center gap-1.5 text-xs text-slate-500'><Clock className='h-3.5 w-3.5' />{event.time}</span>}
@@ -488,7 +546,7 @@ export function CommunityPage() {
           </div>
 
           <div className='flex shrink-0 flex-wrap gap-2' onClick={(e) => e.stopPropagation()}>
-            {!isPast && !organizerOwns && (event.joined ? (
+            {!isPast && !organizerOwns && (event.approvalStatus || 'approved') === 'approved' && (event.joined ? (
               <Button size='sm' variant='outline' className='border-rose-200 text-rose-600 hover:bg-rose-50' onClick={() => leaveEvent(event.id)}>{t('comm.cancel')}</Button>
             ) : (
               <Button size='sm' onClick={() => openSignUp(event)}>{t('comm.signup')}</Button>
@@ -545,6 +603,39 @@ export function CommunityPage() {
         <h1 className='text-2xl font-bold text-slate-900'>{t('comm.title')}</h1>
         <p className='mt-0.5 text-sm text-slate-500'>{t('comm.subtitle')}</p>
       </div>
+
+      {isApprover && pendingEvents.length > 0 && (
+        <div>
+          <h2 className='mb-1 text-sm font-semibold uppercase tracking-wide text-amber-600'>{t('comm.pendingSection')}</h2>
+          <p className='mb-3 text-xs text-slate-500'>{t('comm.pendingSectionDesc')}</p>
+          <div className='space-y-3'>
+            {pendingEvents.map((event) => (
+              <div key={event.id} className='overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/40 shadow-sm'>
+                <div className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-5'>
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <p className='font-semibold text-slate-900'>{event.title}</p>
+                      <span className='rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700'>{t('comm.pendingApproval')}</span>
+                    </div>
+                    <div className='mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500'>
+                      <span className='flex items-center gap-1.5'><CalendarDays className='h-3.5 w-3.5' />{formatDisplayDate(event.date)}</span>
+                      {event.time && <span className='flex items-center gap-1.5'><Clock className='h-3.5 w-3.5' />{event.time}</span>}
+                      <span className='flex items-center gap-1.5'><MapPin className='h-3.5 w-3.5' />{event.location || t('comm.skopje')}</span>
+                      {event.organizer && <span>{t('comm.organizer')} {event.organizer}</span>}
+                    </div>
+                    {event.description && <p className='mt-2 line-clamp-2 text-sm text-slate-600'>{event.description}</p>}
+                  </div>
+                  <div className='flex shrink-0 flex-wrap gap-2'>
+                    <Button size='sm' onClick={() => reviewEvent(event, 'approved')}>{t('comm.approve')}</Button>
+                    <Button size='sm' variant='outline' className='border-rose-200 text-rose-600 hover:bg-rose-50' onClick={() => reviewEvent(event, 'rejected')}>{t('comm.reject')}</Button>
+                    <Button size='sm' variant='outline' onClick={() => setDetailEvent(event)}>{t('comm.details')}</Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Претстојни акции */}
       <div>

@@ -12,10 +12,10 @@ export const IMPRESSUM_SOURCE_URL = 'https://lead.org.mk/blog/skop-e-mozhe-podob
 export const impressumContent = {
   mk: {
     title: 'Импресум',
-    subtitle: 'EkoSkopje · SkopYEAH! Inokamp',
+    subtitle: 'Еко Скопје · SkopYEAH! Inokamp',
     aboutTitle: 'За проектот',
     about: [
-      'Скопје може подобро — и младите веќе имаат идеи. EkoSkopje е роден токму од таа увереност: дека проблемите во градот се видливи, но она што недостасува е систем кој навремено реагира и им дава глас на граѓаните.',
+      'Скопје може подобро — и младите веќе имаат идеи. Еко Скопје е роден токму од таа увереност: дека проблемите во градот се видливи, но она што недостасува е систем кој навремено реагира и им дава глас на граѓаните.',
       'На SkopYEAH! Inokampот (28–30 април 2026, Innox центар, Скопје), поддржан од Европската комисија во рамките на мрежата YouthHub WB&T и организиран од ЛЕАД, млади учесници три дена работеа на предизвик директно поврзан со секојдневниот урбан живот — не апстрактна вежба, туку решение за реални потреби.',
       'Платформата одговара на три конкретни функции: разбирлив приказ на податоци за квалитет на воздух, рано пријавување диви депонии со следење на статус наместо реагирање откако штетата е направена, и пријавување преполни контејнери пред тие да станат нова депонија на отворено.',
       'Суштинскиот предизвик беше поголем од технологијата: како да се создаде доверба дека пријавата на граѓанинот нема да заврши „во фиока“, а институциите ќе добијат навремена, корисна и проверлива информација на која можат да реагираат.',
@@ -27,10 +27,10 @@ export const impressumContent = {
   },
   en: {
     title: 'Impressum',
-    subtitle: 'EkoSkopje · SkopYEAH! Inokamp',
+    subtitle: 'Еко Скопје · SkopYEAH! Inokamp',
     aboutTitle: 'About the project',
     about: [
-      'Skopje can do better — and young people already have ideas. EkoSkopje was born from that belief: the city’s problems are visible, but what’s missing is a system that reacts in time and gives citizens a voice.',
+      'Skopje can do better — and young people already have ideas. Еко Скопје was born from that belief: the city’s problems are visible, but what’s missing is a system that reacts in time and gives citizens a voice.',
       'At the SkopYEAH! Inokamp (28–30 April 2026, Innox Center, Skopje), supported by the European Commission within the YouthHub WB&T network and organized by LEAD, young participants spent three days working on a challenge tied directly to everyday urban life — not an abstract exercise, but a solution for real needs.',
       'The platform addresses three concrete functions: a clear view of air quality data, early reporting of illegal dumps with status tracking instead of reacting after the damage is done, and reporting overflowing containers before they become new open-air dumps.',
       'The core challenge was bigger than technology: how to build trust that a citizen’s report won’t end up “in a drawer”, and that institutions receive timely, useful and verifiable information they can act on.',
@@ -42,10 +42,10 @@ export const impressumContent = {
   },
   sq: {
     title: 'Impresum',
-    subtitle: 'EkoSkopje · SkopYEAH! Inokamp',
+    subtitle: 'Еко Скопје · SkopYEAH! Inokamp',
     aboutTitle: 'Rreth projektit',
     about: [
-      'Shkupi mund të jetë më mirë — dhe të rinjtë tashmë kanë ide. EkoSkopje lindi pikërisht nga kjo bindje: problemet në qytet janë të dukshme, por ajo që mungon është një sistem që reagon në kohë dhe u jep zë qytetarëve.',
+      'Shkupi mund të jetë më mirë — dhe të rinjtë tashmë kanë ide. Еко Скопје lindi pikërisht nga kjo bindje: problemet në qytet janë të dukshme, por ajo që mungon është një sistem që reagon në kohë dhe u jep zë qytetarëve.',
       'Në SkopYEAH! Inokamp (28–30 prill 2026, Innox Center, Shkup), i mbështetur nga Komisioni Evropian brenda rrjetit YouthHub WB&T dhe i organizuar nga LEAD, pjesëmarrësit e rinj punuan tri ditë mbi një sfidë të lidhur drejtpërdrejt me jetën urbane të përditshme — jo ushtrim abstrakt, por zgjidhje për nevojat reale.',
       'Platforma përgjigjet në tri funksione konkrete: paraqitje e qartë e cilësisë së ajrit, raportim i hershëm i deponive ilegale me ndjekje të statusit në vend të reagimit pasi dëmi është bërë, dhe raportim i kontejnerëve të mbushur para se të bëhen deponi të reja në hapësirë të hapur.',
       'Sfida thelbësore ishte më e madhe se teknologjia: si të krijohet besimi se raporti i qytetarit nuk do të përfundojë „në sirtar“, dhe se institucionet do të marrin informacion të kohshëm, të dobishëm dhe të verifikueshëm mbi të cilin mund të veprojnë.',

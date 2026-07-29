@@ -4,7 +4,7 @@ const NOMINATIM = 'https://nominatim.openstreetmap.org/reverse'
 const NOMINATIM_HEADERS = {
   Accept: 'application/json',
   'Accept-Language': 'mk',
-  'User-Agent': 'EkoSkopje/1.0 (https://team2-zeta.vercel.app; civic environmental reporting)',
+  'User-Agent': 'Еко Скопје/1.0 (https://team2-zeta.vercel.app; civic environmental reporting)',
 }
 
 const SKOPJE_CITY_NAMES = new Set(['скопје', 'skopje', 'city of skopje'])

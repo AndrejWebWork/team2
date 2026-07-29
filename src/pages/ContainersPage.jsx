@@ -17,6 +17,7 @@ import { fetchContainerPoints, updateReportStatus } from '../lib/api'
 import { containerKinds } from '../data/catalog'
 import { skopjeAllContainerPoints } from '../data/skopjeContainersMap'
 import { isNativePlatform } from '../lib/notifications'
+import { canAccessReportType, isAdminRole } from '../lib/roles'
 
 // Бесплатна линија на „Комунална хигиена" за пријава на кабаст отпад.
 const BULKY_PHONE_DISPLAY = '080 022233'
@@ -266,7 +267,7 @@ export function ContainersPage() {
         </CardContent>
       </Card>
 
-      {auth.role === 'admin' && activeContainerIssues.length > 0 && (
+      {isAdminRole(auth.role) && activeContainerIssues.length > 0 && (
         <section className='space-y-4'>
           <div className='flex items-center justify-between'>
             <h2 className='text-xl font-bold text-slate-900'>{t('cont.activeIssues')}</h2>

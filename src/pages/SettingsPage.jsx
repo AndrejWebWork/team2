@@ -8,17 +8,28 @@ import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
 import { LANGUAGES, translate } from '../i18n/translations'
 import { deleteAccountApi, fetchUser, updateUserSettingsApi } from '../lib/api'
+import { isAdminRole } from '../lib/roles'
 
 const ROLE_COLORS = {
   user: 'bg-sky-50 text-sky-700 border-sky-200',
   organization: 'bg-violet-50 text-violet-700 border-violet-200',
   admin: 'bg-rose-50 text-rose-700 border-rose-200',
+  admin_inspection: 'bg-amber-50 text-amber-700 border-amber-200',
+  admin_environment: 'bg-sky-50 text-sky-700 border-sky-200',
+  admin_hygiene: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 }
 
 export function SettingsPage() {
   const navigate = useNavigate()
   const { auth, setAuth, logout, t, language, setLanguage, notifAir, setNotifAir } = useApp()
-  const roleLabel = (r) => t(`role.${r === 'organization' ? 'organization' : r === 'admin' ? 'admin' : 'user'}`)
+  const roleLabel = (r) => {
+    if (r === 'organization') return t('role.organization')
+    if (r === 'admin') return t('role.admin')
+    if (r === 'admin_inspection') return t('role.adminInspection')
+    if (r === 'admin_environment') return t('role.adminEnvironment')
+    if (r === 'admin_hygiene') return t('role.adminHygiene')
+    return t('role.user')
+  }
   const isAnonymous = auth.isAnonymous || !auth.email
   const anonymousLabel = t('settings.anonymous')
 
@@ -263,7 +274,7 @@ export function SettingsPage() {
         <CardContent className='space-y-3'>
           <div className='rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
             <p className='text-sm font-medium text-slate-700'>{t('settings.appVersion')}</p>
-            <p className='text-xs text-slate-500 mt-0.5'>EkoSkopje v1.0.0</p>
+            <p className='text-xs text-slate-500 mt-0.5'>Еко Скопје v1.0.0</p>
             <p className='text-xs text-slate-400 mt-1'>{t('common.credit')}</p>
           </div>
           {/* Одјава — само за најавени (анонимен нема сметка за одјава) */}
@@ -279,7 +290,7 @@ export function SettingsPage() {
           )}
 
           {/* Бришење сметка — само за регистрирани корисници (Play/App Store барање) */}
-          {!isAnonymous && auth.email && auth.role !== 'admin' && (
+          {!isAnonymous && auth.email && !isAdminRole(auth.role) && (
             !deleteOpen ? (
               <button
                 type='button'

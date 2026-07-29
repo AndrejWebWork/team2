@@ -1,12 +1,13 @@
 import { Navigate } from 'react-router-dom'
 import { CommunityUsersManager } from '../components/CommunityUsersManager'
 import { useApp } from '../context/AppContext'
+import { isSuperAdmin } from '../lib/roles'
 
 // Посебна админ страница за управување со influencer/community корисници —
-// достапна од левото мени (навигација), одвоено од админ панелот со пријави.
+// достапна само за Супер Админ.
 export function AdminCommunityPage() {
   const { auth, t } = useApp()
-  if (auth.role !== 'admin') return <Navigate to='/home' replace />
+  if (!isSuperAdmin(auth.role)) return <Navigate to='/home' replace />
 
   return (
     <div className='space-y-5'>

@@ -4,9 +4,11 @@ import { Flame, Info, Loader2, MapPin, Wind, XCircle } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, Marker, Popup, useMap } from 'react-leaflet'
 import { MapLayers } from '../components/MapLayers'
+import { InfoTip } from '../components/InfoTip'
 import { ReportShortcutButton } from '../components/ReportShortcutButton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
+import { canAccessReportType, isAdminRole } from '../lib/roles'
 import { fetchSkopjeSensors } from '../lib/waqi'
 import { fetchPulseSensors } from '../lib/api'
 
@@ -384,7 +386,10 @@ export function AirPage() {
         <div className='flex items-center gap-2'>
           <span className='h-2.5 w-2.5 shrink-0 rounded-full border-2 border-sky-500 bg-sky-300' />
           <div>
-            <h2 className='text-base font-bold text-slate-900'>{t('air.officialTitle')}</h2>
+            <div className='flex items-center gap-2'>
+              <h2 className='text-base font-bold text-slate-900'>{t('air.officialTitle')}</h2>
+              <InfoTip label={t('air.officialTitle')}>{t('air.officialInfo')}</InfoTip>
+            </div>
             <p className='text-xs text-slate-500'>{t('air.officialSubtitle')}</p>
           </div>
         </div>
@@ -406,7 +411,10 @@ export function AirPage() {
         <div className='flex items-center gap-2'>
           <span className='h-2.5 w-2.5 shrink-0 rounded-full border-2 border-emerald-500 bg-emerald-300' />
           <div>
-            <h2 className='text-base font-bold text-slate-900'>{t('air.informativeTitle')}</h2>
+            <div className='flex items-center gap-2'>
+              <h2 className='text-base font-bold text-slate-900'>{t('air.informativeTitle')}</h2>
+              <InfoTip label={t('air.informativeTitle')}>{t('air.informativeInfo')}</InfoTip>
+            </div>
             <p className='text-xs text-slate-500'>{t('air.informativeSubtitle')}</p>
           </div>
         </div>
@@ -539,7 +547,7 @@ export function AirPage() {
         </CardContent>
       </Card>
 
-      {auth.role === 'admin' && smellAlerts.length > 0 && (
+      {isAdminRole(auth.role) && canAccessReportType(auth.role, 'smell') && smellAlerts.length > 0 && (
         <section className='space-y-3'>
           <h2 className='text-lg font-semibold text-slate-900'>{t('air.smellReportsTitle')}</h2>
           <div className='grid gap-3 md:grid-cols-2'>
