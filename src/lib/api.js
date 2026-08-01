@@ -150,8 +150,9 @@ export async function createReport(payload, signal) {
     body: JSON.stringify(payload),
     signal,
   })
-  if (!res.ok) throw new Error('Зачувувањето на пријавата не успеа.')
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Зачувувањето на пријавата не успеа.')
+  return data
 }
 
 export async function fetchReports(signal) {
@@ -207,8 +208,9 @@ export async function persistReportWithPhotos({ dataUrls = [], ...payload }, sig
   })
   // Не задавај Content-Type рачно — прелистувачот сам додава multipart boundary.
   const res = await fetch(`${API_URL}/api/reports`, { method: 'POST', body: form, signal })
-  if (!res.ok) throw new Error('Зачувувањето на пријавата не успеа.')
-  return res.json()
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Зачувувањето на пријавата не успеа.')
+  return data
 }
 
 // ---- Настани ----
@@ -505,6 +507,46 @@ export async function addCommunityUserApi({ email, displayName, organizationName
 // Супер Админ: симни community корисник назад на обичен корисник.
 export async function removeCommunityUserApi(email, signal) {
   const res = await fetch(`${API_URL}/api/users/community/${encodeURIComponent(email)}`, {
+    method: 'DELETE',
+    headers: adminHeaders(),
+    signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Отстранувањето не успеа.')
+  return data
+}
+
+// Супер Админ: листа на подадмини.
+export async function fetchSubAdminsApi(signal) {
+  return dedupeGet('subadmins', async () => {
+    const res = await fetch(`${API_URL}/api/users/subadmins`, {
+      headers: adminHeaders(),
+      signal,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || 'Не успеа вчитувањето на подадмини.')
+    return data
+  })
+}
+
+// Супер Админ: креирај / унапреди подадмин.
+export async function addSubAdminApi({ email, displayName, role, password, language }, signal) {
+  const payload = { email, displayName, role, language }
+  if (password) payload.passwordHash = await hashPasswordForTransit(password)
+  const res = await fetch(`${API_URL}/api/users/subadmins`, {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+    signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Додавањето на подадмин не успеа.')
+  return data
+}
+
+// Супер Админ: симни подадмин улога.
+export async function removeSubAdminApi(email, signal) {
+  const res = await fetch(`${API_URL}/api/users/subadmins/${encodeURIComponent(email)}`, {
     method: 'DELETE',
     headers: adminHeaders(),
     signal,

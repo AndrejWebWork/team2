@@ -2,16 +2,166 @@
 <html lang="mk">
   <head>
     <meta charset="UTF-8" />
-    <!-- Икона во табот (public/logo.png — истото лого како во апликацијата). -->
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#10b981" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <!-- Спречи iOS да го „заклучи" зумот по тастатура; 16px на input е главната заштита. -->
+    <meta name="theme-color" content="#059669" />
+    <meta name="color-scheme" content="light" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Еко Скопје" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <title>Еко Скопје</title>
+    <meta name="application-name" content="Еко Скопје" />
+
+    <title>Еко Скопје — квалитет на воздух, диви депонии и контејнери во Скопје</title>
+    <meta name="description" content="Еко Скопје е граѓанска еко-платформа за Град Скопје: квалитет на воздух во живо, пријавување диви депонии и преполни контејнери, следење на статус и еко-акции за заедницата." />
+    <meta name="keywords" content="Еко Скопје, Eko Skopje, квалитет на воздух Скопје, PM2.5, PM10, дива депонија, контејнери, пријави, МЖСПП, Pulse Eco, Skopje air quality, illegal dump, waste containers" />
+    <meta name="author" content="Еко Скопје" />
+    <meta name="creator" content="Andrej Bozinovski" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="bingbot" content="index, follow" />
+    <meta name="geo.region" content="MK-85" />
+    <meta name="geo.placename" content="Skopje" />
+    <meta name="geo.position" content="41.9981;21.4254" />
+    <meta name="ICBM" content="41.9981, 21.4254" />
+    <link rel="canonical" href="https://team2-zeta.vercel.app/" />
+    <link rel="alternate" hreflang="mk" href="https://team2-zeta.vercel.app/" />
+    <link rel="alternate" hreflang="en" href="https://team2-zeta.vercel.app/" />
+    <link rel="alternate" hreflang="sq" href="https://team2-zeta.vercel.app/" />
+    <link rel="alternate" hreflang="x-default" href="https://team2-zeta.vercel.app/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Еко Скопје" />
+    <meta property="og:locale" content="mk_MK" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="sq_AL" />
+    <meta property="og:url" content="https://team2-zeta.vercel.app/" />
+    <meta property="og:title" content="Еко Скопје — паметна еко-платформа за Скопје" />
+    <meta property="og:description" content="Пријави диви депонии и контејнери, следи квалитет на воздух и учествувај во еко-акции. Граѓаните + институциите, заедно." />
+    <meta property="og:image" content="https://team2-zeta.vercel.app/logo.png" />
+    <meta property="og:image:alt" content="Еко Скопје лого" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Еко Скопје — еко-платформа за Скопје" />
+    <meta name="twitter:description" content="Квалитет на воздух, пријави за диви депонии и контејнери, еко-акции за заедницата." />
+    <meta name="twitter:image" content="https://team2-zeta.vercel.app/logo.png" />
+
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- AI / LLM discovery -->
+    <link rel="describedby" href="https://team2-zeta.vercel.app/llms.txt" type="text/plain" title="LLMs" />
+    <meta name="ai-content-declaration" content="human-authored civic platform for Skopje environmental reporting" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "https://team2-zeta.vercel.app/#app",
+            "name": "Еко Скопје",
+            "alternateName": ["Eko Skopje", "EkoSkopje", "ЕкоСкопје"],
+            "url": "https://team2-zeta.vercel.app/",
+            "description": "Civic eco platform for the City of Skopje: live air quality, illegal dump reports, overflowing container reports, status tracking and community eco actions.",
+            "applicationCategory": "LifestyleApplication",
+            "operatingSystem": "Web, Android, iOS",
+            "inLanguage": ["mk", "en", "sq"],
+            "isAccessibleForFree": true,
+            "image": "https://team2-zeta.vercel.app/logo.png",
+            "author": {
+              "@type": "Person",
+              "name": "Andrej Bozinovski",
+              "jobTitle": "Software Engineer"
+            },
+            "creator": {
+              "@type": "Person",
+              "name": "Andrej Bozinovski"
+            },
+            "about": [
+              { "@type": "Thing", "name": "Air quality in Skopje" },
+              { "@type": "Thing", "name": "Illegal dump reporting" },
+              { "@type": "Thing", "name": "Waste container issues" }
+            ],
+            "areaServed": {
+              "@type": "City",
+              "name": "Skopje",
+              "containedInPlace": {
+                "@type": "Country",
+                "name": "North Macedonia"
+              }
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "MKD"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://team2-zeta.vercel.app/#website",
+            "url": "https://team2-zeta.vercel.app/",
+            "name": "Еко Скопје",
+            "inLanguage": ["mk", "en", "sq"],
+            "publisher": { "@id": "https://team2-zeta.vercel.app/#app" },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://team2-zeta.vercel.app/home?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://team2-zeta.vercel.app/#org",
+            "name": "Еко Скопје",
+            "url": "https://team2-zeta.vercel.app/",
+            "logo": "https://team2-zeta.vercel.app/logo.png",
+            "description": "Digital platform connecting citizens and institutions for cleaner Skopje.",
+            "founder": {
+              "@type": "Person",
+              "name": "Andrej Bozinovski"
+            },
+            "knowsAbout": [
+              "ambient air quality",
+              "citizen environmental reporting",
+              "waste management Skopje",
+              "PM2.5",
+              "PM10"
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://team2-zeta.vercel.app/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Што е Еко Скопје?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Еко Скопје е граѓанска платформа за квалитет на воздух, пријавување диви депонии и проблеми со контејнери во Скопје, со следење на статус и еко-акции."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Што се референтни и нереферентни сензори?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Референтните сензори се официјални станици на МЖСПП според законски референтни методи. Нереферентните сензорни уреди не извршуваат мерења по референтни методи и податоците се исклучиво за првична проценка на квалитетот на амбиентниот воздух."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Како да пријавам дива депонија или контејнер?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Отворете ја почетната страница, изберете тип на пријава, дозволете локација, додадете фотографија каде е потребно и испратете. Надлежните институции ја добиваат пријавата со статус на следење."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

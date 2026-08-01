@@ -37,9 +37,9 @@ export function LeaderboardPage() {
   }
 
   const EARN = [
-    { icon: FileText, label: t('lead.earnReport'), pts: '+1', cls: 'text-sky-600 bg-sky-50 border-sky-100' },
-    { icon: ShieldCheck, label: t('lead.earnResolved'), pts: '+3', cls: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-    { icon: Leaf, label: t('lead.earnAction'), pts: '+1', cls: 'text-amber-600 bg-amber-50 border-amber-100' },
+    { icon: FileText, label: t('lead.earnReport'), desc: t('lead.earnReportDesc'), pts: '+1', cls: 'text-sky-600 bg-sky-50 border-sky-100' },
+    { icon: ShieldCheck, label: t('lead.earnResolved'), desc: t('lead.earnResolvedDesc'), pts: '+2', cls: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+    { icon: Leaf, label: t('lead.earnAction'), desc: t('lead.earnActionDesc'), pts: '+1', cls: 'text-amber-600 bg-amber-50 border-amber-100' },
   ]
 
   return (
@@ -123,14 +123,21 @@ export function LeaderboardPage() {
             <TrendingUp className='h-4 w-4 text-emerald-500' />{t('lead.howToEarn')}
           </CardTitle>
         </CardHeader>
-        <CardContent className='grid gap-2 sm:grid-cols-3'>
-          {EARN.map(({ icon: Icon, label, pts, cls }) => (
-            <div key={label} className={`flex items-center gap-3 rounded-xl border p-3 ${cls}`}>
-              <Icon className='h-5 w-5 shrink-0' />
-              <span className='flex-1 text-sm font-medium text-slate-700'>{label}</span>
-              <span className='text-sm font-bold tabular-nums'>{pts}</span>
-            </div>
-          ))}
+        <CardContent className='space-y-3'>
+          <p className='text-sm leading-relaxed text-slate-600'>{t('lead.howToEarnIntro')}</p>
+          <div className='grid gap-2 sm:grid-cols-3'>
+            {EARN.map(({ icon: Icon, label, desc, pts, cls }) => (
+              <div key={label} className={`rounded-xl border p-3 ${cls}`}>
+                <div className='flex items-center gap-2'>
+                  <Icon className='h-5 w-5 shrink-0' />
+                  <span className='flex-1 text-sm font-semibold text-slate-800'>{label}</span>
+                  <span className='text-sm font-bold tabular-nums'>{pts}</span>
+                </div>
+                <p className='mt-1.5 text-xs leading-relaxed text-slate-600'>{desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className='text-xs leading-relaxed text-slate-500'>{t('lead.howToEarnNote')}</p>
         </CardContent>
       </Card>
     </div>

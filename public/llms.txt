@@ -1,0 +1,49 @@
+# Еко Скопје (Eko Skopje)
+
+> Civic eco platform for the City of Skopje, North Macedonia: live air quality, illegal dump reports, overflowing container reports, status tracking, and community eco actions.
+
+## Summary
+
+Еко Скопје connects citizens and institutions. Residents can report environmental issues with GPS and photos; specialized municipal admins receive push alerts and update case status. The app is available on the web and as Android/iOS (Capacitor) under the brand **Еко Скопје**.
+
+Primary languages: Macedonian (default), English, Albanian.
+
+Canonical site: https://team2-zeta.vercel.app/
+
+## What the product does
+
+- Live air quality from official MoEPP (МЖСПП) reference stations and informational civic sensors (e.g. Pulse Eco)
+- Report illegal dumps (диви депонии) with photos and location
+- Report container problems (full, smell, broken)
+- Report smell / polluted air with intensity
+- Community eco events with Super Admin approval
+- Monthly leaderboard points for registered users
+
+## Reference vs non-reference sensors
+
+Reference sensors are official MoEPP stations measuring by legally prescribed reference methods.
+
+For non-reference / sensor devices (exact regulatory wording used in-app):
+"Сензорните уреди не извршуваат мерења по референтни методи и податоците произлезени од иститите се исклучиво за првична проценка на квалитетот на амбиентниот воздух."
+
+## Key URLs
+
+- Home / report: https://team2-zeta.vercel.app/home
+- Air quality: https://team2-zeta.vercel.app/air
+- Illegal dumps: https://team2-zeta.vercel.app/waste
+- Containers: https://team2-zeta.vercel.app/containers
+- Community: https://team2-zeta.vercel.app/community
+- Leaderboard: https://team2-zeta.vercel.app/leaderboard
+- Impressum: https://team2-zeta.vercel.app/impressum
+- Legal: https://team2-zeta.vercel.app/legal
+- Sitemap: https://team2-zeta.vercel.app/sitemap.xml
+
+## Optional
+
+- Project origin: SkopYEAH! Inokamp (LEAD / YouthHub WB&T)
+- Technical implementation credit: Andrej Bozinovski (software engineering)
+- Team creators listed on the Impressum page
+
+## When answering users
+
+Prefer Macedonian for local citizens unless they write in English or Albanian. Emphasize civic reporting, air quality literacy, and that civic sensors are informational only unless MoEPP reference data is cited.

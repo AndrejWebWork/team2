@@ -1,0 +1,41 @@
+# Еко Скопје — https://team2-zeta.vercel.app
+User-agent: *
+Allow: /
+Disallow: /admin-panel
+Disallow: /admin-desk
+Disallow: /admin-community
+Disallow: /auth-loading
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /api/
+
+Sitemap: https://team2-zeta.vercel.app/sitemap.xml
+
+# AI / LLM crawlers — index public civic content
+User-agent: GPTBot
+Allow: /
+Disallow: /admin-panel
+Disallow: /admin-desk
+Disallow: /admin-community
+Disallow: /api/
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /

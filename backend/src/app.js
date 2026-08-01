@@ -26,7 +26,8 @@ app.disable('x-powered-by')
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Frame-Options', 'DENY')
-  res.setHeader('Referrer-Policy', 'no-referrer')
+  // strict-origin-when-cross-origin — подобро за SEO/analytics од no-referrer.
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
   res.setHeader('X-DNS-Prefetch-Control', 'off')
   // HSTS — само кога барањето е преку HTTPS (зад TLS/прокси на Acton). На чист
   // HTTP (локален развој) не се поставува за да не наштети.
@@ -66,6 +67,7 @@ const authRateLimit = makeRateLimit({ windowMs: 15 * 60 * 1000, max: 40, message
 // Поднесување пријави: заштита од спам во базата. 20/мин по IP е повеќе од
 // доволно за реален корисник (обично поднесува 1–3), а блокира ботови.
 const submitRateLimit = makeRateLimit({ windowMs: 60 * 1000, max: 20, message: 'Премногу пријави во краток период. Обидете се повторно за минута.' })
+const settingsRateLimit = makeRateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: 'Премногу ажурирања на поставки. Обидете се повторно подоцна.' })
 
 const allowedOrigins = new Set(config.corsOrigin)
 app.use(cors({
@@ -113,7 +115,9 @@ app.use('/api/uploads', uploadsRouter)
 // Лимитирај само поднесување (POST) пријави; читањата (GET, кеширани) остануваат
 // неограничени за брз пристап при голем број корисници.
 app.use('/api/reports', (req, res, next) => (req.method === 'POST' ? submitRateLimit(req, res, next) : next()), reportsRouter)
-app.use('/api/users', usersRouter)
+app.use('/api/users', (req, res, next) => (
+  req.method === 'PATCH' && req.path === '/settings' ? settingsRateLimit(req, res, next) : next()
+), usersRouter)
 app.use('/api/events', eventsRouter)
 app.use('/api/notifications', notificationsRouter)
 app.use('/api/leaderboard', leaderboardRouter)

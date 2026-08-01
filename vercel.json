@@ -6,7 +6,7 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/uploads/(.*)", "destination": "/api/index" },
-    { "source": "/((?!api|assets|uploads|favicon\\.svg|logo\\.png|logo\\.svg|apple-touch-icon\\.png|icons\\.svg).*)", "destination": "/index.html" }
+    { "source": "/((?!api|assets|uploads|favicon\\.svg|logo\\.png|logo\\.svg|apple-touch-icon\\.png|icons\\.svg|skopje-grb\\.png|robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/index.js": {
@@ -21,9 +21,22 @@
       ]
     },
     {
-      "source": "/(logo|skopje-brand)\\.png",
+      "source": "/(logo|skopje-brand|skopje-grb)\\.png",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
   ]

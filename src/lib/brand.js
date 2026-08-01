@@ -2,6 +2,9 @@
 // ги кешира долгорочно наместо да ги повикува /logo.png при секоја навигација.
 import logoUrl from '../assets/logo.png'
 import brandUrl from '../assets/skopje-brand.png'
+import grbUrl from '../assets/skopje-grb.png'
 
 export const LOGO_SRC = logoUrl
 export const BRAND_SRC = brandUrl
+/** Грб на Град Скопје (официјален амблем). */
+export const GRB_SRC = grbUrl

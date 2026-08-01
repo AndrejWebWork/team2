@@ -181,6 +181,9 @@ reportsRouter.post('/', upload.array('photos', config.maxPhotos), async (req, re
     const lat = num(req.body.lat)
     const lng = num(req.body.lng)
     const description = str(req.body.description)
+    if (description && description.length > 200) {
+      return res.status(400).json({ error: 'Описот може да има најмногу 200 карактери.' })
+    }
     const institutionId = str(req.body.institutionId)
     const intensity = int(req.body.intensity)
     const severity = str(req.body.severity)
@@ -228,7 +231,7 @@ reportsRouter.post('/', upload.array('photos', config.maxPhotos), async (req, re
       await awardPointsOnce(resolvedReporterId, 1, 'report_submitted', rows[0].id)
     }
 
-    // Push + in-app до Супер Админ и надлежниот специјализиран админ.
+    // Push + in-app до сите админи (Супер + подадмини).
     // Best-effort — не смее да го сруши одговорот кон граѓанинот.
     try {
       await notifyAdminsOfNewReport(rows[0])

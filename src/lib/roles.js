@@ -4,9 +4,9 @@ export const ROLES = {
   USER: 'user',
   ORGANIZATION: 'organization',
   SUPER_ADMIN: 'admin',
-  ADMIN_INSPECTION: 'admin_inspection', // Комунална Инспекција → диви депонии
-  ADMIN_ENVIRONMENT: 'admin_environment', // Животна Средина → воздух / миризби
-  ADMIN_HYGIENE: 'admin_hygiene', // Комунална Хигиена → контејнери
+  ADMIN_INSPECTION: 'admin_inspection', // Комунална инспекција → диви депонии
+  ADMIN_ENVIRONMENT: 'admin_environment', // Животна средина инспекција → воздух / миризби
+  ADMIN_HYGIENE: 'admin_hygiene', // Комунална хигиена → контејнери
 }
 
 export const ADMIN_ROLES = [

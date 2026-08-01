@@ -13,9 +13,9 @@ const ALLOWED_ROLES = ['admin', 'admin_inspection', 'admin_environment', 'admin_
 const role = ALLOWED_ROLES.includes(process.env.ADMIN_ROLE) ? process.env.ADMIN_ROLE : 'admin'
 const roleNames = {
   admin: 'Супер Админ',
-  admin_inspection: 'Комунална Инспекција',
-  admin_environment: 'Животна Средина',
-  admin_hygiene: 'Комунална Хигиена',
+  admin_inspection: 'Комунална инспекција',
+  admin_environment: 'Животна средина инспекција',
+  admin_hygiene: 'Комунална хигиена',
 }
 
 async function run() {

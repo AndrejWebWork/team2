@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { navItems } from './navConfig'
 import { cx } from '../utils/ui'
 import { useApp } from '../context/AppContext'
-import { BRAND_SRC } from '../lib/brand'
+import { BRAND_SRC, GRB_SRC } from '../lib/brand'
 import { isAdminRole, isSuperAdmin } from '../lib/roles'
 
 function clearTapFocus(e) {
@@ -66,9 +66,17 @@ export function Sidebar({ role }) {
             draggable={false}
           />
           <div className='absolute inset-0 bg-gradient-to-t from-emerald-950/85 via-emerald-900/35 to-transparent' />
-          <div className='absolute inset-x-0 bottom-0 px-4 pb-3'>
-            <p className='font-display text-xl font-bold leading-tight tracking-tight text-white drop-shadow-sm'>Еко Скопје</p>
-            <p className='text-[11px] font-medium text-emerald-50/90'>{t('brand.tagline')}</p>
+          <div className='absolute inset-x-0 bottom-0 flex items-end gap-2.5 px-3 pb-3'>
+            <img
+              src={GRB_SRC}
+              alt={t('brand.coatAlt')}
+              className='h-12 w-auto shrink-0 drop-shadow-md'
+              draggable={false}
+            />
+            <div className='min-w-0 pb-0.5'>
+              <p className='font-display text-xl font-bold leading-tight tracking-tight text-white drop-shadow-sm'>Еко Скопје</p>
+              <p className='text-[11px] font-medium text-emerald-50/90'>{t('brand.tagline')}</p>
+            </div>
           </div>
         </div>
         <nav className='flex-1 space-y-0.5'>

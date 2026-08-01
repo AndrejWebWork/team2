@@ -1,38 +1,52 @@
-﻿import { Leaf, ShieldCheck } from 'lucide-react'
-import { useEffect, useState } from 'react'
+﻿import { ShieldCheck } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
+import { GRB_SRC } from '../lib/brand'
 import { isAdminRole } from '../lib/roles'
 
 export function AuthLoadingPage() {
   const navigate = useNavigate()
   const { auth, setAuth, t } = useApp()
   const [step, setStep] = useState('checkingSession')
+  const authRef = useRef(auth)
+  authRef.current = auth
 
   useEffect(() => {
     const t1 = setTimeout(() => setStep('loadingRole'), 800)
     const t2 = setTimeout(() => {
-      // Осигурај се дека сесијата е автентицирана (спречува redirect-loop назад тука).
-      setAuth((prev) => ({ ...prev, isAuthenticated: true, isAnonymous: false }))
-      if (isAdminRole(auth.role)) return navigate('/admin-desk', { replace: true })
-      if (auth.role === 'organization') return navigate('/community', { replace: true })
+      const current = authRef.current
+      // Задржи ја анонимноста ако нема е-пошта; само означи сесија како готова.
+      setAuth((prev) => ({
+        ...prev,
+        isAuthenticated: true,
+        isAnonymous: !prev.email,
+      }))
+      if (isAdminRole(current.role)) return navigate('/admin-desk', { replace: true })
+      if (current.role === 'organization') return navigate('/community', { replace: true })
       return navigate('/home', { replace: true })
     }, 1700)
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
     }
-  }, [auth, navigate])
+    // Само еднаш при mount — не ресетирај ги тајмерите при auth промени.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, setAuth])
 
   return (
     <div className='flex min-h-screen items-center justify-center bg-transparent p-4 app-safe-page'>
       <Card className='w-full max-w-md border-white/70 bg-white/75 backdrop-blur-xl'>
         <CardHeader className='text-center'>
-          <div className='mx-auto mb-2 inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-sky-100 text-emerald-700'>
-            <Leaf className='h-6 w-6' />
-          </div>
+          <img
+            src={GRB_SRC}
+            alt={t('brand.coatAlt')}
+            className='mx-auto mb-3 h-16 w-auto object-contain'
+            draggable={false}
+          />
           <CardTitle className='font-display text-4xl'>Еко Скопје</CardTitle>
+          <p className='mt-1 text-xs font-medium text-slate-400'>{t('brand.cityOfSkopje')}</p>
         </CardHeader>
         <CardContent className='text-center'>
           <p className='text-base text-slate-600'>{t(`auth.${step}`)}</p>

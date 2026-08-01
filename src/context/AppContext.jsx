@@ -952,21 +952,27 @@ export function AppProvider({ children }) {
         })
       }
       return { ok: true }
-    } catch {
-      optimisticInsertReport(payload)
-      // И офлајн: корисникот добива потврда дека пријавата е зачувана локално.
-      if (payload.type === 'waste') {
-        pushNotification({
-          title: t('deponija.newReportTitle'),
-          body: t('deponija.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
-        })
-      } else if (payload.type === 'container') {
-        pushNotification({
-          title: t('container.newReportTitle'),
-          body: t('container.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
-        })
+    } catch (err) {
+      const msg = String(err?.message || '')
+      const isNetwork = err instanceof TypeError
+        || /failed to fetch|networkerror|load failed|network request failed/i.test(msg)
+      // Само вистински мрежен пад → локална копија. HTTP 4xx/5xx НЕ се „успех“.
+      if (isNetwork) {
+        optimisticInsertReport(payload)
+        if (payload.type === 'waste') {
+          pushNotification({
+            title: t('deponija.newReportTitle'),
+            body: t('deponija.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
+          })
+        } else if (payload.type === 'container') {
+          pushNotification({
+            title: t('container.newReportTitle'),
+            body: t('container.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
+          })
+        }
+        return { ok: true, offline: true }
       }
-      return { ok: true, offline: true }
+      return { ok: false, error: msg || t('form.submitFailed') }
     }
   }
 

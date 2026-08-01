@@ -1,7 +1,8 @@
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { IMPRESSUM_CREATORS, IMPRESSUM_SOURCE_URL, impressumContent } from '../i18n/impressum'
+import { IMPRESSUM_CREATORS, IMPRESSUM_SOURCE_URL, IMPRESSUM_TECH_CREDIT, impressumContent } from '../i18n/impressum'
+import { GRB_SRC } from '../lib/brand'
 
 export function ImpressumPage() {
   const navigate = useNavigate()
@@ -33,6 +34,14 @@ export function ImpressumPage() {
       </header>
 
       <main className='mx-auto max-w-3xl space-y-4 px-4 py-6'>
+        <div className='flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 sm:px-7'>
+          <img src={GRB_SRC} alt={t('brand.coatAlt')} className='h-14 w-auto object-contain sm:h-16' draggable={false} />
+          <div className='min-w-0'>
+            <p className='font-display text-lg font-bold text-slate-900'>Еко Скопје</p>
+            <p className='text-sm text-slate-500'>{t('brand.cityOfSkopje')}</p>
+          </div>
+        </div>
+
         <article className='rounded-2xl border border-slate-200 bg-white p-5 sm:p-7'>
           <h2 className='text-sm font-semibold uppercase tracking-wide text-emerald-700'>{content.aboutTitle}</h2>
           <div className='mt-3 space-y-3'>
@@ -58,6 +67,9 @@ export function ImpressumPage() {
               <li key={name} className='text-sm font-medium text-slate-800'>{name}</li>
             ))}
           </ul>
+          <p className='mt-5 border-t border-slate-100 pt-4 text-xs leading-relaxed text-slate-400'>
+            {IMPRESSUM_TECH_CREDIT[language] || IMPRESSUM_TECH_CREDIT.mk}
+          </p>
         </article>
       </main>
     </div>

@@ -28,9 +28,9 @@ CREATE TYPE user_role        AS ENUM (
   'user',
   'organization',
   'admin',                 -- Супер Админ
-  'admin_inspection',      -- Комунална Инспекција (диви депонии)
-  'admin_environment',     -- Животна Средина (воздух / миризби)
-  'admin_hygiene'          -- Комунална Хигиена (контејнери)
+  'admin_inspection',      -- Комунална инспекција (диви депонии)
+  'admin_environment',     -- Животна средина инспекција (воздух / миризби)
+  'admin_hygiene'          -- Комунална хигиена (контејнери)
 );
 CREATE TYPE report_type      AS ENUM ('smell', 'waste', 'container');
 CREATE TYPE report_status    AS ENUM ('pending', 'in_progress', 'resolved');

@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { BRAND_SRC, LOGO_SRC } from '../lib/brand'
+import { BRAND_SRC, GRB_SRC, LOGO_SRC } from '../lib/brand'
 import { loginNavState, resolveAuthReturnTo } from '../lib/authNav'
 import { useApp } from '../context/AppContext'
 import { isAdminRole, postLoginPath } from '../lib/roles'
@@ -80,8 +80,10 @@ export function LoginPage() {
           <div className='absolute inset-0 bg-gradient-to-br from-emerald-900/90 via-emerald-800/70 to-emerald-950/90' />
 
           <div className='relative'>
-            <span className='inline-flex items-center justify-center rounded-2xl bg-white p-2.5 shadow-lg'>
-              <img src={LOGO_SRC} alt='Еко Скопје' className='h-11 w-auto object-contain' />
+            <span className='inline-flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-lg'>
+              <img src={GRB_SRC} alt={t('brand.coatAlt')} className='h-12 w-auto object-contain' draggable={false} />
+              <span className='h-10 w-px bg-slate-200' aria-hidden />
+              <img src={LOGO_SRC} alt='Еко Скопје' className='h-11 w-auto object-contain' draggable={false} />
             </span>
             <h1 className='mt-8 text-4xl font-extrabold tracking-tight leading-tight drop-shadow-sm'>
               {t('login.heroTitle')}
@@ -110,8 +112,10 @@ export function LoginPage() {
         {/* Right panel */}
         <div className='flex-1 flex flex-col justify-center px-8 py-12 sm:px-12'>
           <div className='lg:hidden mb-8 flex justify-center'>
-            <span className='inline-flex items-center justify-center rounded-2xl bg-white p-2 shadow-md ring-1 ring-slate-100'>
-              <img src={LOGO_SRC} alt='Еко Скопје' className='h-12 w-auto object-contain' />
+            <span className='inline-flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-md ring-1 ring-slate-100'>
+              <img src={GRB_SRC} alt={t('brand.coatAlt')} className='h-12 w-auto object-contain' draggable={false} />
+              <span className='h-10 w-px bg-slate-200' aria-hidden />
+              <img src={LOGO_SRC} alt='Еко Скопје' className='h-12 w-auto object-contain' draggable={false} />
             </span>
           </div>
 

@@ -36,7 +36,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Администраторски сметки (лозинката се поставува од backend со bcrypt hash)
 INSERT INTO users (email, display_name, role, is_anonymous) VALUES
   ('admin@ekoskopje.mk', 'Супер Админ', 'admin', FALSE),
-  ('inspekcija@ekoskopje.mk', 'Комунална Инспекција', 'admin_inspection', FALSE),
-  ('sredina@ekoskopje.mk', 'Животна Средина', 'admin_environment', FALSE),
-  ('higiena@ekoskopje.mk', 'Комунална Хигиена', 'admin_hygiene', FALSE)
+  ('inspekcija@ekoskopje.mk', 'Комунална инспекција', 'admin_inspection', FALSE),
+  ('sredina@ekoskopje.mk', 'Животна средина инспекција', 'admin_environment', FALSE),
+  ('higiena@ekoskopje.mk', 'Комунална хигиена', 'admin_hygiene', FALSE)
 ON CONFLICT (email) DO NOTHING;

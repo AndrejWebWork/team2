@@ -2,6 +2,7 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { CookieConsent } from './components/CookieConsent'
 import { Layout } from './components/Layout'
+import { SeoHead } from './components/SeoHead'
 import { useApp } from './context/AppContext'
 import { AdminCommunityPage } from './pages/AdminCommunityPage'
 import { AdminDeskPage } from './pages/AdminDeskPage'
@@ -66,6 +67,7 @@ function ProtectedLayout() {
 export default function App() {
   return (
     <>
+      <SeoHead />
       <ScrollToTop />
       <Routes>
         <Route path='/' element={<Navigate to='/home' replace />} />

@@ -135,6 +135,103 @@ usersRouter.delete('/community/:email', requireSuperAdmin, async (req, res, next
   } catch (err) { next(err) }
 })
 
+const SUBADMIN_ROLES = ['admin_inspection', 'admin_environment', 'admin_hygiene']
+const SUBADMIN_DEFAULT_NAMES = {
+  admin_inspection: 'Комунална инспекција',
+  admin_environment: 'Животна средина инспекција',
+  admin_hygiene: 'Комунална хигиена',
+}
+
+function publicSubAdmin(u) {
+  return {
+    id: u.id,
+    email: u.email,
+    displayName: u.display_name,
+    role: u.role,
+    language: u.language,
+    createdAt: u.created_at,
+  }
+}
+
+// GET /api/users/subadmins — листа на подадмини (само Супер Админ)
+usersRouter.get('/subadmins', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, email, display_name, role, language, created_at
+         FROM users
+        WHERE role::text = ANY($1::text[])
+        ORDER BY role, created_at DESC`,
+      [SUBADMIN_ROLES],
+    )
+    res.json(rows.map(publicSubAdmin))
+  } catch (err) { next(err) }
+})
+
+// POST /api/users/subadmins — креирај / унапреди подадмин (само Супер Админ)
+usersRouter.post('/subadmins', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const { email, displayName = null, role, language = 'mk' } = req.body
+    const clientHash = extractClientPasswordHash(req.body)
+    if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: 'Внесете валидна е-пошта.' })
+    if (!SUBADMIN_ROLES.includes(role)) {
+      return res.status(400).json({ error: 'Невалидна улога на подадмин.' })
+    }
+    const lang = LANGS.includes(language) ? language : 'mk'
+    const name = (displayName && String(displayName).trim())
+      || SUBADMIN_DEFAULT_NAMES[role]
+      || String(email).split('@')[0]
+
+    const existing = await query('SELECT id, role FROM users WHERE lower(email) = $1', [String(email).toLowerCase()])
+    if (existing.rows[0]?.role === 'admin') {
+      return res.status(400).json({ error: 'Супер Админ сметката не може да се претвори во подадмин.' })
+    }
+
+    if (existing.rows.length > 0) {
+      const passwordHash = clientHash ? await hashForStorage(clientHash) : null
+      const { rows } = await query(
+        `UPDATE users SET
+           role = $2,
+           display_name = $3,
+           is_anonymous = FALSE,
+           password_hash = COALESCE($4, password_hash),
+           language = COALESCE($5, language),
+           updated_at = now()
+         WHERE lower(email) = $1
+         RETURNING id, email, display_name, role, language, created_at`,
+        [String(email).toLowerCase(), role, name, passwordHash, lang],
+      )
+      return res.json(publicSubAdmin(rows[0]))
+    }
+
+    if (!clientHash) {
+      return res.status(400).json({ error: 'За нов подадмин внесете лозинка (мин. 6 знаци).' })
+    }
+    const storedHash = await hashForStorage(clientHash)
+    const { rows } = await query(
+      `INSERT INTO users (email, password_hash, display_name, role, language, is_anonymous)
+         VALUES ($1, $2, $3, $4, $5, FALSE)
+       RETURNING id, email, display_name, role, language, created_at`,
+      [String(email).toLowerCase(), storedHash, name, role, lang],
+    )
+    res.status(201).json(publicSubAdmin(rows[0]))
+  } catch (err) { next(err) }
+})
+
+// DELETE /api/users/subadmins/:email — симни подадмин улога назад на 'user'
+usersRouter.delete('/subadmins/:email', requireSuperAdmin, async (req, res, next) => {
+  try {
+    const email = String(req.params.email || '').trim().toLowerCase()
+    const { rows } = await query(
+      `UPDATE users SET role = 'user', updated_at = now()
+         WHERE lower(email) = $1 AND role::text = ANY($2::text[])
+       RETURNING id`,
+      [email, SUBADMIN_ROLES],
+    )
+    if (rows.length === 0) return res.status(404).json({ error: 'Подадминот не постои.' })
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
 // PATCH /api/users/settings  { email, displayName?, language?, notifAir?, notifWaste?, notifEvents? }
 // Зачувување на профил и поставки (како јазикот) — делумно ажурирање по поле.
 usersRouter.patch('/settings', async (req, res, next) => {

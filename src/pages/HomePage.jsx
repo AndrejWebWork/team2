@@ -10,11 +10,29 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
 import { useGeolocation } from '../hooks/useGeolocation'
-import { LOGO_SRC } from '../lib/brand'
+import { GRB_SRC, LOGO_SRC } from '../lib/brand'
 import { isValidReportType } from '../lib/reportTypes'
 import { isAdminRole } from '../lib/roles'
 
 const MAX_PHOTOS = 6
+const DESC_MAX = 200
+
+function DescriptionField({ value, onChange, placeholder, className }) {
+  return (
+    <div className='space-y-1'>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value.slice(0, DESC_MAX))}
+        placeholder={placeholder}
+        maxLength={DESC_MAX}
+        className={className}
+      />
+      <p className={`text-right text-xs tabular-nums ${value.length >= DESC_MAX ? 'text-rose-500' : 'text-slate-400'}`}>
+        {value.length}/{DESC_MAX}
+      </p>
+    </div>
+  )
+}
 
 function stopStream(stream) {
   stream?.getTracks?.().forEach((tr) => {
@@ -202,7 +220,7 @@ function SmellForm({ submitReport, onDone, loc, t }) {
     const coords = await loc.ensureFresh()
     if (!coords?.lat) return setToast(t('form.locationUnavailable'))
     setBusy(true)
-    await submitReport({
+    const result = await submitReport({
       type: 'smell',
       location: coords.label,
       lat: coords.lat,
@@ -212,6 +230,7 @@ function SmellForm({ submitReport, onDone, loc, t }) {
       severity: intensity >= 4 ? 'critical' : 'warning',
     })
     setBusy(false)
+    if (!result?.ok) return setToast(result?.error || t('form.submitFailed'))
     setDescription('')
     setIntensity(3)
     onDone()
@@ -243,7 +262,7 @@ function SmellForm({ submitReport, onDone, loc, t }) {
         </div>
       </div>
 
-      <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('form.smellPlaceholder')} className='min-h-20' />
+      <DescriptionField value={description} onChange={setDescription} placeholder={t('form.smellPlaceholder')} className='min-h-20' />
       <Button type='submit' className='w-full' disabled={loc.loading || busy}>{t('common.submitReport')}</Button>
       <Toast toast={toast} onClose={() => setToast('')} />
     </form>
@@ -263,7 +282,7 @@ function DeponijForm({ submitReport, onDone, loc, t }) {
     if (!coords?.lat) return setToast(t('form.locationUnavailable'))
     if (photos.length === 0) return setToast(t('deponija.photoRequired'))
     setBusy(true)
-    await submitReport({
+    const result = await submitReport({
       type: 'waste',
       location: coords.label,
       lat: coords.lat,
@@ -272,6 +291,7 @@ function DeponijForm({ submitReport, onDone, loc, t }) {
       dataUrls: photos,
     })
     setBusy(false)
+    if (!result?.ok) return setToast(result?.error || t('form.submitFailed'))
     setDescription('')
     setPhotos([])
     onDone()
@@ -281,7 +301,7 @@ function DeponijForm({ submitReport, onDone, loc, t }) {
     <form onSubmit={submit} className='space-y-4'>
       <GPSStatus loc={loc} onRetry={loc.retry} onRefresh={loc.refresh} t={t} />
       <PhotoCapture photos={photos} setPhotos={setPhotos} required t={t} />
-      <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('deponija.descPlaceholder')} className='min-h-20' />
+      <DescriptionField value={description} onChange={setDescription} placeholder={t('deponija.descPlaceholder')} className='min-h-20' />
       <Button type='submit' className='w-full' disabled={loc.loading || busy}>{t('common.submitReport')}</Button>
       <Toast toast={toast} onClose={() => setToast('')} />
     </form>
@@ -303,7 +323,7 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
     if (!coords?.lat) return setToast(t('form.locationUnavailable'))
     if (photos.length === 0) return setToast(t('deponija.photoRequired'))
     setBusy(true)
-    await submitReport({
+    const result = await submitReport({
       type: 'container',
       location: coords.label,
       lat: coords.lat,
@@ -316,6 +336,7 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
       dataUrls: photos,
     })
     setBusy(false)
+    if (!result?.ok) return setToast(result?.error || t('form.submitFailed'))
     setDescription('')
     setContainerKind('mesan')
     setIssueType('full')
@@ -347,7 +368,7 @@ function ContainerForm({ submitReport, onDone, loc, t }) {
 
       <PhotoCapture photos={photos} setPhotos={setPhotos} required t={t} />
 
-      <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('container.descPlaceholder')} className='min-h-16' />
+      <DescriptionField value={description} onChange={setDescription} placeholder={t('container.descPlaceholder')} className='min-h-16' />
       <Button type='submit' className='w-full' disabled={loc.loading || busy}>{t('common.submitReport')}</Button>
       <Toast toast={toast} onClose={() => setToast('')} />
     </form>
@@ -370,11 +391,21 @@ function HeroSection({ t }) {
             {t('home.heroSubtitle')}
           </p>
         </div>
-        <img
-          src={LOGO_SRC}
-          alt='Еко Скопје'
-          className='relative h-20 w-auto shrink-0 rounded-2xl bg-white px-4 py-3 object-contain sm:h-32 sm:px-5 sm:py-4'
-        />
+        <div className='relative flex shrink-0 items-center gap-3 rounded-2xl bg-white px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3'>
+          <img
+            src={GRB_SRC}
+            alt={t('brand.coatAlt')}
+            className='h-14 w-auto object-contain sm:h-20'
+            draggable={false}
+          />
+          <span className='h-12 w-px bg-slate-200 sm:h-16' aria-hidden />
+          <img
+            src={LOGO_SRC}
+            alt='Еко Скопје'
+            className='h-12 w-auto object-contain sm:h-16'
+            draggable={false}
+          />
+        </div>
       </div>
     </div>
   )
@@ -396,6 +427,12 @@ export function HomePage() {
   const reportSectionRef = useRef(null)
   const loc = useGeolocation(t)
 
+  const handleDone = useCallback(() => setSubmitted(true), [])
+  const navAir = useCallback(() => navigate('/air'), [navigate])
+  const navWaste = useCallback(() => navigate('/waste'), [navigate])
+  const navContainers = useCallback(() => navigate('/containers'), [navigate])
+  const navAdminDesk = useCallback(() => navigate('/admin-desk'), [navigate])
+
   useEffect(() => {
     const paramType = searchParams.get('type')
     if (isValidReportType(paramType)) setType(paramType)
@@ -406,13 +443,8 @@ export function HomePage() {
     }
   }, [searchParams])
 
+  // После сите hooks — инаку админ redirect фрла „fewer hooks than expected“.
   if (isAdminRole(auth.role)) return <Navigate to='/admin-panel' replace />
-
-  const handleDone = useCallback(() => setSubmitted(true), [])
-  const navAir = useCallback(() => navigate('/air'), [navigate])
-  const navWaste = useCallback(() => navigate('/waste'), [navigate])
-  const navContainers = useCallback(() => navigate('/containers'), [navigate])
-  const navAdminDesk = useCallback(() => navigate('/admin-desk'), [navigate])
 
   const selected = TYPES.find((opt) => opt.value === type)
 

@@ -1,0 +1,29 @@
+{
+  "name": "Еко Скопје",
+  "short_name": "Еко Скопје",
+  "description": "Граѓанска еко-платформа за квалитет на воздух, диви депонии и контејнери во Скопје.",
+  "id": "/",
+  "start_url": "/home",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#059669",
+  "theme_color": "#059669",
+  "lang": "mk",
+  "dir": "ltr",
+  "categories": ["lifestyle", "utilities", "government"],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

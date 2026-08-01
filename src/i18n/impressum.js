@@ -1,11 +1,18 @@
 export const IMPRESSUM_CREATORS = [
   'Андреј Божиновски',
   'Ергун Неџип',
-  'Данаил Трпевски',
+  'Данаил Търпевски',
   'Миа Закев',
   'Михаил Пршевски',
   'Михајло Димовски',
 ]
+
+/** Дискретна техничка заслуга — не како главен наслов, туку како фуснота. */
+export const IMPRESSUM_TECH_CREDIT = {
+  mk: 'Дигитална платформа · техничка реализација Андреј Божиновски',
+  en: 'Digital platform · technical implementation by Andrej Bozinovski',
+  sq: 'Platformë digjitale · realizim teknik nga Andrej Bozinovski',
+}
 
 export const IMPRESSUM_SOURCE_URL = 'https://lead.org.mk/blog/skop-e-mozhe-podobro-mladite-vekje-imaat-idei-1'
 
