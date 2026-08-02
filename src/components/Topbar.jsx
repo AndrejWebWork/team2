@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
 import { loginNavState } from '../lib/authNav'
-import { GRB_SRC } from '../lib/brand'
 
 function clearTapFocus(e) {
   const el = e.currentTarget
@@ -78,9 +77,8 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
             <UserCircle2 className='h-[30px] w-[30px]' />
           </button>
 
-          {/* Desktop: грб + user info */}
+          {/* Desktop: user info */}
           <div className='hidden items-center gap-2 lg:flex'>
-            <img src={GRB_SRC} alt={t('brand.coatAlt')} className='h-8 w-auto object-contain' draggable={false} />
             <UserCircle2 className='h-6 w-6 text-slate-400' />
             <div>
               <p className='text-sm font-semibold text-slate-800'>{displayLabel}</p>
