@@ -69,6 +69,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount,
   const [pendingStatus, setPendingStatus] = useState(report.status)
   const [copying, setCopying] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Миризба нема решавање на статус — само преглед + бришење.
   const changed = report.type !== 'smell' && pendingStatus !== report.status
 
   useEffect(() => {
@@ -111,7 +112,17 @@ function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount,
         <div className='app-safe-drawer-head flex items-center justify-between border-b border-slate-200 px-5 pb-4'>
           <div className='flex items-center gap-2'>
             <TypePill type={report.type} />
-            <StatusPill status={report.status} />
+            {report.type !== 'smell' ? (
+              <StatusPill status={report.status} />
+            ) : (
+              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                report.severity === 'critical'
+                  ? 'border-rose-200 bg-rose-50 text-rose-700'
+                  : 'border-amber-200 bg-amber-50 text-amber-700'
+              }`}>
+                {report.severity === 'critical' ? t('badge.critical') : t('badge.warning')}
+              </span>
+            )}
           </div>
           <div className='flex items-center gap-1'>
             <Button
@@ -257,7 +268,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount,
             </div>
           </div>
 
-          {/* Status flow — only for waste/container */}
+          {/* Status flow — само депонии/контејнери (миризба нема решавање) */}
           {report.type !== 'smell' && (
             <div>
               <p className='mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400'>{t('admin.updateStatus')}</p>
@@ -284,7 +295,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount,
             </div>
           )}
 
-          {/* Delete invalid report */}
+          {/* Delete — достапно за надлежниот подадмин / супер админ */}
           <div className='rounded-xl border border-rose-100 bg-rose-50/60 p-3'>
             <Button
               type='button'
@@ -299,8 +310,8 @@ function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount,
           </div>
         </div>
 
-        {/* Footer save */}
-        {report.type !== 'smell' && (
+        {/* Footer */}
+        {report.type !== 'smell' ? (
           <div className='app-safe-drawer-foot border-t border-slate-200 px-5 pt-4 flex gap-3'>
             <Button
               className='flex-1'
@@ -314,8 +325,7 @@ function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount,
             </Button>
             <Button variant='outline' onClick={requestClose}>{t('common.cancel')}</Button>
           </div>
-        )}
-        {report.type === 'smell' && (
+        ) : (
           <div className='app-safe-drawer-foot border-t border-slate-200 px-5 pt-4'>
             <Button variant='outline' className='w-full' onClick={requestClose}>{t('common.close')}</Button>
           </div>
@@ -326,9 +336,16 @@ function ReportDrawer({ report, onClose, onUpdateStatus, onDelete, clusterCount,
   )
 }
 
+function defaultTypeFilter(role) {
+  const allowed = reportTypesForRole(role)
+  // Еден тип (подадмин) → директно тој филтер; супер админ → сите.
+  if (Array.isArray(allowed) && allowed.length === 1) return allowed[0]
+  return 'all'
+}
+
 export function AdminPanelPage() {
-  const { auth, wasteReports, setWasteReports, smellAlerts, containers, setContainers, pushNotification, changeReportStatus, deleteReport, removeReportLocally, refreshData, t } = useApp()
-  const [typeFilter, setTypeFilter] = useState('all')
+  const { auth, wasteReports, setWasteReports, smellAlerts, setSmellAlerts, containers, setContainers, pushNotification, changeReportStatus, deleteReport, removeReportLocally, refreshData, t } = useApp()
+  const [typeFilter, setTypeFilter] = useState(() => defaultTypeFilter(auth.role))
   const [statusFilter, setStatusFilter] = useState('pending')
   const [sortBy, setSortBy] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
@@ -353,6 +370,12 @@ export function AdminPanelPage() {
   )
 
   const allowedTypes = reportTypesForRole(auth.role)
+  // Ако улогата е ограничена, не дозволувај филтер надвор од дозволените типови.
+  const effectiveTypeFilter = (
+    typeFilter !== 'all'
+    && allowedTypes !== null
+    && !allowedTypes.includes(typeFilter)
+  ) ? defaultTypeFilter(auth.role) : typeFilter
 
   // Merge all reports into unified list (филтрирани според улога)
   const allReports = useMemo(() => {
@@ -360,7 +383,13 @@ export function AdminPanelPage() {
       ? wasteReports.map((r) => ({ ...r, type: 'waste', status: r.status || 'pending' }))
       : []
     const smell = canAccessReportType(auth.role, 'smell')
-      ? smellAlerts.map((r) => ({ ...r, type: 'smell', status: 'pending', location: r.location || '—' }))
+      ? smellAlerts.map((r) => ({
+        ...r,
+        type: 'smell',
+        status: r.status || 'pending',
+        location: r.location || '—',
+        description: r.description || r.message || '',
+      }))
       : []
     const cont = canAccessReportType(auth.role, 'container')
       ? containers.map((c) => ({
@@ -381,8 +410,11 @@ export function AdminPanelPage() {
 
   const filtered = useMemo(() => {
     let list = allReports
-    if (typeFilter !== 'all') list = list.filter((r) => r.type === typeFilter)
-    if (statusFilter !== 'all') list = list.filter((r) => r.status === statusFilter)
+    if (effectiveTypeFilter !== 'all') list = list.filter((r) => r.type === effectiveTypeFilter)
+    // Миризба нема status workflow — се гледа само кај „сите“ / „во тек“ (pending), не како resolved.
+    if (statusFilter !== 'all') {
+      list = list.filter((r) => (r.type === 'smell' ? statusFilter === 'pending' : r.status === statusFilter))
+    }
     return [...list].sort((a, b) => {
       let va, vb
       if (sortBy === 'date') { va = new Date(a.createdAt || 0).getTime(); vb = new Date(b.createdAt || 0).getTime() }
@@ -391,9 +423,9 @@ export function AdminPanelPage() {
       else { va = 0; vb = 0 }
       return sortDir === 'asc' ? va - vb : vb - va
     })
-  }, [allReports, typeFilter, statusFilter, sortBy, sortDir, smellClusterCounts, airSensors])
+  }, [allReports, effectiveTypeFilter, statusFilter, sortBy, sortDir, smellClusterCounts, airSensors])
 
-  const paginationKey = `${typeFilter}-${statusFilter}-${sortBy}-${sortDir}`
+  const paginationKey = `${effectiveTypeFilter}-${statusFilter}-${sortBy}-${sortDir}`
   const {
     visible: pagedReports,
     currentPage,
@@ -405,7 +437,7 @@ export function AdminPanelPage() {
   } = usePagination(filtered, ADMIN_PAGE_SIZE, paginationKey)
 
   const activeReports = useMemo(
-    () => allReports.filter((r) => r.status !== 'resolved'),
+    () => allReports.filter((r) => r.type === 'smell' || r.status !== 'resolved'),
     [allReports],
   )
 
@@ -518,10 +550,10 @@ export function AdminPanelPage() {
           <button
             key={f.key}
             onClick={() => setTypeFilter(f.key)}
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${typeFilter === f.key ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${effectiveTypeFilter === f.key ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
           >
             {f.label}
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${typeFilter === f.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{f.count}</span>
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${effectiveTypeFilter === f.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{f.count}</span>
           </button>
         ))}
         <div className='ml-auto flex gap-2'>
@@ -619,7 +651,19 @@ export function AdminPanelPage() {
                       </div>
                     </td>
                     <td className='px-4 py-3 text-xs text-slate-400 whitespace-nowrap'>{mkDate(r.createdAt)}</td>
-                    <td className='px-4 py-3'><StatusPill status={r.status} /></td>
+                    <td className='px-4 py-3'>
+                      {r.type === 'smell' ? (
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                          r.severity === 'critical'
+                            ? 'border-rose-200 bg-rose-50 text-rose-700'
+                            : 'border-amber-200 bg-amber-50 text-amber-700'
+                        }`}>
+                          {r.severity === 'critical' ? t('badge.critical') : t('badge.warning')}
+                        </span>
+                      ) : (
+                        <StatusPill status={r.status} />
+                      )}
+                    </td>
                     <td className='px-4 py-3'><ChevronRight className='h-4 w-4 text-slate-300' /></td>
                   </tr>
                 )

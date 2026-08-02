@@ -54,7 +54,16 @@ export function canApproveEvents(role) {
   return isSuperAdmin(role)
 }
 
-/** Сите админи добиваат push за секоја нова пријава (без разлика на тип). */
-export function adminRolesForReportType(_type) {
-  return [...ADMIN_ROLES]
+/** Кои админ улоги добиваат push за даден тип пријава (Супер + надлежен подадмин). */
+export function adminRolesForReportType(type) {
+  switch (type) {
+    case 'waste':
+      return [ROLES.SUPER_ADMIN, ROLES.ADMIN_INSPECTION]
+    case 'smell':
+      return [ROLES.SUPER_ADMIN, ROLES.ADMIN_ENVIRONMENT]
+    case 'container':
+      return [ROLES.SUPER_ADMIN, ROLES.ADMIN_HYGIENE]
+    default:
+      return [ROLES.SUPER_ADMIN]
+  }
 }

@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { query } from '../db.js'
 import { invalidateCache } from '../lib/responseCache.js'
+import { requireAdmin } from '../middleware/requireAdmin.js'
 import { resolveUserId } from '../services/users.js'
 
 export const notificationsRouter = Router()
@@ -55,8 +56,8 @@ notificationsRouter.post('/air-alert', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// POST /api/notifications  { title, body, email? }  (email отсутен = broadcast)
-notificationsRouter.post('/', async (req, res, next) => {
+// POST /api/notifications  { title, body, email? }  — само админ (спречува произволен spam/broadcast)
+notificationsRouter.post('/', requireAdmin, async (req, res, next) => {
   try {
     const { title, body = null, email = null } = req.body
     if (!title) return res.status(400).json({ error: 'Недостасува наслов.' })
@@ -65,6 +66,7 @@ notificationsRouter.post('/', async (req, res, next) => {
       `INSERT INTO notifications (user_id, title, body) VALUES ($1, $2, $3) RETURNING *`,
       [userId, title, body],
     )
+    invalidateCache('notifications:')
     res.status(201).json(rowToNotification(rows[0]))
   } catch (err) { next(err) }
 })

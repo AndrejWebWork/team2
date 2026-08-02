@@ -12,7 +12,7 @@ import { useApp } from '../context/AppContext'
 import { updateReportStatus } from '../lib/api'
 import { getDeviceId } from '../lib/device'
 import { isMyReport } from '../lib/reportOwnership'
-import { canAccessReportType, isAdminRole } from '../lib/roles'
+import { canAccessReportType } from '../lib/roles'
 
 function mkDate(iso, noDate) {
   if (!iso) return noDate
@@ -20,7 +20,7 @@ function mkDate(iso, noDate) {
 }
 
 export function WastePage() {
-  const { wasteReports, setWasteReports, auth, awardPoints, refreshReports, t } = useApp()
+  const { wasteReports, setWasteReports, auth, refreshReports, t } = useApp()
   const [statusSuccess, setStatusSuccess] = useState(null)
 
   useEffect(() => {
@@ -31,16 +31,17 @@ export function WastePage() {
     return () => clearInterval(timer)
   }, [refreshReports])
 
+  const isWasteAdmin = canAccessReportType(auth.role, 'waste')
   const isMine = (r) => isMyReport(r, auth, getDeviceId())
   const myReports = useMemo(
-    () => (isAdminRole(auth.role) ? wasteReports : wasteReports.filter(isMine)),
-    [wasteReports, auth.role, auth.email, auth.userId, auth.isAnonymous],
+    () => (isWasteAdmin ? wasteReports : wasteReports.filter(isMine)),
+    [wasteReports, isWasteAdmin, auth.email, auth.userId, auth.isAnonymous],
   )
 
   // Решените пријави се ЈАВНИ ПОСТОВИ — секој граѓанин ги гледа сите (од кого
   // било), како доказ дека пријавите се решаваат.
   const resolvedPosts = wasteReports.filter((r) => r.status === 'resolved')
-  const activeReports = isAdminRole(auth.role)
+  const activeReports = isWasteAdmin
     ? wasteReports.filter((r) => r.status !== 'resolved')
     : myReports.filter((r) => r.status !== 'resolved')
 
@@ -51,12 +52,12 @@ export function WastePage() {
   }), [myReports])
 
   async function updateStatus(id, status) {
-    if (typeof id === 'string' && id.includes('-')) {
-      try {
-        await updateReportStatus(id, status)
-      } catch {
-        return
-      }
+    // Само серверски UUID — поените ги доделува backend.
+    if (!(typeof id === 'string' && id.includes('-'))) return
+    try {
+      await updateReportStatus(id, status)
+    } catch {
+      return
     }
     const report = wasteReports.find((r) => r.id === id)
     const loc = report?.location || t('admin.unknownLocation')
@@ -64,9 +65,6 @@ export function WastePage() {
     setWasteReports((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r
-        if (status === 'resolved' && r.status !== 'resolved' && !r.resolvedRewardGiven) {
-          if (r.reportedById && r.reportedById.includes('@')) awardPoints(r.reportedById, 2)
-        }
         return {
           ...r,
           status,
@@ -76,7 +74,7 @@ export function WastePage() {
         }
       }),
     )
-    if (isAdminRole(auth.role)) {
+    if (isWasteAdmin) {
       setStatusSuccess({
         title: t('admin.statusUpdatedTitle', { status: statusLabel }),
         body: t('admin.statusUpdatedBody', { loc, status: statusLabel }),
@@ -102,13 +100,13 @@ export function WastePage() {
 
       <section className='space-y-3'>
         <div className='flex items-center justify-between'>
-          <h2 className='text-lg font-semibold text-slate-900'>{isAdminRole(auth.role) ? t('waste.activeAdmin') : t('waste.activeMine')}</h2>
+          <h2 className='text-lg font-semibold text-slate-900'>{isWasteAdmin ? t('waste.activeAdmin') : t('waste.activeMine')}</h2>
           <p className='text-xs text-slate-500'>{activeReports.length} {t('common.records')}</p>
         </div>
         {activeReports.length === 0 ? (
           <EmptyState
-            title={isAdminRole(auth.role) ? t('waste.noActiveAdmin') : t('waste.noActiveMine')}
-            description={isAdminRole(auth.role) ? t('waste.noActiveAdminDesc') : t('waste.noActiveMineDesc')}
+            title={isWasteAdmin ? t('waste.noActiveAdmin') : t('waste.noActiveMine')}
+            description={isWasteAdmin ? t('waste.noActiveAdminDesc') : t('waste.noActiveMineDesc')}
           />
         ) : (
           <div className='grid gap-4 md:grid-cols-2'>
@@ -135,7 +133,7 @@ export function WastePage() {
                   <p className='flex items-center gap-1 text-xs text-slate-500'>
                     <UserRound className='h-3.5 w-3.5' />{report.reportedBy || t('common.anonymousCitizen')} · {mkDate(report.createdAt, t('waste.noDate'))}
                   </p>
-                  {isAdminRole(auth.role) && (
+                  {isWasteAdmin && (
                     <div className='flex flex-wrap gap-2 pt-1'>
                       <Button size='sm' variant='info' onClick={() => updateStatus(report.id, 'in_progress')}>{t('waste.markInProgress')}</Button>
                       <Button size='sm' onClick={() => updateStatus(report.id, 'resolved')}>{t('waste.markResolved')}</Button>

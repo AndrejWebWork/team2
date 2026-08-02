@@ -175,9 +175,16 @@ function ContainerRow({ container, onReset }) {
   )
 }
 
+function defaultDeskTab(role) {
+  if (canAccessReportType(role, 'waste')) return 'waste'
+  if (canAccessReportType(role, 'smell')) return 'smell'
+  if (canAccessReportType(role, 'container')) return 'containers'
+  return 'waste'
+}
+
 export function AdminDeskPage() {
   const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, pushNotification, t } = useApp()
-  const [tab, setTab] = useState('waste')
+  const [tab, setTab] = useState(() => defaultDeskTab(auth.role))
   const [airSensors, setAirSensors] = useState([])
   const [statusSuccess, setStatusSuccess] = useState(null)
 
@@ -203,7 +210,7 @@ export function AdminDeskPage() {
     const type = tabItem.key === 'containers' ? 'container' : tabItem.key
     return canAccessReportType(auth.role, type)
   })
-  const defaultTab = visibleTabs[0]?.key || 'waste'
+  const defaultTab = visibleTabs[0]?.key || defaultDeskTab(auth.role)
   const activeTab = visibleTabs.some((x) => x.key === tab) ? tab : defaultTab
 
   const unresolvedWaste = canWaste
@@ -216,18 +223,19 @@ export function AdminDeskPage() {
   // Промената прво се потврдува на backend; при одбивање (пр. невалиден админ
   // токен) не се прикажува лажен успех. Поените ги доделува ИСКЛУЧИВО backend.
   async function updateWasteStatus(id, status) {
+    const loc = wasteReports.find((r) => r.id === id)?.location || t('admin.unknownLocation')
+    if (!(typeof id === 'string' && id.includes('-'))) {
+      pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
+      return
+    }
     let serverRow = null
-    if (typeof id === 'string' && id.includes('-')) {
-      try {
-        serverRow = await updateReportStatus(id, status)
-      } catch {
-        const loc = wasteReports.find((r) => r.id === id)?.location || t('admin.unknownLocation')
-        pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
-        return
-      }
+    try {
+      serverRow = await updateReportStatus(id, status)
+    } catch {
+      pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
+      return
     }
     const mapped = serverRow ? serverToWaste(serverRow) : null
-    const loc = wasteReports.find((r) => r.id === id)?.location || t('admin.unknownLocation')
     const statusLabel = t(STATUS_META[status] || STATUS_META.pending)
     setWasteReports((prev) =>
       prev.map((r) => {
@@ -248,18 +256,19 @@ export function AdminDeskPage() {
   }
 
   async function resetContainer(id) {
+    const loc = containers.find((c) => c.id === id)?.area || t('admin.unknownLocation')
+    if (!(typeof id === 'string' && id.includes('-'))) {
+      pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
+      return
+    }
     let serverRow = null
-    if (typeof id === 'string' && id.includes('-')) {
-      try {
-        serverRow = await updateReportStatus(id, 'resolved')
-      } catch {
-        const loc = containers.find((c) => c.id === id)?.area || t('admin.unknownLocation')
-        pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
-        return
-      }
+    try {
+      serverRow = await updateReportStatus(id, 'resolved')
+    } catch {
+      pushNotification({ title: t('admin.statusUpdateFailedTitle'), body: t('admin.statusUpdateFailedBody', { loc }) })
+      return
     }
     const mapped = serverRow ? serverToContainer(serverRow) : null
-    const loc = containers.find((c) => c.id === id)?.area || t('admin.unknownLocation')
     const statusLabel = t('status.resolved')
     setContainers((prev) => prev.map((c) => {
       if (c.id !== id) return c

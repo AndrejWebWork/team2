@@ -231,7 +231,7 @@ reportsRouter.post('/', upload.array('photos', config.maxPhotos), async (req, re
       await awardPointsOnce(resolvedReporterId, 1, 'report_submitted', rows[0].id)
     }
 
-    // Push + in-app до сите админи (Супер + подадмини).
+    // Push + in-app до Супер Админ и надлежниот подадмин за тој тип.
     // Best-effort — не смее да го сруши одговорот кон граѓанинот.
     try {
       await notifyAdminsOfNewReport(rows[0])
@@ -253,6 +253,9 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
     }
     const existing = await query('SELECT status, type FROM reports WHERE id = $1', [req.params.id])
     if (existing.rowCount === 0) return res.status(404).json({ error: 'Пријавата не постои.' })
+    if (existing.rows[0].type === 'smell') {
+      return res.status(400).json({ error: 'Пријавите за миризба немаат решавање на статус.' })
+    }
     if (!assertReportTypeAccess(req, res, existing.rows[0].type)) return
 
     const oldStatus = existing.rows[0].status

@@ -328,8 +328,10 @@ export async function fetchNotifications(email, signal) {
 
 export async function createNotificationApi(payload, signal) {
   const res = await fetch(`${API_URL}/api/notifications`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload), signal,
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+    signal,
   })
   if (!res.ok) throw new Error('Креирањето на известувањето не успеа.')
   return res.json()
@@ -716,11 +718,15 @@ export function serverToSmell(r) {
     lat: r.lat,
     lng: r.lng,
     message: r.description,
+    description: r.description,
+    status: r.status || 'pending',
     intensity: r.intensity,
     severity: r.severity,
     institutionId: r.institution_id,
     createdBy: r.reporter_name,
+    reportedBy: r.reporter_name,
     createdAt: r.created_at,
+    resolvedAt: r.resolved_at || null,
     nearestSensorId: isAirSensor ? r.nearest_point_id : null,
     nearestSensorDistanceM: isAirSensor ? (r.nearest_point_distance_m ?? null) : null,
   }

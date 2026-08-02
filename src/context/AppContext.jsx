@@ -757,12 +757,15 @@ export function AppProvider({ children }) {
     if (email) createAirAlertNotificationApi({ email, title, body }).catch(() => {})
   }
 
-  // Ново известување: оптимистички локално + (ако сме најавени) во базата +
-  // телефонска локална нотификација (не за админ — таму не е потребно).
+  // Ново известување: оптимистички локално + телефонска локална нотификација.
+  // Persist во DB само за админ (POST /api/notifications бара админ токен).
+  // Граѓанските системски нотификации (статус, настани) ги пишува backend директно.
   function pushNotification({ title, body }) {
     const optimistic = { id: `local-${Date.now()}`, title, body, group: 'Денес', read: false, createdAt: new Date().toISOString() }
     setNotifications((prev) => [optimistic, ...prev])
-    if (email) createNotificationApi({ title, body, email }).catch(() => {})
+    if (email && isAdminRole(auth.role)) {
+      createNotificationApi({ title, body, email }).catch(() => {})
+    }
     if (!isAdminRole(auth.role)) scheduleLocalNotification({ title, body })
   }
 
@@ -849,39 +852,8 @@ export function AppProvider({ children }) {
 
   // ---- Записи кон backend (единствен извор на вистина) ----
 
-  // Оптимистички локален запис при офлајн (за да се види пријавата веднаш и да
-  // остане во кешот на уредот додека backend-от не се врати).
-  function optimisticInsertReport(p) {
-    const now = new Date().toISOString()
-    const reportedBy = auth.email || t('common.anonymousCitizen')
-    if (p.type === 'smell') {
-      setSmellAlerts((prev) => [{
-        id: `local-${Date.now()}`, location: p.location, lat: p.lat, lng: p.lng,
-        message: p.description || '', intensity: p.intensity || 3,
-        severity: (p.intensity || 3) >= 4 ? 'critical' : 'warning',
-        createdBy: reportedBy, createdAt: now,
-        nearestSensorId: p.nearestSensorId || null,
-        nearestSensorDistanceM: p.nearestSensorDistanceM ?? null,
-      }, ...prev])
-    } else if (p.type === 'waste') {
-      setWasteReports((prev) => [{
-        id: `local-${Date.now()}`, location: p.location, lat: p.lat, lng: p.lng,
-        description: p.description || '', status: 'pending', visibility: 'admin',
-        reportedBy, reportedById: currentUserId, reportedByDevice: DEVICE_ID, createdAt: now,
-        photo: (p.dataUrls && p.dataUrls[0]) || '',
-      }, ...prev])
-    } else if (p.type === 'container') {
-      setContainers((prev) => [{
-        id: `C-local-${Date.now()}`, area: p.location, lat: p.lat, lng: p.lng,
-        fill: p.fill ?? null, issue: p.containerIssue || 'full', description: p.description || '',
-        photo: (p.dataUrls && p.dataUrls[0]) || '', issueOpen: true,
-        reportedBy, reportedById: currentUserId, reportedByDevice: DEVICE_ID, createdAt: now,
-      }, ...prev])
-    }
-  }
-
   // Пријава (миризба/депонија/контејнер) → backend (слики како BYTEA во база).
-  // Успех → веднаш освежи од сервер; офлајн → оптимистички локален запис + кеш.
+  // Успех → веднаш освежи од сервер; мрежен/HTTP пад → грешка (без лажен успех).
   async function submitReport(payload) {
     let location = payload.location || ''
     let municipality = payload.municipality || ''
@@ -954,24 +926,7 @@ export function AppProvider({ children }) {
       return { ok: true }
     } catch (err) {
       const msg = String(err?.message || '')
-      const isNetwork = err instanceof TypeError
-        || /failed to fetch|networkerror|load failed|network request failed/i.test(msg)
-      // Само вистински мрежен пад → локална копија. HTTP 4xx/5xx НЕ се „успех“.
-      if (isNetwork) {
-        optimisticInsertReport(payload)
-        if (payload.type === 'waste') {
-          pushNotification({
-            title: t('deponija.newReportTitle'),
-            body: t('deponija.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
-          })
-        } else if (payload.type === 'container') {
-          pushNotification({
-            title: t('container.newReportTitle'),
-            body: t('container.newReportBody', { loc: payload.location || t('admin.unknownLocation') }),
-          })
-        }
-        return { ok: true, offline: true }
-      }
+      // Мрежен пад и HTTP грешки → неуспех (без лажен „успех“ / без offline sync queue).
       return { ok: false, error: msg || t('form.submitFailed') }
     }
   }

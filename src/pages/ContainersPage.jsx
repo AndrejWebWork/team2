@@ -17,7 +17,7 @@ import { fetchContainerPoints, updateReportStatus } from '../lib/api'
 import { containerKinds } from '../data/catalog'
 import { skopjeAllContainerPoints } from '../data/skopjeContainersMap'
 import { isNativePlatform } from '../lib/notifications'
-import { canAccessReportType, isAdminRole } from '../lib/roles'
+import { canAccessReportType } from '../lib/roles'
 
 // Бесплатна линија на „Комунална хигиена" за пријава на кабаст отпад.
 const BULKY_PHONE_DISPLAY = '080 022233'
@@ -51,7 +51,7 @@ function mkDate(iso) {
 }
 
 export function ContainersPage() {
-  const { containers, setContainers, auth, awardPoints, t } = useApp()
+  const { containers, setContainers, auth, t } = useApp()
   const containerKindLabel = (id) => t(`containerKind.${id || 'mesan'}`)
   const [toast, setToast] = useState('')
   const [statusSuccess, setStatusSuccess] = useState(null)
@@ -126,12 +126,12 @@ export function ContainersPage() {
   )
 
   async function resetIssue(id) {
-    if (typeof id === 'string' && id.includes('-')) {
-      try {
-        await updateReportStatus(id, 'resolved')
-      } catch {
-        return
-      }
+    // Само серверски UUID — поените ги доделува backend.
+    if (!(typeof id === 'string' && id.includes('-'))) return
+    try {
+      await updateReportStatus(id, 'resolved')
+    } catch {
+      return
     }
     const container = containers.find((c) => c.id === id)
     const loc = container?.area || t('admin.unknownLocation')
@@ -139,7 +139,6 @@ export function ContainersPage() {
     setContainers((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c
-        if (c.issueOpen && !c.resolvedRewardGiven && c.reportedById && c.reportedById.includes('@')) awardPoints(c.reportedById, 2)
         return {
           ...c,
           issue: 'none',
@@ -267,7 +266,7 @@ export function ContainersPage() {
         </CardContent>
       </Card>
 
-      {isAdminRole(auth.role) && activeContainerIssues.length > 0 && (
+      {canAccessReportType(auth.role, 'container') && activeContainerIssues.length > 0 && (
         <section className='space-y-4'>
           <div className='flex items-center justify-between'>
             <h2 className='text-xl font-bold text-slate-900'>{t('cont.activeIssues')}</h2>
