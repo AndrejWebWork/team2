@@ -65,7 +65,7 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
   return (
     <>
       <header className='app-chrome app-topbar sticky top-0 z-20 border-b border-slate-200 bg-white md:px-6' onContextMenu={(e) => e.preventDefault()}>
-        <div className='relative flex items-center justify-between px-4 md:px-0'>
+        <div className='flex items-center justify-between px-4 md:px-0'>
 
           {/* Mobile: avatar opens slide menu */}
           <button
@@ -77,12 +77,6 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
           >
             <UserCircle2 className='h-[30px] w-[30px]' />
           </button>
-
-          {/* Mobile: градски грб + бренд во центар */}
-          <div className='pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 lg:hidden'>
-            <img src={GRB_SRC} alt={t('brand.coatAlt')} className='h-7 w-auto object-contain' draggable={false} />
-            <span className='font-display text-sm font-bold tracking-tight text-slate-800'>Еко Скопје</span>
-          </div>
 
           {/* Desktop: грб + user info */}
           <div className='hidden items-center gap-2 lg:flex'>
@@ -171,12 +165,9 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
           onClick={(e) => e.stopPropagation()}
         >
           <div className='app-safe-drawer-head flex items-center justify-between border-b border-slate-200 px-4 pb-4'>
-            <div className='flex min-w-0 items-center gap-2.5'>
-              <img src={GRB_SRC} alt={t('brand.coatAlt')} className='h-9 w-auto shrink-0 object-contain' draggable={false} />
-              <div className='min-w-0'>
-                <p className='truncate text-sm font-semibold text-slate-900'>{displayLabel}</p>
-                <p className='truncate text-xs text-slate-400'>{roleLabel}</p>
-              </div>
+            <div className='min-w-0'>
+              <p className='truncate text-sm font-semibold text-slate-900'>{displayLabel}</p>
+              <p className='truncate text-xs text-slate-400'>{roleLabel}</p>
             </div>
             <button
               type='button'

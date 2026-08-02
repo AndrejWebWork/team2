@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Textarea } from '../components/ui/textarea'
 import { useApp } from '../context/AppContext'
 import { useGeolocation } from '../hooks/useGeolocation'
-import { GRB_SRC, LOGO_SRC } from '../lib/brand'
+import { LOGO_SRC } from '../lib/brand'
 import { isValidReportType } from '../lib/reportTypes'
 import { isAdminRole } from '../lib/roles'
 
@@ -391,21 +391,12 @@ function HeroSection({ t }) {
             {t('home.heroSubtitle')}
           </p>
         </div>
-        <div className='relative flex shrink-0 items-center gap-3 rounded-2xl bg-white px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3'>
-          <img
-            src={GRB_SRC}
-            alt={t('brand.coatAlt')}
-            className='h-14 w-auto object-contain sm:h-20'
-            draggable={false}
-          />
-          <span className='h-12 w-px bg-slate-200 sm:h-16' aria-hidden />
-          <img
-            src={LOGO_SRC}
-            alt='Еко Скопје'
-            className='h-12 w-auto object-contain sm:h-16'
-            draggable={false}
-          />
-        </div>
+        <img
+          src={LOGO_SRC}
+          alt='Еко Скопје'
+          className='relative h-20 w-auto shrink-0 rounded-2xl bg-white px-4 py-3 object-contain sm:h-32 sm:px-5 sm:py-4'
+          draggable={false}
+        />
       </div>
     </div>
   )
