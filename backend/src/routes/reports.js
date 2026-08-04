@@ -329,13 +329,31 @@ reportsRouter.patch('/:id/status', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// DELETE /api/reports/:id — трајно бришење (админ). Ги отстранува и BYTEA сликите
-// од базата (ON DELETE CASCADE за историја; поените остануваат со report_id = NULL).
+// DELETE /api/reports/:id — трајно бришење (админ). Ги отстранува BYTEA сликите
+// и ги враќа поените (report_submitted / report_resolved) на пријавувачот.
 reportsRouter.delete('/:id', requireAdmin, async (req, res, next) => {
   try {
     const existing = await query('SELECT id, type FROM reports WHERE id = $1', [req.params.id])
     if (existing.rowCount === 0) return res.status(404).json({ error: 'Пријавата не постои.' })
     if (!assertReportTypeAccess(req, res, existing.rows[0].type)) return
+
+    // Прво одземи ги поените врзани за пријавата (инаку ON DELETE SET NULL ги остава).
+    await query(
+      `WITH removed AS (
+         DELETE FROM points_events WHERE report_id = $1
+         RETURNING user_id, points
+       ),
+       totals AS (
+         SELECT user_id, SUM(points)::int AS total
+         FROM removed
+         GROUP BY user_id
+       )
+       UPDATE users u
+          SET points = GREATEST(0, u.points - t.total)
+         FROM totals t
+        WHERE u.id = t.user_id`,
+      [req.params.id],
+    )
 
     const { rows } = await query(
       `DELETE FROM reports WHERE id = $1 RETURNING id, type`,
