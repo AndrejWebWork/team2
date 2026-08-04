@@ -327,3 +327,27 @@ LEFT JOIN points_events pe
   AND pe.created_at >= date_trunc('month', now())
 GROUP BY u.id, u.display_name, u.email
 ORDER BY points DESC;
+
+-- Награди од месечен лидерборд (топ 1–5): порака/push + контакт форма
+CREATE TABLE leaderboard_awards (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  period_month    DATE NOT NULL,
+  place           INTEGER NOT NULL CHECK (place BETWEEN 1 AND 5),
+  user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  message         TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'pending_contact'
+                  CHECK (status IN ('pending_contact', 'contact_submitted', 'closed')),
+  contact_name    TEXT,
+  contact_phone   TEXT,
+  contact_email   TEXT,
+  contact_note    TEXT,
+  notified_at     TIMESTAMPTZ,
+  created_by      UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (period_month, place),
+  UNIQUE (period_month, user_id)
+);
+
+CREATE INDEX idx_leaderboard_awards_user ON leaderboard_awards(user_id, status);
+CREATE INDEX idx_leaderboard_awards_month ON leaderboard_awards(period_month);

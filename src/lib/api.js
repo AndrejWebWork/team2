@@ -395,6 +395,53 @@ export async function fetchMyLeaderboardRank(email, _signal) {
   })
 }
 
+export async function fetchMyLeaderboardAward(email, signal) {
+  const e = String(email || '').trim()
+  if (!e) return null
+  const res = await fetch(
+    `${API_URL}/api/leaderboard/awards/mine?email=${encodeURIComponent(e)}`,
+    { signal, cache: 'no-store' },
+  )
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function fetchLeaderboardAwards(month, signal) {
+  const q = month ? `?month=${encodeURIComponent(month)}` : ''
+  const res = await fetch(`${API_URL}/api/leaderboard/awards${q}`, {
+    headers: adminHeaders(),
+    signal,
+    cache: 'no-store',
+  })
+  const data = await res.json().catch(() => ([]))
+  if (!res.ok) throw new Error(data.error || 'Вчитувањето на наградите не успеа.')
+  return data
+}
+
+export async function sendLeaderboardAwardApi({ place, email, userId, message, month }, signal) {
+  const res = await fetch(`${API_URL}/api/leaderboard/awards`, {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ place, email, userId, message, month }),
+    signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Испраќањето на наградата не успеа.')
+  return data
+}
+
+export async function submitLeaderboardAwardContactApi(id, payload, signal) {
+  const res = await fetch(`${API_URL}/api/leaderboard/awards/${id}/contact`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'Испраќањето на контактот не успеа.')
+  return data
+}
+
 // ---- Воздух: нереферентни (граѓански) сензори од Pulse.eco (преку backend) ----
 
 // Ги враќа граѓанските сензори во живо. Ако backend/Pulse.eco е недостапен → [].

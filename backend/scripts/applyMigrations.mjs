@@ -76,5 +76,19 @@ if (!(await colType('events', 'approval_status'))) {
   console.log('012 already applied')
 }
 
+// 013 — leaderboard awards (награди + контакт)
+{
+  const { rows } = await client.query(
+    `SELECT 1 FROM information_schema.tables WHERE table_name = 'leaderboard_awards'`,
+  )
+  if (!rows.length) {
+    console.log('Applying 013_leaderboard_awards.sql ...')
+    await client.query(readFileSync(join(root, 'db/migrations/013_leaderboard_awards.sql'), 'utf8'))
+    console.log('  done')
+  } else {
+    console.log('013 already applied')
+  }
+}
+
 await client.end()
 console.log('All migrations up to date.')

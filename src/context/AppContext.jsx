@@ -622,17 +622,29 @@ export function AppProvider({ children }) {
           createdAt: new Date().toISOString(),
         }, ...prev])
         // Foreground: системски banner и за админи (инаку FCM само ја полни листата).
-        if (data.type === 'report_created' || isAdminRole(authRoleRef.current)) {
+        if (
+          data.type === 'report_created'
+          || data.type === 'leaderboard_award'
+          || data.type === 'leaderboard_award_contact'
+          || isAdminRole(authRoleRef.current)
+        ) {
           scheduleLocalNotification({ title, body }).catch(() => {})
         }
         // Веднаш освежи пријави/известувања за админ панелот.
-        if (data.type === 'report_created') {
+        if (data.type === 'report_created' || data.type === 'leaderboard_award' || data.type === 'leaderboard_award_contact') {
           try { refreshDataRef.current() } catch { /* ignore */ }
         }
       },
       onAction: (data) => {
-        if (data?.type !== 'report_created') return
-        const path = isAdminRole(authRoleRef.current) ? '/admin-panel' : '/home'
+        let path = null
+        if (data?.type === 'report_created') {
+          path = isAdminRole(authRoleRef.current) ? '/admin-panel' : '/home'
+        } else if (data?.type === 'leaderboard_award') {
+          path = '/leaderboard'
+        } else if (data?.type === 'leaderboard_award_contact') {
+          path = '/leaderboard'
+        }
+        if (!path) return
         try { sessionStorage.setItem('ekoskopje.pushNav', path) } catch { /* ignore */ }
         window.dispatchEvent(new CustomEvent('ekoskopje:push-nav', { detail: path }))
         try { refreshDataRef.current() } catch { /* ignore */ }
@@ -1035,7 +1047,13 @@ export function AppProvider({ children }) {
   // додава од локалниот леџер (не постои во базата).
   const leaderboardMonthly = useMemo(() => {
     const map = new Map()
-    serverLeaderboard.forEach((e) => map.set(e.userId, { userId: e.userId, name: e.name, points: e.points }))
+    serverLeaderboard.forEach((e) => map.set(e.userId, {
+      id: e.id,
+      userId: e.userId,
+      email: e.email,
+      name: e.name,
+      points: e.points,
+    }))
     const localDevicePoints = pointsLedger[DEVICE_ID] || 0
     if (!email && localDevicePoints > 0) {
       map.set(DEVICE_ID, { userId: DEVICE_ID, points: localDevicePoints })
