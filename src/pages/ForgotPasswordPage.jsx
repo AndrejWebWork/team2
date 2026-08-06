@@ -12,7 +12,7 @@ import { LOGO_SRC } from '../lib/brand'
 export function ForgotPasswordPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { t } = useApp()
+  const { t, language } = useApp()
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
@@ -24,7 +24,7 @@ export function ForgotPasswordPage() {
     if (!/^\S+@\S+\.\S+$/.test(normalized)) return setToast(t('login.invalidEmail'))
     setBusy(true)
     try {
-      await forgotPasswordApi({ email: normalized })
+      await forgotPasswordApi({ email: normalized, language })
       setSent(true)
     } catch (err) {
       if (err?.status === 404) setToast(t('forgot.notFound'))

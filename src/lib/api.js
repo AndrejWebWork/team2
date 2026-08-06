@@ -641,10 +641,11 @@ export async function deleteAccountApi({ email, password }, signal) {
 }
 
 // Заборавена лозинка — праќа reset линк на email (Brevo).
-export async function forgotPasswordApi({ email }, signal) {
+// language = тековен јазик во апликацијата, за локализиран email.
+export async function forgotPasswordApi({ email, language }, signal) {
   const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }), signal,
+    body: JSON.stringify({ email, language }), signal,
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {

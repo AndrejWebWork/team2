@@ -90,10 +90,12 @@ authRouter.post('/login', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// POST /api/auth/forgot-password  { email }
+// POST /api/auth/forgot-password  { email, language? }
+// language = јазикот избран во апликацијата (mk|en|sq); fallback = users.language.
 authRouter.post('/forgot-password', async (req, res, next) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase()
+    const requestedLang = String(req.body?.language || '').trim().toLowerCase()
     if (!email || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: 'Внесете валидна е-пошта.' })
     }
@@ -126,10 +128,13 @@ authRouter.post('/forgot-password', async (req, res, next) => {
     )
 
     const resetUrl = `${config.appPublicUrl}/reset-password?token=${encodeURIComponent(token)}`
+    const language = LANGS.includes(requestedLang)
+      ? requestedLang
+      : (LANGS.includes(user.language) ? user.language : 'mk')
     await sendPasswordResetEmail({
       to: user.email,
       resetUrl,
-      language: user.language || 'mk',
+      language,
     })
 
     res.json({ ok: true, message: RESET_OK_MSG })
