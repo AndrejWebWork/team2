@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { query } from '../db.js'
 import { extractClientPasswordHash, hashForStorage } from '../lib/clientPassword.js'
+import { POINTS_PERIOD_SQL } from '../lib/pointsPeriod.js'
 import { requireSuperAdmin } from '../middleware/requireAdmin.js'
 
 export const usersRouter = Router()
@@ -54,7 +55,7 @@ usersRouter.get('/', async (req, res, next) => {
               notif_air, notif_waste, notif_events,
               COALESCE((SELECT SUM(pe.points) FROM points_events pe
                         WHERE pe.user_id = users.id
-                          AND pe.created_at >= date_trunc('month', now())), 0)::int AS points
+                          AND ${POINTS_PERIOD_SQL}), 0)::int AS points
        FROM users WHERE email = $1`,
       [email],
     )

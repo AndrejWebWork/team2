@@ -4,6 +4,7 @@ import { config } from '../config.js'
 import { query } from '../db.js'
 import { extractClientPasswordHash, hashForStorage, verifyClientPassword } from '../lib/clientPassword.js'
 import { isEmailConfigured, sendPasswordResetEmail } from '../lib/brevo.js'
+import { POINTS_PERIOD_SQL } from '../lib/pointsPeriod.js'
 import { isAdminRole } from '../lib/roles.js'
 
 export const authRouter = Router()
@@ -65,13 +66,12 @@ authRouter.post('/login', async (req, res, next) => {
     const passwordHash = extractClientPasswordHash(req.body)
     if (!email || !passwordHash) return res.status(400).json({ error: 'Недостасува е-пошта или лозинка.' })
 
-    // Поените се МЕСЕЧНИ (се ресетираат на 1-ви секој месец) — се сумираат
-    // од points_events за тековниот месец, исто како leaderboard_monthly.
+    // Поените се за тековниот период (до 1.1.2027, потоа годишен reset).
     const { rows } = await query(
       `SELECT id, email, role, display_name, language, password_hash,
               COALESCE((SELECT SUM(pe.points) FROM points_events pe
                         WHERE pe.user_id = users.id
-                          AND pe.created_at >= date_trunc('month', now())), 0) AS points
+                          AND ${POINTS_PERIOD_SQL}), 0) AS points
        FROM users WHERE email = $1`,
       [email],
     )

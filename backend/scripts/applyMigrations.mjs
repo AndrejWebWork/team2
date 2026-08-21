@@ -90,5 +90,12 @@ if (!(await colType('events', 'approval_status'))) {
   }
 }
 
+// 014 — поени до 1.1.2027, потоа годишен reset
+{
+  console.log('Applying 014_points_period_until_2027.sql ...')
+  await client.query(readFileSync(join(root, 'db/migrations/014_points_period_until_2027.sql'), 'utf8'))
+  console.log('  done')
+}
+
 await client.end()
 console.log('All migrations up to date.')

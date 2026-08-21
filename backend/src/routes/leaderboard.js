@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { query } from '../db.js'
 import { sendPushToUser, sendPushToUsers } from '../lib/fcm.js'
+import { currentAwardPeriodDate, POINTS_PERIOD_SQL } from '../lib/pointsPeriod.js'
 import { invalidateCache, serveCachedJson } from '../lib/responseCache.js'
 import { requireSuperAdmin } from '../middleware/requireAdmin.js'
 
@@ -8,11 +9,6 @@ export const leaderboardRouter = Router()
 
 const LEADERBOARD_TTL_MS = 15000
 const MAX_AWARD_PLACE = 5
-
-function currentPeriodMonth() {
-  const d = new Date()
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`
-}
 
 function rowToAward(r) {
   return {
@@ -83,14 +79,13 @@ leaderboardRouter.get('/me', async (req, res, next) => {
 // GET /api/leaderboard/awards?month=YYYY-MM-01 — супер админ листа
 leaderboardRouter.get('/awards', requireSuperAdmin, async (req, res, next) => {
   try {
-    const month = String(req.query.month || currentPeriodMonth()).slice(0, 10)
+    const month = String(req.query.month || currentAwardPeriodDate()).slice(0, 10)
     const { rows } = await query(
       `SELECT a.*, u.email, u.display_name,
               COALESCE((
                 SELECT SUM(pe.points) FROM points_events pe
                 WHERE pe.user_id = a.user_id
-                  AND pe.created_at >= a.period_month
-                  AND pe.created_at < (a.period_month + INTERVAL '1 month')
+                  AND ${POINTS_PERIOD_SQL}
               ), 0) AS points
        FROM leaderboard_awards a
        JOIN users u ON u.id = a.user_id
@@ -107,7 +102,7 @@ leaderboardRouter.get('/awards/mine', async (req, res, next) => {
   try {
     const email = String(req.query.email || '').trim().toLowerCase()
     if (!email) return res.status(400).json({ error: 'Недостасува email.' })
-    const month = currentPeriodMonth()
+    const month = currentAwardPeriodDate()
     const { rows } = await query(
       `SELECT a.*, u.email, u.display_name
        FROM leaderboard_awards a
@@ -129,7 +124,7 @@ leaderboardRouter.post('/awards', requireSuperAdmin, async (req, res, next) => {
   try {
     const place = Number(req.body?.place)
     const message = String(req.body?.message || '').trim()
-    const month = String(req.body?.month || currentPeriodMonth()).slice(0, 10)
+    const month = String(req.body?.month || currentAwardPeriodDate()).slice(0, 10)
     const email = String(req.body?.email || '').trim().toLowerCase()
     let userId = req.body?.userId || null
 
@@ -197,7 +192,7 @@ leaderboardRouter.post('/awards', requireSuperAdmin, async (req, res, next) => {
     res.status(201).json(rowToAward({ ...award, email: userRows[0].email, display_name: userRows[0].display_name }))
   } catch (err) {
     if (err?.code === '23505') {
-      return res.status(409).json({ error: 'Овој корисник веќе има награда за овој месец (друго место).' })
+      return res.status(409).json({ error: 'Овој корисник веќе има награда за овој период (друго место).' })
     }
     next(err)
   }
