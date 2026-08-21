@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
 import { fetchLeaderboardAwards, sendLeaderboardAwardApi } from '../lib/api'
+import { nextPointsResetLabel } from '../lib/pointsPeriod'
 import { isSuperAdmin } from '../lib/roles'
 
 const COLORS = [
@@ -32,7 +33,7 @@ function initials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-function AdminAwardsPanel({ ranked, t }) {
+function AdminAwardsPanel({ ranked, t, language }) {
   const top5 = ranked.slice(0, 5)
   const [awards, setAwards] = useState([])
   const [messages, setMessages] = useState({})
@@ -87,7 +88,7 @@ function AdminAwardsPanel({ ranked, t }) {
         </CardTitle>
       </CardHeader>
       <CardContent className='space-y-4'>
-        <p className='text-sm text-slate-600'>{t('lead.adminAwardsDesc')}</p>
+        <p className='text-sm text-slate-600'>{t('lead.adminAwardsDesc', { date: nextPointsResetLabel(language) })}</p>
         {top5.map((entry, idx) => {
           const place = idx + 1
           const existing = awardByPlace.get(place)
@@ -142,7 +143,7 @@ function AdminAwardsPanel({ ranked, t }) {
 }
 
 export function LeaderboardPage() {
-  const { leaderboardMonthly, auth, currentUserPoints, currentUserId, t } = useApp()
+  const { leaderboardMonthly, auth, currentUserPoints, currentUserId, t, language } = useApp()
 
   const isAnon = !auth.email
   const myName = isAnon ? t('common.anonymousCitizen') : (auth.displayName || auth.email)
@@ -177,7 +178,7 @@ export function LeaderboardPage() {
         <p className='mt-0.5 text-sm text-slate-500'>{t('lead.subtitle')}</p>
         <p className='mt-1.5 flex items-center gap-1.5 text-xs text-slate-400'>
           <CalendarDays className='h-3.5 w-3.5 shrink-0 text-slate-400' aria-hidden />
-          <span>{t('lead.thisMonth')}</span>
+          <span>{t('lead.thisMonth', { date: nextPointsResetLabel(language) })}</span>
         </p>
       </div>
 
@@ -292,7 +293,7 @@ export function LeaderboardPage() {
         </Card>
       )}
 
-      {isSuperAdmin(auth.role) && <AdminAwardsPanel ranked={ranked} t={t} />}
+      {isSuperAdmin(auth.role) && <AdminAwardsPanel ranked={ranked} t={t} language={language} />}
 
       <Card>
         <CardHeader className='pb-2'>
@@ -314,7 +315,7 @@ export function LeaderboardPage() {
               </div>
             ))}
           </div>
-          <p className='text-xs leading-relaxed text-slate-500'>{t('lead.howToEarnNote')}</p>
+          <p className='text-xs leading-relaxed text-slate-500'>{t('lead.howToEarnNote', { date: nextPointsResetLabel(language) })}</p>
         </CardContent>
       </Card>
 
