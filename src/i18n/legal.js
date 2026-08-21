@@ -4,7 +4,7 @@
 
 export const LEGAL_UPDATED = '2026-07-24'
 export const LEGAL_OPERATOR = 'Град Скопје'
-export const LEGAL_CONTACT = 'kontakt@skopje.gov.mk'
+export const LEGAL_CONTACT = 'ekoskopje@skopje.gov.mk'
 export const LEGAL_APP_ID = 'mk.gov.skopje.ekoskopje'
 
 export const legalContent = {
@@ -76,7 +76,7 @@ export const legalContent = {
           'Оваа политика е јавно достапна преку менито Поставки → Правни информации → Политика за приватност и на истата URL-адреса на веб-версијата на апликацијата (за внесување во store-формуларите).',
         ] },
         { h: 'Деца', p: [
-          'Апликацијата не е наменета за деца под 16 години и свесно не собираме нивни лични податоци. Ако сте родител/старател и сметате дека дете ни доставило лични податоци, контактирајте нè за да ги избришеме.',
+          'Апликацијата не е наменета за деца под 8 години и свесно не собираме нивни лични податоци. Ако сте родител/старател и сметате дека дете ни доставило лични податоци, контактирајте нè за да ги избришеме.',
         ] },
         { h: 'Вашите права', p: [
           'Имате право на пристап, исправка, бришење и ограничување на обработката, право на приговор и повлекување согласност во секое време.',
@@ -86,7 +86,7 @@ export const legalContent = {
           'Применуваме соодветни технички и организациски мерки (криптирање на лозинки, безбедна комуникација, контрола на пристап) за заштита на податоците од неовластен пристап.',
         ] },
         { h: 'Контакт', p: [
-          'За прашања поврзани со приватноста контактирајте го Град Скопје на: kontakt@skopje.gov.mk',
+          'За прашања поврзани со приватноста контактирајте го Град Скопје на: ekoskopje@skopje.gov.mk',
         ] },
       ],
     },
@@ -220,7 +220,7 @@ export const legalContent = {
           'This policy is publicly available via Settings → Legal information → Privacy Policy and at the same URL on the app web version (for store forms).',
         ] },
         { h: 'Children', p: [
-          'The app is not intended for children under 16 and we do not knowingly collect their personal data. If you are a parent/guardian and believe a child has provided us personal data, contact us so we can delete it.',
+          'The app is not intended for children under 8 and we do not knowingly collect their personal data. If you are a parent/guardian and believe a child has provided us personal data, contact us so we can delete it.',
         ] },
         { h: 'Your rights', p: [
           'You have the right to access, rectify, erase and restrict processing, to object, and to withdraw consent at any time.',
@@ -230,7 +230,7 @@ export const legalContent = {
           'We apply appropriate technical and organisational measures (password hashing, secure communication, access control) to protect data from unauthorised access.',
         ] },
         { h: 'Contact', p: [
-          'For privacy questions contact the City of Skopje at: kontakt@skopje.gov.mk',
+          'For privacy questions contact the City of Skopje at: ekoskopje@skopje.gov.mk',
         ] },
       ],
     },
@@ -363,7 +363,7 @@ export const legalContent = {
           'Kjo politikë është publike përmes Cilësimet → Informacione ligjore → Politika e privatësisë dhe në të njëjtën URL të versionit web.',
         ] },
         { h: 'Fëmijët', p: [
-          'Aplikacioni nuk është i dedikuar për fëmijë nën 16 vjeç dhe nuk mbledhim me vetëdije të dhënat e tyre personale. Nëse jeni prind/kujdestar dhe besoni se një fëmijë na ka dhënë të dhëna personale, na kontaktoni që t’i fshijmë.',
+          'Aplikacioni nuk është i dedikuar për fëmijë nën 8 vjeç dhe nuk mbledhim me vetëdije të dhënat e tyre personale. Nëse jeni prind/kujdestar dhe besoni se një fëmijë na ka dhënë të dhëna personale, na kontaktoni që t’i fshijmë.',
         ] },
         { h: 'Të drejtat tuaja', p: [
           'Keni të drejtë qasjeje, korrigjimi, fshirjeje dhe kufizimi të përpunimit, të drejtë kundërshtimi dhe tërheqjeje të pëlqimit në çdo kohë.',
@@ -373,7 +373,7 @@ export const legalContent = {
           'Zbatojmë masa të përshtatshme teknike dhe organizative (hash-im të fjalëkalimeve, komunikim të sigurt, kontroll qasjeje) për të mbrojtur të dhënat nga qasja e paautorizuar.',
         ] },
         { h: 'Kontakti', p: [
-          'Për pyetje mbi privatësinë kontaktoni Qytetin e Shkupit në: kontakt@skopje.gov.mk',
+          'Për pyetje mbi privatësinë kontaktoni Qytetin e Shkupit në: ekoskopje@skopje.gov.mk',
         ] },
       ],
     },
