@@ -10,13 +10,25 @@ const SKOPJE_BOUNDS = '41.90,21.30,42.10,21.75'
 const EXTRA_UIDS = [12408]
 const FRESH_MS = 48 * 60 * 60 * 1000
 
-const PRODUCTION_API = 'https://team2-zeta.vercel.app'
+const PRODUCTION_API = 'https://ekoskopje.skopje.gov.mk'
+
+function isLocalhostUrl(url) {
+  return /localhost|127\.0\.0\.1/.test(url)
+}
 
 function resolveApiUrl() {
   const fromEnv = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+  if (Capacitor.isNativePlatform()) {
+    if (fromEnv && !isLocalhostUrl(fromEnv)) return fromEnv
+    return PRODUCTION_API
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === 'ekoskopje.skopje.gov.mk' || host.endsWith('.skopje.gov.mk')) return ''
+    if (fromEnv && isLocalhostUrl(fromEnv) && host !== 'localhost' && host !== '127.0.0.1') return ''
+  }
   if (fromEnv) return fromEnv
   if (import.meta.env.DEV) return 'http://localhost:4000'
-  if (Capacitor.isNativePlatform()) return PRODUCTION_API
   return ''
 }
 

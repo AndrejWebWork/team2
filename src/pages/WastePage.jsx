@@ -20,14 +20,14 @@ function mkDate(iso, noDate) {
 }
 
 export function WastePage() {
-  const { wasteReports, setWasteReports, auth, refreshReports, t } = useApp()
+  const { wasteReports, setWasteReports, auth, refreshReports, noteReportsChanged, t } = useApp()
   const [statusSuccess, setStatusSuccess] = useState(null)
 
   useEffect(() => {
     refreshReports()
     const timer = setInterval(() => {
       if (!document.hidden) refreshReports()
-    }, 12000)
+    }, 2500)
     return () => clearInterval(timer)
   }, [refreshReports])
 
@@ -62,6 +62,7 @@ export function WastePage() {
     const report = wasteReports.find((r) => r.id === id)
     const loc = report?.location || t('admin.unknownLocation')
     const statusLabel = t(`status.${status}`)
+    noteReportsChanged()
     setWasteReports((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r

@@ -80,10 +80,10 @@ function readStoredAuth() {
   }
 }
 // Колку често се освежуваат податоците од backend (reports, events, leaderboard).
-const POLL_INTERVAL_MS = 22000
-const ADMIN_POLL_INTERVAL_MS = 12000
-// Случаен растур (jitter) за да не удрат сите клиенти истовремено (spikes).
-const POLL_JITTER_MS = 4000
+const POLL_INTERVAL_MS = 2000
+const ADMIN_POLL_INTERVAL_MS = 1500
+// Мал растур — статистиката треба да е речиси моментална.
+const POLL_JITTER_MS = 400
 // Стабилен идентитет на уредот за анонимни корисници (кеш по уред).
 const DEVICE_ID = getDeviceId()
 
@@ -280,6 +280,7 @@ export function AppProvider({ children }) {
   // Рачно освежување: покачувањето предизвикува веднаш нов циклус на вчитување
   // (пр. по успешна пријава/промена на статус/настан — без да се чека поллот).
   const [refreshKey, setRefreshKey] = useState(0)
+  const reportsGenRef = useRef(0)
   const wasteSnapRef = useRef(wasteReports)
   const containersSnapRef = useRef(containers)
   const smellSnapRef = useRef(smellAlerts)
@@ -289,6 +290,10 @@ export function AppProvider({ children }) {
 
   const email = auth.email || null
   const reportsIdentityKey = reportsIdentity(auth, DEVICE_ID)
+
+  function noteReportsChanged() {
+    reportsGenRef.current += 1
+  }
 
   function persistReportsCache(waste, containers, smell) {
     wasteSnapRef.current = waste
@@ -300,6 +305,7 @@ export function AppProvider({ children }) {
   // Веднаш ажурирај локална состојба од еден server report (POST/PATCH) — без refresh.
   function mergeReportFromServer(row) {
     if (!row?.id || !row?.type) return
+    noteReportsChanged()
     if (row.type === 'waste') {
       const mapped = serverToWaste(row)
       setWasteReports((prev) => {
@@ -427,6 +433,7 @@ export function AppProvider({ children }) {
     async function sync(initial) {
       if (syncInFlight) return
       syncInFlight = true
+      const gen = reportsGenRef.current
       try {
         // Поените/лидербордот се применуваат ШТОМ стигнат — не чекаат reports.
         const boardPromise = fetchLeaderboard(controller.signal).then((board) => {
@@ -439,7 +446,7 @@ export function AppProvider({ children }) {
           fetchReports(controller.signal),
           fetchEvents(email, controller.signal),
         ])
-        if (cancelled) return
+        if (cancelled || reportsGenRef.current !== gen) return
         setApiOnline(true)
         // Секој извор се ажурира само ако навистина се сменил (инаку 304).
         if (rows !== NOT_MODIFIED) {
@@ -541,9 +548,11 @@ export function AppProvider({ children }) {
   }, [email, reportsIdentityKey])
 
   const refreshReports = useCallback(async () => {
+    const gen = reportsGenRef.current
     clearReportsEtag()
     try {
       const rows = await fetchReports()
+      if (reportsGenRef.current !== gen) return
       if (rows === NOT_MODIFIED) return
       const waste = rows.filter((r) => r.type === 'waste').map(serverToWaste)
       const containers = rows.filter((r) => r.type === 'container').map(serverToContainer)
@@ -957,6 +966,7 @@ export function AppProvider({ children }) {
 
   // Трајно бришење на пријава (админ) — ги отстранува и BYTEA сликите од базата.
   function removeReportLocally(id, type) {
+    noteReportsChanged()
     if (type === 'waste') {
       setWasteReports((prev) => {
         const next = prev.filter((r) => r.id !== id)
@@ -1103,6 +1113,7 @@ export function AppProvider({ children }) {
       refreshData,
       refreshEvents,
       refreshReports,
+      noteReportsChanged,
       logout,
       submitReport,
       changeReportStatus,

@@ -4,10 +4,11 @@ import { formatAccuracyMeters } from '../lib/geolocation'
 
 export function GPSStatus({ loc, onRetry, onRefresh, t }) {
   const accuracyLabel = formatAccuracyMeters(loc.accuracy, t)
-  const lowAccuracy = loc.isDesktop && loc.accuracy != null && loc.accuracy > 400
+  const lowAccuracy = loc.isDesktop && loc.accuracy != null && loc.accuracy > 250
   const native = Capacitor.isNativePlatform()
   const handleRefresh = onRefresh || onRetry
   const openSettings = native && (loc.denied || loc.servicesOff)
+  const guideWeb = !native && Boolean(loc.error)
 
   if (loc.loading) {
     return (
@@ -30,11 +31,19 @@ export function GPSStatus({ loc, onRetry, onRefresh, t }) {
           <XCircle className='mt-0.5 h-4 w-4 shrink-0' />
           <span>{loc.error}</span>
         </div>
-        {loc.isDesktop && !loc.denied && (
+        {loc.isDesktop && !guideWeb && (
           <p className='text-xs text-rose-600/90'>{t('gps.desktopHint')}</p>
         )}
         {openSettings && (
           <p className='text-xs text-rose-600/90'>{t('gps.openSettingsHint')}</p>
+        )}
+        {guideWeb && (
+          <ol className='list-decimal space-y-1 pl-4 text-xs leading-relaxed text-rose-800'>
+            <li>{t('gps.webStep1')}</li>
+            <li>{t('gps.webStep2')}</li>
+            <li>{t('gps.webStep3')}</li>
+            <li>{t('gps.webStep4')}</li>
+          </ol>
         )}
         <button
           type='button'
@@ -44,7 +53,7 @@ export function GPSStatus({ loc, onRetry, onRefresh, t }) {
           {openSettings ? <Settings className='h-4 w-4' /> : <MapPin className='h-4 w-4' />}
           {openSettings
             ? t('gps.retryOpenSettings')
-            : (loc.denied ? t('gps.retryDenied') : t('gps.retry'))}
+            : (guideWeb ? t('gps.webRetry') : (loc.denied ? t('gps.retryDenied') : t('gps.retry')))}
         </button>
       </div>
     )

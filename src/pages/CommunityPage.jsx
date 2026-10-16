@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, ChevronLeft, Clock, Loader2, MapPin, Trash2, Users, X } from 'lucide-react'
+import { Bell, CalendarDays, CalendarPlus, ChevronLeft, Clock, Loader2, MapPin, Trash2, Users, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { InstagramIcon } from '../components/InstagramIcon'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
@@ -222,13 +222,13 @@ function EventDetailPage({ event, past, canManage, isOrganizer, organizerEmail, 
     { icon: Users, label: t('comm.signedUp'), value: event.signupCount ?? 0 },
   ]
   return (
-    <div className='space-y-5'>
+    <div className='community-page space-y-5'>
       <button onClick={onBack} className='flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-slate-800'>
         <ChevronLeft className='h-4 w-4' />{t('comm.backToEvents')}
       </button>
 
-      <div className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${past ? 'opacity-80' : ''}`}>
-        <div className='border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-white px-6 py-5'>
+      <div className={`community-detail overflow-hidden rounded-2xl border border-slate-200 bg-white ${past ? 'opacity-80' : ''}`}>
+        <div className='border-b border-slate-100 bg-gradient-to-r from-emerald-50/80 to-white px-6 py-5'>
           <div className='flex flex-wrap items-start justify-between gap-2'>
             <h1 className='text-2xl font-bold text-slate-900 leading-snug'>{event.title}</h1>
             <div className='flex items-center gap-2'>
@@ -247,7 +247,7 @@ function EventDetailPage({ event, past, canManage, isOrganizer, organizerEmail, 
         <div className='px-6 py-5 space-y-4'>
           <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4'>
             {meta.map(({ icon: Icon, label, value }) => (
-              <div key={label} className='rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
+              <div key={label} className='community-meta-tile rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
                 <p className='flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400'>
                   <Icon className='h-3.5 w-3.5' />{label}
                 </p>
@@ -509,7 +509,7 @@ export function CommunityPage() {
     return (
       <div
         key={event.id}
-        className={`flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md ${isPast ? 'opacity-70' : ''}`}
+        className={`community-event flex overflow-hidden rounded-2xl border border-slate-200 bg-white ${isPast ? 'opacity-70' : ''}`}
       >
         <div className={`w-1.5 shrink-0 ${accent}`} />
         <div className='flex flex-1 flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-5'>
@@ -534,11 +534,11 @@ export function CommunityPage() {
             {(event.approvalStatus || 'approved') === 'rejected' && event.rejectionReason && (
               <p className='mt-1 text-xs text-rose-600'>{event.rejectionReason}</p>
             )}
-            <div className='mt-1.5 flex flex-wrap gap-x-4 gap-y-1'>
-              <span className='flex items-center gap-1.5 text-xs text-slate-500'><CalendarDays className='h-3.5 w-3.5' />{formatDisplayDate(event.date)}</span>
-              {event.time && <span className='flex items-center gap-1.5 text-xs text-slate-500'><Clock className='h-3.5 w-3.5' />{event.time}</span>}
-              <span className='flex items-center gap-1.5 text-xs text-slate-500'><MapPin className='h-3.5 w-3.5' />{event.location || t('comm.skopje')}</span>
-              <span className='flex items-center gap-1.5 text-xs text-slate-500'><Users className='h-3.5 w-3.5' />{event.signupCount ?? 0} {t('comm.signedUpWord')}</span>
+            <div className='mt-2 flex flex-wrap gap-1.5'>
+              <span className='community-chip'><CalendarDays className='h-3.5 w-3.5' />{formatDisplayDate(event.date)}</span>
+              {event.time && <span className='community-chip'><Clock className='h-3.5 w-3.5' />{event.time}</span>}
+              <span className='community-chip'><MapPin className='h-3.5 w-3.5' />{event.location || t('comm.skopje')}</span>
+              <span className='community-chip'><Users className='h-3.5 w-3.5' />{event.signupCount ?? 0} {t('comm.signedUpWord')}</span>
               {event.organizerInstagram && (
                 <InstagramLink handle={event.organizerInstagram} className='text-xs' />
               )}
@@ -598,8 +598,8 @@ export function CommunityPage() {
   }
 
   return (
-    <div className='space-y-6'>
-      <div>
+    <div className='community-page space-y-6'>
+      <div className='community-hero'>
         <h1 className='text-2xl font-bold text-slate-900'>{t('comm.title')}</h1>
         <p className='mt-0.5 text-sm text-slate-500'>{t('comm.subtitle')}</p>
       </div>
@@ -610,7 +610,7 @@ export function CommunityPage() {
           <p className='mb-3 text-xs text-slate-500'>{t('comm.pendingSectionDesc')}</p>
           <div className='space-y-3'>
             {pendingEvents.map((event) => (
-              <div key={event.id} className='overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/40 shadow-sm'>
+              <div key={event.id} className='community-pending overflow-hidden rounded-2xl border border-amber-200 bg-amber-50/40'>
                 <div className='flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-5'>
                   <div className='min-w-0 flex-1'>
                     <div className='flex flex-wrap items-center gap-2'>
@@ -666,10 +666,15 @@ export function CommunityPage() {
         </div>
       )}
       {auth.role === 'organization' && (
-        <Card>
-          <CardHeader className='pb-3'><CardTitle>{t('comm.createEvent')}</CardTitle></CardHeader>
+        <Card className='community-card'>
+          <CardHeader className='pb-3'>
+            <CardTitle className='flex items-center gap-2 text-base'>
+              <CalendarPlus className='h-4 w-4 text-emerald-600' />
+              {t('comm.createEvent')}
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            <form onSubmit={createEvent} className='space-y-4'>
+            <form onSubmit={createEvent} className='community-create space-y-4'>
               <div className='grid gap-4 sm:grid-cols-2'>
                 <FormField label={t('comm.eventTitlePlaceholder')} htmlFor='event-title' className='sm:col-span-2'>
                   <Input

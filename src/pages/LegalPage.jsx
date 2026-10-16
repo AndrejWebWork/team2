@@ -2,7 +2,7 @@ import { ArrowLeft, FileText, ShieldCheck, Database } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { LEGAL_UPDATED, legalContent } from '../i18n/legal'
+import { LEGAL_CONTACT, LEGAL_UPDATED, legalContent } from '../i18n/legal'
 
 const TABS = [
   { id: 'privacy', icon: ShieldCheck },
@@ -85,6 +85,12 @@ export function LegalPage() {
               </section>
             ))}
           </div>
+          <a
+            href={`mailto:${LEGAL_CONTACT}`}
+            className='mt-6 inline-block text-sm font-medium text-emerald-700 hover:text-emerald-800'
+          >
+            {t('legal.contactEmail')}: {LEGAL_CONTACT}
+          </a>
         </article>
       </main>
     </div>

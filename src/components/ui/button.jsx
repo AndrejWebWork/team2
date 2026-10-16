@@ -29,7 +29,7 @@ const buttonVariants = cva(
 const Button = React.forwardRef(({ className, variant, size, onPointerUp, ...props }, ref) => (
   <button
     ref={ref}
-    className={cn(buttonVariants({ variant, size, className }))}
+    className={cn(buttonVariants({ variant, size }), className)}
     {...props}
     onPointerUp={(e) => {
       onPointerUp?.(e)

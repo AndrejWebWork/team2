@@ -109,7 +109,7 @@ public class EkoLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDe
         bridge?.saveCall(call)
         bestLocation = nil
 
-        let enableHighAccuracy = call.getBool("enableHighAccuracy") ?? false
+        let enableHighAccuracy = call.getBool("enableHighAccuracy") ?? true
         let timeoutMs = max(call.getInt("timeout") ?? 30000, 5000)
         let maximumAge = call.getInt("maximumAge") ?? 0
 
@@ -127,8 +127,8 @@ public class EkoLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDe
         }
 
         manager.desiredAccuracy = enableHighAccuracy
-            ? kCLLocationAccuracyBest
-            : kCLLocationAccuracyHundredMeters
+            ? kCLLocationAccuracyBestForNavigation
+            : kCLLocationAccuracyNearestTenMeters
         manager.distanceFilter = kCLDistanceFilterNone
 
         if !isUpdating {
@@ -225,8 +225,8 @@ public class EkoLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDe
             bestLocation = loc
         }
 
-        // Accept a usable fix early (≤150m) — indoors Wi‑Fi/cell is enough for reports.
-        if loc.horizontalAccuracy > 0 && loc.horizontalAccuracy <= 150, let call = positionCall {
+        // Keep sampling until a tight GPS fix; timeout returns the best so far.
+        if loc.horizontalAccuracy > 0 && loc.horizontalAccuracy <= 20, let call = positionCall {
             finishSuccess(call, location: loc)
         }
     }

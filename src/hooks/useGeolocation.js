@@ -72,7 +72,7 @@ export function useGeolocation(t) {
         accuracy: null,
         loading: false,
         denied,
-        servicesOff: Boolean(err?.iosLocationOff),
+        servicesOff: Boolean(err?.iosLocationOff || err?.servicesOff || err?.code === 2),
         error: geoErrorMessage(err, t),
         isDesktop: isLikelyDesktop(),
       }
@@ -129,6 +129,32 @@ export function useGeolocation(t) {
     }, delayMs)
     return () => clearTimeout(timer)
   }, [request])
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() || !navigator.permissions?.query) return undefined
+    let status
+    let cancelled = false
+    navigator.permissions.query({ name: 'geolocation' }).then((s) => {
+      status = s
+      if (cancelled) return
+      if (s.state === 'denied') {
+        const next = {
+          lat: null, lng: null, label: '', accuracy: null, loading: false,
+          denied: true, servicesOff: false, error: t('gps.webDenied'), isDesktop: isLikelyDesktop(),
+        }
+        setLoc(next)
+        locRef.current = next
+      }
+      s.onchange = () => {
+        if (cancelled) return
+        if (s.state === 'granted') request({ attempts: 1 })
+      }
+    }).catch(() => {})
+    return () => {
+      cancelled = true
+      if (status) status.onchange = null
+    }
+  }, [request, t])
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return undefined

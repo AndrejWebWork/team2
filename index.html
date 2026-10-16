@@ -2,20 +2,44 @@
 <html lang="mk">
   <head>
     <meta charset="UTF-8" />
+    <style>
+      html, body { margin: 0; background: #f4f6f8; }
+      #seo-snapshot {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        clip-path: inset(50%) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
+      }
+    </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#059669" />
     <meta name="color-scheme" content="light" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Еко Скопје" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="Еко Скопје" />
+    <meta name="publisher" content="Град Скопје" />
 
-    <title>Еко Скопје — квалитет на воздух, диви депонии и контејнери во Скопје</title>
-    <meta name="description" content="Еко Скопје е граѓанска еко-платформа за Град Скопје: квалитет на воздух во живо, пријавување диви депонии и преполни контејнери, следење на статус и еко-акции за заедницата." />
-    <meta name="keywords" content="Еко Скопје, Eko Skopje, квалитет на воздух Скопје, PM2.5, PM10, дива депонија, контејнери, пријави, МЖСПП, Pulse Eco, Skopje air quality, illegal dump, waste containers" />
-    <meta name="author" content="Еко Скопје" />
-    <meta name="creator" content="Andrej Bozinovski" />
+    <title>Еко Скопје — официјална еко платформа на Град Скопје</title>
+    <meta name="description" content="Еко Скопје (ekoskopje, eko skopje, еко скопје) е официјалната еко платформа на Град Скопје: квалитет на воздух во живо, пријавување диви депонии и контејнери, јавно следење на статус и еко акции. Контакт: ekoskopje@skopje.gov.mk" />
+    <meta name="keywords" content="ekoskopje, eko skopje, еко скопје, Еко Скопје, ЕкоСкопје, Eko Skopje, EkoSkopje, eko-skopje, екоскопје, Град Скопје, City of Skopje, квалитет на воздух Скопје, AQI Скопје, PM2.5, PM10, дива депонија Скопје, контејнери Скопје, МЖСПП, ekoskopje.skopje.gov.mk" />
+    <meta name="abstract" content="Еко Скопје (ekoskopje, eko skopje, еко скопје) е официјалната еко платформа на Град Скопје на https://ekoskopje.skopje.gov.mk — воздух во живо, диви депонии, контејнери и еко акции. Не е Еко-свест." />
+    <meta name="subject" content="Еко Скопје; ekoskopje; eko skopje; еко скопје" />
+    <meta name="topic" content="Official environmental platform of the City of Skopje" />
+    <meta name="classification" content="Government" />
+    <meta name="coverage" content="Skopje, North Macedonia" />
+    <meta name="rating" content="general" />
+    <meta name="language" content="Macedonian, English, Albanian" />
+    <meta name="author" content="Град Скопје" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1" />
     <meta name="bingbot" content="index, follow" />
@@ -23,103 +47,133 @@
     <meta name="geo.placename" content="Skopje" />
     <meta name="geo.position" content="41.9981;21.4254" />
     <meta name="ICBM" content="41.9981, 21.4254" />
-    <link rel="canonical" href="https://team2-zeta.vercel.app/" />
-    <link rel="alternate" hreflang="mk" href="https://team2-zeta.vercel.app/" />
-    <link rel="alternate" hreflang="en" href="https://team2-zeta.vercel.app/" />
-    <link rel="alternate" hreflang="sq" href="https://team2-zeta.vercel.app/" />
-    <link rel="alternate" hreflang="x-default" href="https://team2-zeta.vercel.app/" />
+
+    <link rel="canonical" href="https://ekoskopje.skopje.gov.mk/" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Еко Скопје" />
     <meta property="og:locale" content="mk_MK" />
     <meta property="og:locale:alternate" content="en_US" />
     <meta property="og:locale:alternate" content="sq_AL" />
-    <meta property="og:url" content="https://team2-zeta.vercel.app/" />
-    <meta property="og:title" content="Еко Скопје — паметна еко-платформа за Скопје" />
-    <meta property="og:description" content="Пријави диви депонии и контејнери, следи квалитет на воздух и учествувај во еко-акции. Граѓаните + институциите, заедно." />
-    <meta property="og:image" content="https://team2-zeta.vercel.app/logo.png" />
-    <meta property="og:image:alt" content="Еко Скопје лого" />
+    <meta property="og:url" content="https://ekoskopje.skopje.gov.mk/" />
+    <meta property="og:title" content="Еко Скопје — официјална еко платформа на Град Скопје" />
+    <meta property="og:description" content="Еко Скопје, eko skopje, еко скопје: официјална платформа на Град Скопје за воздух, диви депонии, контејнери и еко акции." />
+    <meta property="og:image" content="https://ekoskopje.skopje.gov.mk/og-image.png" />
+    <meta property="og:image:secure_url" content="https://ekoskopje.skopje.gov.mk/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Еко Скопје — eko skopje, ekoskopje, еко скопје. Официјална еко платформа на Град Скопје." />
+    <meta property="og:see_also" content="https://skopje.gov.mk/" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Еко Скопје — еко-платформа за Скопје" />
-    <meta name="twitter:description" content="Квалитет на воздух, пријави за диви депонии и контејнери, еко-акции за заедницата." />
-    <meta name="twitter:image" content="https://team2-zeta.vercel.app/logo.png" />
+    <meta name="twitter:title" content="Еко Скопје — официјална еко платформа на Град Скопје" />
+    <meta name="twitter:description" content="ekoskopje, eko skopje, еко скопје — квалитет на воздух, диви депонии и контејнери. Контакт: ekoskopje@skopje.gov.mk" />
+    <meta name="twitter:image" content="https://ekoskopje.skopje.gov.mk/og-image.png" />
+    <meta name="twitter:image:alt" content="Лого на Еко Скопје" />
 
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="icon" type="image/png" href="/logo.png" sizes="512x512" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-
-    <!-- AI / LLM discovery -->
-    <link rel="describedby" href="https://team2-zeta.vercel.app/llms.txt" type="text/plain" title="LLMs" />
-    <meta name="ai-content-declaration" content="human-authored civic platform for Skopje environmental reporting" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <link rel="describedby" href="https://ekoskopje.skopje.gov.mk/llms.txt" type="text/plain" title="LLMs" />
+    <link rel="describedby" href="https://ekoskopje.skopje.gov.mk/llms-full.txt" type="text/plain" title="LLMs full" />
+    <meta name="ai-content-declaration" content="human-authored official civic platform of the City of Skopje" />
 
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@graph": [
           {
-            "@type": "WebApplication",
-            "@id": "https://team2-zeta.vercel.app/#app",
+            "@type": "GovernmentOrganization",
+            "@id": "https://ekoskopje.skopje.gov.mk/#city",
+            "name": "Град Скопје",
+            "alternateName": ["City of Skopje", "Qyteti i Shkupit"],
+            "url": "https://skopje.gov.mk/",
+            "email": "ekoskopje@skopje.gov.mk",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Skopje",
+              "addressCountry": "MK"
+            },
+            "areaServed": { "@id": "https://ekoskopje.skopje.gov.mk/#place" }
+          },
+          {
+            "@type": "GovernmentService",
+            "@id": "https://ekoskopje.skopje.gov.mk/#service",
             "name": "Еко Скопје",
-            "alternateName": ["Eko Skopje", "EkoSkopje", "ЕкоСкопје"],
-            "url": "https://team2-zeta.vercel.app/",
-            "description": "Civic eco platform for the City of Skopje: live air quality, illegal dump reports, overflowing container reports, status tracking and community eco actions.",
-            "applicationCategory": "LifestyleApplication",
+            "alternateName": ["ekoskopje", "eko skopje", "еко скопје", "Eko Skopje", "EkoSkopje", "ЕкоСкопје"],
+            "disambiguatingDescription": "Official City of Skopje platform at ekoskopje.skopje.gov.mk. Not the NGO Eko-svest (ekosvest.com.mk).",
+            "serviceType": "Civic environmental reporting and air-quality information",
+            "provider": { "@id": "https://ekoskopje.skopje.gov.mk/#city" },
+            "areaServed": { "@id": "https://ekoskopje.skopje.gov.mk/#place" },
+            "availableChannel": {
+              "@type": "ServiceChannel",
+              "serviceUrl": "https://ekoskopje.skopje.gov.mk/",
+              "availableLanguage": ["mk", "en", "sq"]
+            }
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://ekoskopje.skopje.gov.mk/#app",
+            "name": "Еко Скопје",
+            "alternateName": ["ekoskopje", "eko skopje", "еко скопје", "Eko Skopje", "EkoSkopje", "ЕкоСкопје"],
+            "url": "https://ekoskopje.skopje.gov.mk/",
+            "description": "Official civic eco platform of the City of Skopje: live air quality, illegal dump reports, container reports, public status tracking and community eco actions. Search names: ekoskopje, eko skopje, еко скопје, Eko Skopje.",
+            "disambiguatingDescription": "Еко Скопје is the official digital service of Град Скопје. It is not Eko-svest and not a private association.",
+            "applicationCategory": "GovernmentApplication",
             "operatingSystem": "Web, Android, iOS",
+            "browserRequirements": "Requires JavaScript. Modern browser or official mobile app.",
             "inLanguage": ["mk", "en", "sq"],
             "isAccessibleForFree": true,
-            "image": "https://team2-zeta.vercel.app/logo.png",
-            "author": {
-              "@type": "Person",
-              "name": "Andrej Bozinovski",
-              "jobTitle": "Software Engineer"
-            },
-            "creator": {
-              "@type": "Person",
-              "name": "Andrej Bozinovski"
-            },
+            "image": "https://ekoskopje.skopje.gov.mk/logo.png",
+            "screenshot": "https://ekoskopje.skopje.gov.mk/skopje-brand.png",
+            "identifier": "mk.gov.skopje.ekoskopje",
+            "email": "ekoskopje@skopje.gov.mk",
+            "publisher": { "@id": "https://ekoskopje.skopje.gov.mk/#city" },
+            "provider": { "@id": "https://ekoskopje.skopje.gov.mk/#city" },
             "about": [
               { "@type": "Thing", "name": "Air quality in Skopje" },
               { "@type": "Thing", "name": "Illegal dump reporting" },
               { "@type": "Thing", "name": "Waste container issues" }
             ],
-            "areaServed": {
-              "@type": "City",
-              "name": "Skopje",
-              "containedInPlace": {
-                "@type": "Country",
-                "name": "North Macedonia"
-              }
-            },
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "MKD"
-            }
+            "areaServed": { "@id": "https://ekoskopje.skopje.gov.mk/#place" },
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "MKD" }
           },
           {
             "@type": "WebSite",
-            "@id": "https://team2-zeta.vercel.app/#website",
-            "url": "https://team2-zeta.vercel.app/",
+            "@id": "https://ekoskopje.skopje.gov.mk/#website",
+            "url": "https://ekoskopje.skopje.gov.mk/",
             "name": "Еко Скопје",
+            "alternateName": ["ekoskopje", "eko skopje", "еко скопје", "Eko Skopje", "EkoSkopje", "ЕкоСкопје"],
             "inLanguage": ["mk", "en", "sq"],
-            "publisher": { "@id": "https://team2-zeta.vercel.app/#app" },
+            "publisher": { "@id": "https://ekoskopje.skopje.gov.mk/#city" },
             "potentialAction": {
-              "@type": "SearchAction",
-              "target": "https://team2-zeta.vercel.app/home?q={search_term_string}",
-              "query-input": "required name=search_term_string"
+              "@type": "ViewAction",
+              "target": "https://ekoskopje.skopje.gov.mk/home",
+              "name": "Пријави еко проблем"
             }
           },
           {
             "@type": "Organization",
-            "@id": "https://team2-zeta.vercel.app/#org",
+            "@id": "https://ekoskopje.skopje.gov.mk/#org",
             "name": "Еко Скопје",
-            "url": "https://team2-zeta.vercel.app/",
-            "logo": "https://team2-zeta.vercel.app/logo.png",
-            "description": "Digital platform connecting citizens and institutions for cleaner Skopje.",
-            "founder": {
-              "@type": "Person",
-              "name": "Andrej Bozinovski"
+            "alternateName": ["ekoskopje", "eko skopje", "еко скопје", "Eko Skopje", "EkoSkopje"],
+            "url": "https://ekoskopje.skopje.gov.mk/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://ekoskopje.skopje.gov.mk/logo.png"
+            },
+            "email": "ekoskopje@skopje.gov.mk",
+            "description": "Official digital platform connecting citizens and City of Skopje services for cleaner air and public space. Also searched as ekoskopje, eko skopje and еко скопје.",
+            "disambiguatingDescription": "Municipal platform of the City of Skopje. Distinct from the citizen association Eko-svest.",
+            "parentOrganization": { "@id": "https://ekoskopje.skopje.gov.mk/#city" },
+            "sameAs": ["https://skopje.gov.mk/"],
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "email": "ekoskopje@skopje.gov.mk",
+              "contactType": "customer support",
+              "availableLanguage": ["Macedonian", "English", "Albanian"]
             },
             "knowsAbout": [
               "ambient air quality",
@@ -130,15 +184,27 @@
             ]
           },
           {
+            "@type": "City",
+            "@id": "https://ekoskopje.skopje.gov.mk/#place",
+            "name": "Skopje",
+            "alternateName": ["Скопје", "Shkup"],
+            "containedInPlace": { "@type": "Country", "name": "North Macedonia" },
+            "geo": {
+              "@type": "GeoCoordinates",
+              "latitude": 41.9981,
+              "longitude": 21.4254
+            }
+          },
+          {
             "@type": "FAQPage",
-            "@id": "https://team2-zeta.vercel.app/#faq",
+            "@id": "https://ekoskopje.skopje.gov.mk/#faq",
             "mainEntity": [
               {
                 "@type": "Question",
-                "name": "Што е Еко Скопје?",
+                "name": "Што е Еко Скопје, ekoskopje, eko skopje и еко скопје?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Еко Скопје е граѓанска платформа за квалитет на воздух, пријавување диви депонии и проблеми со контејнери во Скопје, со следење на статус и еко-акции."
+                  "text": "Еко Скопје, ekoskopje, eko skopje и еко скопје се истото име: официјалната еко платформа на Град Скопје на https://ekoskopje.skopje.gov.mk. Служи за квалитет на воздух, пријавување диви депонии и проблеми со контејнери, со јавно следење на статус и еко акции. Контакт: ekoskopje@skopje.gov.mk"
                 }
               },
               {
@@ -154,7 +220,31 @@
                 "name": "Како да пријавам дива депонија или контејнер?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Отворете ја почетната страница, изберете тип на пријава, дозволете локација, додадете фотографија каде е потребно и испратете. Надлежните институции ја добиваат пријавата со статус на следење."
+                  "text": "Отворете ја почетната страница на https://ekoskopje.skopje.gov.mk/home, изберете тип на пријава, дозволете локација, додадете фотографија каде е потребно и испратете. Надлежните служби ја добиваат пријавата со статус на следење."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Дали eko skopje е исто што и Еко-свест?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Не. Еко Скопје (eko skopje, ekoskopje, еко скопје) е официјалната еко платформа на Град Скопје на https://ekoskopje.skopje.gov.mk. Еко-свест е друго, граѓанско здружение на ekosvest.com.mk."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Кој е официјалниот сајт за eko skopje?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Официјалниот сајт е https://ekoskopje.skopje.gov.mk/. Имињата Еко Скопје, ekoskopje, eko skopje, еко скопје, Eko Skopje и EkoSkopje се истото име."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Кој е официјалниот контакт?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Официјална е-пошта на Еко Скопје е ekoskopje@skopje.gov.mk. Оператор на платформата е Град Скопје."
                 }
               }
             ]
@@ -164,7 +254,21 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main id="seo-snapshot">
+        <h1>Еко Скопје</h1>
+        <p>Еко Скопје (ekoskopje, eko skopje, еко скопје) е официјалната еко платформа на Град Скопје. На https://ekoskopje.skopje.gov.mk граѓаните гледаат квалитет на воздух во живо и пријавуваат диви депонии, контејнери и миризба. Контакт: ekoskopje@skopje.gov.mk. Ова не е Еко-свест.</p>
+        <nav>
+          <a href="/home">Почетна</a>
+          <a href="/air">Квалитет на воздух</a>
+          <a href="/waste">Диви депонии</a>
+          <a href="/containers">Контејнери</a>
+          <a href="/community">Заедница</a>
+          <a href="/impressum">Импресум</a>
+          <a href="/legal">Правни информации</a>
+        </nav>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

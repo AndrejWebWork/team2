@@ -385,6 +385,7 @@ function HeroSection({ t }) {
       <div className='relative flex flex-col-reverse items-start gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6'>
         <div className='min-w-0'>
           <h1 className='text-[clamp(1.5rem,5vw,2.25rem)] font-extrabold leading-tight tracking-tight'>
+            <span className='mb-1 block text-sm font-semibold tracking-wide text-emerald-200'>Еко Скопје</span>
             {t('home.heroLine1')}<br />{t('home.heroLine2')}
           </h1>
           <p className='mt-3 max-w-md text-[clamp(0.875rem,2.5vw,1rem)] text-slate-300'>

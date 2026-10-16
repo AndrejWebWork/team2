@@ -1,14 +1,80 @@
-import { Bell, ChevronRight, Database, FileText, LogOut, Languages, Scale, ScrollText, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Bell, Check, ChevronDown, ChevronRight, Database, FileText, LogIn, LogOut, Languages, Mail, Scale, ScrollText, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
+import { IMPRESSUM_TECH_CREDIT } from '../i18n/impressum'
+import { LEGAL_CONTACT } from '../i18n/legal'
 import { LANGUAGES, translate } from '../i18n/translations'
 import { deleteAccountApi, fetchUser, updateUserSettingsApi } from '../lib/api'
+import { loginNavState } from '../lib/authNav'
 import { isAdminRole } from '../lib/roles'
+
+const LANG_CODE = { mk: 'МК', en: 'EN', sq: 'SQ' }
+
+function LanguagePicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+  const current = LANGUAGES.find((l) => l.id === value) || LANGUAGES[0]
+
+  useEffect(() => {
+    function onDoc(e) {
+      if (!wrapRef.current?.contains(e.target)) setOpen(false)
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [])
+
+  return (
+    <div className={`lang-picker ${open ? 'is-open' : ''}`} ref={wrapRef}>
+      <button
+        type='button'
+        className='lang-picker-trigger'
+        aria-expanded={open}
+        aria-haspopup='listbox'
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className='lang-picker-code'>{LANG_CODE[current.id] || current.id.toUpperCase()}</span>
+        <span className='lang-picker-copy'>
+          <span className='lang-picker-name'>{current.label}</span>
+        </span>
+        <ChevronDown className='lang-picker-chevron' aria-hidden />
+      </button>
+      <div className='lang-picker-menu' role='listbox' aria-label={current.label}>
+        {LANGUAGES.map((l) => {
+          const active = l.id === value
+          return (
+            <button
+              key={l.id}
+              type='button'
+              role='option'
+              aria-selected={active}
+              className={`lang-picker-option${active ? ' is-active' : ''}`}
+              onClick={() => {
+                onChange(l.id)
+                setOpen(false)
+              }}
+            >
+              <span className='lang-picker-code'>{LANG_CODE[l.id] || l.id.toUpperCase()}</span>
+              <span className='lang-picker-name'>{l.label}</span>
+              <Check className='lang-picker-check' aria-hidden />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 const ROLE_COLORS = {
   user: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -114,14 +180,14 @@ export function SettingsPage() {
   }
 
   return (
-    <div className='space-y-5 max-w-2xl'>
-      <div>
+    <div className='settings-page space-y-5 max-w-2xl'>
+      <div className='settings-hero'>
         <h1 className='text-2xl font-bold text-slate-900'>{t('settings.title')}</h1>
         <p className='mt-0.5 text-sm text-slate-500'>{t('settings.subtitle')}</p>
       </div>
 
       {/* Profile */}
-      <Card>
+      <Card className='settings-card'>
         <CardHeader className='pb-3'>
           <CardTitle className='flex items-center gap-2 text-base'>
             <User className='h-4 w-4 text-emerald-600' />
@@ -130,7 +196,7 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent className='space-y-4'>
           <div className='flex items-center gap-4'>
-            <div className='flex aspect-square h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold leading-none text-emerald-700 shrink-0'>
+            <div className='settings-avatar flex aspect-square h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold leading-none text-emerald-700 shrink-0'>
               {(isAnonymous ? anonymousLabel[0] : (displayName?.[0] || auth.email?.[0] || '?')).toUpperCase()}
             </div>
             <div>
@@ -152,12 +218,18 @@ export function SettingsPage() {
                 className={`h-10 ${isAnonymous ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
               />
               {isAnonymous && (
-                <p className='text-xs leading-relaxed text-slate-500'>
-                  {t('settings.anonymousNameHint')}{' '}
-                  <Link to='/login' state={{ returnTo: '/settings' }} className='font-semibold text-emerald-600 hover:text-emerald-700'>
+                <div className='pt-1'>
+                  <p className='text-xs leading-relaxed text-slate-500'>{t('settings.anonymousNameHint')}</p>
+                  <Button
+                    type='button'
+                    size='sm'
+                    className='mt-2'
+                    onClick={() => navigate('/login', { state: loginNavState('/settings') })}
+                  >
+                    <LogIn className='h-3.5 w-3.5' />
                     {t('login.signIn')}
-                  </Link>
-                </p>
+                  </Button>
+                </div>
               )}
             </div>
             <div className='space-y-1'>
@@ -176,7 +248,7 @@ export function SettingsPage() {
       </Card>
 
       {/* Notifications */}
-      <Card>
+      <Card className='settings-card'>
         <CardHeader className='pb-3'>
           <CardTitle className='flex items-center gap-2 text-base'>
             <Bell className='h-4 w-4 text-emerald-600' />
@@ -189,7 +261,7 @@ export function SettingsPage() {
             { label: t('settings.notifWaste'), sub: t('settings.notifWasteSub'), value: notifWaste, key: 'notifWaste', set: setNotifWaste },
             { label: t('settings.notifEvents'), sub: t('settings.notifEventsSub'), value: notifEvents, key: 'notifEvents', set: setNotifEvents },
           ].map((item) => (
-            <div key={item.label} className='flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
+            <div key={item.label} className='settings-row flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
               <div>
                 <p className='text-sm font-medium text-slate-800'>{item.label}</p>
                 <p className='text-xs text-slate-500'>{item.sub}</p>
@@ -197,9 +269,9 @@ export function SettingsPage() {
               <button
                 type='button'
                 onClick={() => saveNotif(item.key, !item.value, item.set)}
-                className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${item.value ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                className={`settings-toggle relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent focus:outline-none ${item.value ? 'is-on bg-emerald-500' : 'bg-slate-300'}`}
               >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${item.value ? 'translate-x-5' : 'translate-x-0'}`} />
+                <span className={`settings-toggle-knob inline-block h-5 w-5 transform rounded-full bg-white ${item.value ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
             </div>
           ))}
@@ -207,7 +279,7 @@ export function SettingsPage() {
       </Card>
 
       {/* Language */}
-      <Card>
+      <Card className='settings-card'>
         <CardHeader className='pb-3'>
           <CardTitle className='flex items-center gap-2 text-base'>
             <Languages className='h-4 w-4 text-emerald-600' />
@@ -217,25 +289,19 @@ export function SettingsPage() {
         <CardContent className='space-y-4'>
           <div>
             <p className='mb-2 text-sm font-medium text-slate-700'>{t('settings.languageLabel')}</p>
-            <select
+            <LanguagePicker
               value={language}
-              onChange={(e) => {
-                const next = e.target.value
+              onChange={(next) => {
                 setLanguage(next)
                 setToast(translate(next, 'settings.langSaved'))
               }}
-              className='h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm'
-            >
-              {LANGUAGES.map((l) => (
-                <option key={l.id} value={l.id}>{l.label}</option>
-              ))}
-            </select>
+            />
           </div>
         </CardContent>
       </Card>
 
       {/* Legal / Privacy — линкови до правната страница (преведена на 3 јазици) */}
-      <Card>
+      <Card className='settings-card'>
         <CardHeader className='pb-3'>
           <CardTitle className='flex items-center gap-2 text-base'>
             <Scale className='h-4 w-4 text-emerald-600' />
@@ -253,18 +319,28 @@ export function SettingsPage() {
               key={tab}
               type='button'
               onClick={() => navigate(path)}
-              className='flex w-full items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-left transition-colors hover:bg-slate-100'
+              className='settings-link flex w-full items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-left'
             >
               <Icon className='h-4 w-4 shrink-0 text-slate-500' />
               <span className='flex-1 text-sm font-medium text-slate-800'>{label}</span>
               <ChevronRight className='h-4 w-4 shrink-0 text-slate-400' />
             </button>
           ))}
+          <a
+            href={`mailto:${LEGAL_CONTACT}`}
+            className='settings-link flex w-full items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-left'
+          >
+            <Mail className='h-4 w-4 shrink-0 text-slate-500' />
+            <span className='min-w-0 flex-1'>
+              <span className='block text-sm font-medium text-slate-800'>{t('legal.contactEmail')}</span>
+              <span className='block truncate text-xs text-slate-500'>{LEGAL_CONTACT}</span>
+            </span>
+          </a>
         </CardContent>
       </Card>
 
       {/* Account */}
-      <Card>
+      <Card className='settings-card'>
         <CardHeader className='pb-3'>
           <CardTitle className='flex items-center gap-2 text-base'>
             <Shield className='h-4 w-4 text-emerald-600' />
@@ -274,8 +350,9 @@ export function SettingsPage() {
         <CardContent className='space-y-3'>
           <div className='rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
             <p className='text-sm font-medium text-slate-700'>{t('settings.appVersion')}</p>
-            <p className='text-xs text-slate-500 mt-0.5'>Еко Скопје v1.0.0</p>
+            <p className='text-xs text-slate-500 mt-0.5'>Еко Скопје v1.0.2</p>
             <p className='text-xs text-slate-400 mt-1'>{t('common.credit')}</p>
+            <p className='mt-2 text-[11px] leading-relaxed text-slate-400'>{IMPRESSUM_TECH_CREDIT[language] || IMPRESSUM_TECH_CREDIT.mk}</p>
           </div>
           {/* Одјава — само за најавени (анонимен нема сметка за одјава) */}
           {!isAnonymous && (

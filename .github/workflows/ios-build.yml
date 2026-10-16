@@ -1,5 +1,5 @@
-# Build a signed iOS IPA (Capacitor) on GitHub Actions.
-# Requires Apple Developer account + GitHub secrets (see job comments).
+# Build a signed App Store IPA (Capacitor) on GitHub Actions.
+# Requires Apple Distribution certificate + App Store profile in GitHub secrets.
 name: iOS Build
 
 on:
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build-ipa:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -33,20 +33,16 @@ jobs:
           VITE_WAQI_TOKEN: ${{ secrets.VITE_WAQI_TOKEN }}
         run: npm run build
 
-      - name: Copy web assets to iOS
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Normalize SPM paths for macOS
         run: |
           set -euo pipefail
-          rm -rf ios/App/App/public
-          mkdir -p ios/App/App/public
-          cp -R dist/. ios/App/App/public/
-          cp capacitor.config.json ios/App/App/capacitor.config.json
-          cat > ios/App/App/config.xml <<'EOF'
-          <?xml version='1.0' encoding='utf-8'?>
-          <widget version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-            <access origin="*" />
-          </widget>
-          EOF
-          test -f ios/App/App/config.xml
+          sed -i '' 's|\\|/|g' ios/App/CapApp-SPM/Package.swift
+
+      - name: Use production push entitlement
+        run: /usr/libexec/PlistBuddy -c 'Set :aps-environment production' ios/App/App/App.entitlements
 
       - name: Import signing certificate and profile
         env:
@@ -68,18 +64,22 @@ jobs:
           PP_PATH="$RUNNER_TEMP/build_pp.mobileprovision"
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
 
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 -D -o "$CERTIFICATE_PATH"
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 -D -o "$PP_PATH"
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          curl -fsSL -o "$RUNNER_TEMP/AppleWWDRCAG3.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" -k "$KEYCHAIN_PATH" -T /usr/bin/codesign -T /usr/bin/security
           security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
 
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles"
+          UUID=$(security cms -D -i "$PP_PATH" | plutil -extract UUID raw -)
+          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
 
       - name: Prepare export options
         env:
@@ -91,10 +91,11 @@ jobs:
             echo "::error::Missing IOS_TEAM_ID or IOS_PROVISIONING_PROFILE_NAME secrets"
             exit 1
           fi
+          mkdir -p build
           sed \
             -e "s/__TEAM_ID__/${IOS_TEAM_ID}/g" \
             -e "s/__PROVISIONING_PROFILE_NAME__/${IOS_PROVISIONING_PROFILE_NAME}/g" \
-            ios/export/ExportOptions.development.plist > build/ExportOptions.plist
+            ios/export/ExportOptions.appstore.plist > build/ExportOptions.plist
 
       - name: Archive app
         env:
@@ -110,7 +111,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$IOS_TEAM_ID" \
             PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
-            CODE_SIGN_IDENTITY="Apple Development" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
 
       - name: Export IPA

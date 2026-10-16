@@ -1,8 +1,8 @@
 {
   "name": "Еко Скопје",
   "short_name": "Еко Скопје",
-  "description": "Граѓанска еко-платформа за квалитет на воздух, диви депонии и контејнери во Скопје.",
-  "id": "/",
+  "description": "Еко Скопје (ekoskopje, eko skopje, еко скопје, Eko Skopje) — официјална еко платформа на Град Скопје: воздух, диви депонии, контејнери и еко акции.",
+  "id": "https://ekoskopje.skopje.gov.mk/",
   "start_url": "/home",
   "scope": "/",
   "display": "standalone",
@@ -24,6 +24,28 @@
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Пријави",
+      "short_name": "Пријави",
+      "url": "/home"
+    },
+    {
+      "name": "Воздух",
+      "short_name": "Воздух",
+      "url": "/air"
+    },
+    {
+      "name": "Диви депонии",
+      "short_name": "Депонии",
+      "url": "/waste"
+    },
+    {
+      "name": "Контејнери",
+      "short_name": "Контејнери",
+      "url": "/containers"
     }
   ]
 }

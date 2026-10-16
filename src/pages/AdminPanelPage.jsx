@@ -344,7 +344,7 @@ function defaultTypeFilter(role) {
 }
 
 export function AdminPanelPage() {
-  const { auth, wasteReports, setWasteReports, smellAlerts, setSmellAlerts, containers, setContainers, pushNotification, changeReportStatus, deleteReport, removeReportLocally, refreshData, t } = useApp()
+  const { auth, wasteReports, setWasteReports, smellAlerts, setSmellAlerts, containers, setContainers, pushNotification, changeReportStatus, deleteReport, removeReportLocally, refreshData, noteReportsChanged, t } = useApp()
   const [typeFilter, setTypeFilter] = useState(() => defaultTypeFilter(auth.role))
   const [statusFilter, setStatusFilter] = useState('pending')
   const [sortBy, setSortBy] = useState('date')
@@ -472,6 +472,7 @@ export function AdminPanelPage() {
         return false
       }
     } else if (report.type === 'waste') {
+      noteReportsChanged()
       setWasteReports((prev) => prev.map((r) => {
         if (r.id !== report.id) return r
         return {
@@ -482,6 +483,7 @@ export function AdminPanelPage() {
         }
       }))
     } else if (report.type === 'container') {
+      noteReportsChanged()
       setContainers((prev) => prev.map((c) => {
         if (c.id !== report.id) return c
         return {

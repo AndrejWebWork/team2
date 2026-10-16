@@ -271,16 +271,8 @@ html[data-platform='android'] .app-shell-main {
   border: none !important;
 }
 
-/* Сензорите да стојат фиксно — без „лизгање" при zoom / refresh */
-.app-map-shell .leaflet-marker-icon,
-.app-map-shell .leaflet-marker-shadow,
-.app-map-shell .leaflet-pane,
-.app-map-shell .leaflet-tile,
-.app-map-shell .leaflet-zoom-anim .leaflet-zoom-animated,
-.app-map-shell .leaflet-fade-anim .leaflet-tile,
-.app-map-shell .leaflet-fade-anim .leaflet-popup {
-  transition: none !important;
-  animation: none !important;
+.app-map-shell .leaflet-container {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Помали прозорчиња само на телефон — на desktop остануваат нормални */
@@ -323,17 +315,99 @@ html[data-platform='android'] .app-shell-main {
   contain: layout;
 }
 
-.app-map-shell .leaflet-container {
+.app-map-shell .leaflet-container,
+.app-map-shell .air-map-root,
+.app-map-shell .air-map-canvas,
+.app-map-shell .maplibregl-map {
   height: 100%;
   width: 100%;
-  background: #f1f5f9;
+  background: #e8e4dc;
 }
+
+.air-map-root { position: relative; }
+.air-map-pin { line-height: 0; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.28)); }
+.air-map-pin svg { display: block; }
+.air-map-user-dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #2563eb;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.22);
+}
+.air-map-styles {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+}
+.air-map-styles button {
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+}
+.air-map-styles button:hover { background: #f1f5f9; color: #0f172a; }
+.air-map-hint {
+  position: absolute;
+  left: 10px;
+  bottom: 28px;
+  z-index: 2;
+  margin: 0;
+  max-width: 70%;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.3;
+  pointer-events: none;
+}
+.air-map-popup-title { font-weight: 700; font-size: 13px; margin: 0 0 2px; }
+.air-map-popup-src { color: #64748b; font-size: 11px; margin: 0 0 4px; }
+.air-map-popup p { margin: 0 0 2px; font-size: 12px; }
+.air-map-popup-edu { margin-top: 6px !important; color: #475569; font-size: 11px !important; line-height: 1.4; }
+.app-map-shell .maplibregl-ctrl-attrib { font-size: 10px; }
 
 @media (min-width: 640px) {
   .app-map-shell {
-    height: clamp(300px, 52dvh, 480px);
-    border-radius: 1.25rem;
+    height: clamp(340px, 58dvh, 560px);
+    border-radius: 6px;
   }
+}
+
+/* Десктоп: информативните балончиња се коцки, малку помали; картичките помалку заоблени. */
+@media (min-width: 768px) {
+  .rounded-2xl { border-radius: 6px; }
+  .rounded-xl { border-radius: 4px; }
+  .maplibregl-popup-content {
+    border-radius: 0;
+    padding: 8px 10px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  }
+  .maplibregl-popup-tip {
+    border-top-width: 6px;
+    border-bottom-width: 6px;
+    border-left-width: 6px;
+    border-right-width: 6px;
+  }
+  .air-map-popup-title { font-size: 12px; }
+  .air-map-popup-src,
+  .air-map-popup p { font-size: 11px; }
+  .air-map-styles { border-radius: 4px; padding: 2px; }
+  .air-map-styles button { border-radius: 2px; padding: 4px 8px; font-size: 10px; }
+  .air-map-hint { border-radius: 2px; font-size: 10px; }
 }
 
 /* Тост нотификации: мазно влегување од десно кон лево, и излегување назад. */
@@ -539,6 +613,215 @@ html[data-platform='android'] .app-shell-main {
 
 .toast-icon-pop {
   animation: icon-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) 0.06s both;
+}
+
+/* Заедница — лесен polish на карти и форма за настан */
+.community-page .community-hero {
+  padding-bottom: 2px;
+}
+.community-page .community-card,
+.community-page .community-detail {
+  border-color: #e8eef4;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -16px rgba(15, 23, 42, 0.18);
+}
+.community-event,
+.community-pending {
+  border-color: #e8eef4;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+.community-event:hover,
+.community-pending:hover {
+  border-color: #dbe7f0;
+  box-shadow: 0 10px 24px -16px rgba(15, 23, 42, 0.22);
+  transform: translateY(-1px);
+}
+.community-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+}
+.community-chip svg {
+  color: #94a3b8;
+}
+.community-meta-tile {
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+.community-create input,
+.community-create textarea {
+  border-radius: 12px;
+}
+.community-create input:focus,
+.community-create textarea:focus {
+  border-color: #a7f3d0;
+}
+
+/* Поставки — потивка страница + премиум избор на јазик */
+.settings-page .settings-hero {
+  padding-bottom: 2px;
+}
+.settings-page .settings-card {
+  border-color: #e8eef4;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -16px rgba(15, 23, 42, 0.18);
+}
+.settings-page .settings-avatar {
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.18), 0 6px 16px -8px rgba(16, 185, 129, 0.45);
+}
+.settings-page .settings-row,
+.settings-page .settings-link {
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+.settings-page .settings-row:hover,
+.settings-page .settings-link:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+.settings-page .settings-link:active {
+  transform: scale(0.992);
+}
+.settings-page .settings-toggle {
+  transition: background-color 220ms ease, box-shadow 220ms ease;
+}
+.settings-page .settings-toggle.is-on {
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+.settings-page .settings-toggle-knob {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lang-picker {
+  position: relative;
+}
+.lang-picker-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid #dbe3ec;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  text-align: left;
+}
+.lang-picker-trigger:hover {
+  border-color: #c5d4e2;
+  box-shadow: 0 4px 14px -8px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.lang-picker-trigger:active {
+  transform: scale(0.985);
+}
+.lang-picker.is-open .lang-picker-trigger {
+  border-color: #a7f3d0;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1), 0 8px 20px -12px rgba(15, 23, 42, 0.2);
+}
+.lang-picker-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.lang-picker-copy {
+  flex: 1;
+  min-width: 0;
+}
+.lang-picker-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.lang-picker-chevron {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lang-picker.is-open .lang-picker-chevron {
+  transform: rotate(180deg);
+}
+.lang-picker-menu {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.28), 0 4px 12px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top center;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lang-picker.is-open .lang-picker-menu {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.lang-picker-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.lang-picker-option:hover {
+  background: #f8fafc;
+}
+.lang-picker-option:active {
+  transform: scale(0.99);
+}
+.lang-picker-option .lang-picker-name {
+  flex: 1;
+  font-weight: 600;
+}
+.lang-picker-check {
+  width: 16px;
+  height: 16px;
+  color: #059669;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lang-picker-option.is-active {
+  background: #f0fdf6;
+}
+.lang-picker-option.is-active:hover {
+  background: #ecfdf5;
+}
+.lang-picker-option.is-active .lang-picker-name {
+  color: #065f46;
+}
+.lang-picker-option.is-active .lang-picker-check {
+  opacity: 1;
+  transform: scale(1);
 }
 
 @media (prefers-reduced-motion: reduce) {

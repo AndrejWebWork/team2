@@ -183,7 +183,7 @@ function defaultDeskTab(role) {
 }
 
 export function AdminDeskPage() {
-  const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, pushNotification, t } = useApp()
+  const { auth, smellAlerts, wasteReports, containers, setWasteReports, setContainers, pushNotification, noteReportsChanged, t } = useApp()
   const [tab, setTab] = useState(() => defaultDeskTab(auth.role))
   const [airSensors, setAirSensors] = useState([])
   const [statusSuccess, setStatusSuccess] = useState(null)
@@ -237,6 +237,7 @@ export function AdminDeskPage() {
     }
     const mapped = serverRow ? serverToWaste(serverRow) : null
     const statusLabel = t(STATUS_META[status] || STATUS_META.pending)
+    noteReportsChanged()
     setWasteReports((prev) =>
       prev.map((r) => {
         if (r.id !== id) return r
@@ -270,6 +271,7 @@ export function AdminDeskPage() {
     }
     const mapped = serverRow ? serverToContainer(serverRow) : null
     const statusLabel = t('status.resolved')
+    noteReportsChanged()
     setContainers((prev) => prev.map((c) => {
       if (c.id !== id) return c
       if (mapped) return mapped

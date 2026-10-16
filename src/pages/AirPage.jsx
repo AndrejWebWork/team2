@@ -1,99 +1,35 @@
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+import { Capacitor } from '@capacitor/core'
 import { Flame, Info, Loader2, MapPin, Wind, XCircle } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { MapContainer, Marker, Popup, useMap } from 'react-leaflet'
-import { MapLayers } from '../components/MapLayers'
+import { useEffect, useMemo, useState } from 'react'
+import { AirMap } from '../components/AirMap'
+import { EmptyState } from '../components/EmptyState'
 import { InfoTip } from '../components/InfoTip'
 import { ReportShortcutButton } from '../components/ReportShortcutButton'
+import { StatusBadge } from '../components/StatusBadge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { useApp } from '../context/AppContext'
-import { canAccessReportType, isAdminRole } from '../lib/roles'
+import { useGeolocation } from '../hooks/useGeolocation'
+import { fetchPulseSensors, NOT_MODIFIED, peekPulseSensors } from '../lib/api'
+import { getDeviceId } from '../lib/device'
+import { findNearestAirSensor, haversineKm } from '../lib/geo'
+import { isMyReport } from '../lib/reportOwnership'
+import { canAccessReportType } from '../lib/roles'
 import { fetchSkopjeSensors } from '../lib/waqi'
-import { fetchPulseSensors } from '../lib/api'
 
 // Колку често се освежуваат мерењата во живо од WAQI (референтни МЖСПП + граѓански).
-const AIR_REFRESH_MS = 3 * 60 * 1000
+const AIR_REFRESH_MS = 20 * 1000
 
-const userIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-})
-
-function makeSensorIcon(bg, border) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${bg};border:2.5px solid ${border};box-shadow:0 1px 4px rgba(0,0,0,0.18);"></div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+function hasPulseEco(list) {
+  return (list || []).some((s) => {
+    const id = String(s?.id || '')
+    return id.startsWith('PULSE-') && !id.startsWith('PULSE-SC-')
   })
 }
 
-const pulseIcon = makeSensorIcon('#34d399', '#10b981')
-
-// Официјалните МЖСПП станици: значка со живата AQI вредност, обоена според
-// квалитетот (зелена/жолта/црвена), со покажувач кон точната локација.
-// Многу поинформативно од обичен син круг — вредноста се чита директно на мапата.
-const AQI_PIN = {
-  good: { bg: '#22c55e', ring: '#dcfce7' },
-  moderate: { bg: '#f59e0b', ring: '#fef3c7' },
-  unhealthy: { bg: '#ef4444', ring: '#fee2e2' },
-}
-
-// Кеш по AQI вредност — иста референца меѓу рендери (Capacitor WebView
-// често „губи“ маркери ако секој poll прави нов L.divIcon).
-const aqiIconCache = new Map()
-
-function makeAqiIcon(aqi) {
-  const n = Number.isFinite(Number(aqi)) ? Math.round(Number(aqi)) : null
-  const cacheKey = n == null ? 'na' : String(n)
-  const cached = aqiIconCache.get(cacheKey)
-  if (cached) return cached
-
-  const level = n == null ? 'good' : n >= 101 ? 'unhealthy' : n >= 51 ? 'moderate' : 'good'
-  const c = AQI_PIN[level]
-  const label = n == null ? '—' : String(n)
-  // Без CSS filter:drop-shadow — Android/iOS WebView често не го црта (празни пинови).
-  const icon = L.divIcon({
-    className: 'aqi-map-pin',
-    html: `
-      <div style="position:relative;width:34px;height:42px;">
-        <div style="
-          width:34px;height:34px;border-radius:50%;
-          background:${c.bg};border:3px solid #ffffff;
-          box-shadow:0 0 0 2px ${c.ring},0 2px 6px rgba(15,23,42,0.35);
-          display:flex;align-items:center;justify-content:center;
-          color:#ffffff;font-weight:800;font-size:${n != null && n >= 100 ? 11 : 13}px;
-          font-family:system-ui,-apple-system,sans-serif;line-height:1;
-        ">${label}</div>
-        <div style="
-          position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
-          width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;
-          border-top:8px solid #ffffff;
-        "></div>
-      </div>`,
-    iconSize: [34, 42],
-    iconAnchor: [17, 42],
-    popupAnchor: [0, -40],
-  })
-  aqiIconCache.set(cacheKey, icon)
-  return icon
-}
-
-import { findNearestAirSensor, haversineKm } from '../lib/geo'
-import { useGeolocation } from '../hooks/useGeolocation'
-
-function RecenterMap({ lat, lng }) {
-  const map = useMap()
-  const centered = useRef(false)
-  useEffect(() => {
-    if (centered.current || lat == null || lng == null) return
-    centered.current = true
-    map.setView([lat, lng], 13)
-  }, [lat, lng, map])
-  return null
+function aqiMeaningKey(key) {
+  if (key === 'moderate') return 'air.meaningModerate'
+  if (key === 'unhealthy') return 'air.meaningUnhealthy'
+  return 'air.meaningGood'
 }
 
 function aqiColor(aqi) {
@@ -160,6 +96,7 @@ function SensorDetail({ sensor, onClose, t }) {
         <div className='min-w-0'>
           <p className='truncate text-sm font-bold text-slate-900 sm:text-lg'>{sensorName(sensor, t)}</p>
           <p className='text-[11px] text-slate-500 sm:text-sm'>{t(`aqi.${c.key}`)}</p>
+          <p className='mt-1 text-[11px] leading-snug text-slate-600 sm:text-xs'>{t(aqiMeaningKey(c.key))}</p>
         </div>
         <div className='shrink-0 text-right'>
           <p className='text-2xl font-extrabold leading-none sm:text-4xl' style={{ color: c.text }}>{sensor.aqi}</p>
@@ -178,7 +115,8 @@ function SensorDetail({ sensor, onClose, t }) {
                 <div className='h-full rounded-full' style={{ width: `${Math.min(val / max * 100, 100)}%`, background: c.bar }} />
               </div>
             )}
-            <p className='mt-1 hidden text-[10px] text-slate-400 sm:block'>{hint}</p>
+            <p className='mt-1 text-[10px] leading-snug text-slate-500'>{label === 'PM2.5' ? t('air.pm25Short') : t('air.pm10Short')}</p>
+            <p className='mt-0.5 text-[10px] text-slate-400'>{hint}</p>
           </div>
         ))}
       </div>
@@ -188,7 +126,7 @@ function SensorDetail({ sensor, onClose, t }) {
 }
 
 export function AirPage() {
-  const { sensors, setSensors, smellAlerts, auth, t } = useApp()
+  const { sensors, setSensors, smellAlerts, auth, refreshReports, t } = useApp()
   // Иста GPS логика како Home / пријави — useGeolocation насекаде.
   const loc = useGeolocation(t)
   const userLocation = loc.lat != null && loc.lng != null
@@ -198,9 +136,19 @@ export function AirPage() {
   const [selectedSensor, setSelectedSensor] = useState(null)
   // Нереферентни (граѓански) сензори: WAQI граѓански + Pulse.eco во живо.
   // Само реални податоци — почнува празно и се полни од API при првото вчитување.
-  const [pulse, setPulse] = useState([])
+  const [pulse, setPulse] = useState(peekPulseSensors)
   // Статус на живото вчитување: 'loading' | 'live' | 'offline'.
   const [airStatus, setAirStatus] = useState('loading')
+
+  useEffect(() => {
+    refreshReports()
+  }, [refreshReports])
+
+  const isSmellAdmin = canAccessReportType(auth.role, 'smell')
+  const mySmellReports = useMemo(() => {
+    const mine = isSmellAdmin ? smellAlerts : smellAlerts.filter((r) => isMyReport(r, auth, getDeviceId()))
+    return mine.filter((r) => r.status !== 'resolved')
+  }, [smellAlerts, isSmellAdmin, auth.email, auth.userId, auth.isAnonymous])
 
   // Реални мерења во живо од WAQI (aqicn.org) + Pulse.eco:
   //  • официјални/референтни (МЖСПП) → context `sensors`,
@@ -212,8 +160,13 @@ export function AirPage() {
     const controller = new AbortController()
 
     let loadInFlight = false
+    let queued = false
+    let sawPulseEco = false
     async function load() {
-      if (loadInFlight) return
+      if (loadInFlight) {
+        queued = true
+        return
+      }
       loadInFlight = true
       try {
       // Трите извори се НЕЗАВИСНИ: пад на еден (пр. WAQI) не смее да ги блокира
@@ -225,31 +178,42 @@ export function AirPage() {
       if (cancelled) return
       const valid = (s) => s.lat != null && s.lng != null && (s.aqi != null || s.pm25 != null || s.pm10 != null)
       const waqi = waqiRes.status === 'fulfilled' ? waqiRes.value : []
-      const pulseLive = pulseRes.status === 'fulfilled' ? pulseRes.value.filter(valid) : []
+      const pulseLive = pulseRes.status === 'fulfilled' && pulseRes.value !== NOT_MODIFIED
+        ? pulseRes.value.filter(valid)
+        : null
 
       const referent = waqi.filter((s) => s.category === 'referent' && valid(s))
       const civic = waqi.filter((s) => s.category !== 'referent' && valid(s))
       if (waqiRes.status === 'fulfilled') setSensors(referent)
+      let mergedHasEco = sawPulseEco
       setPulse((prev) => {
         const nextCivic = waqiRes.status === 'fulfilled'
           ? civic
           : prev.filter((s) => String(s.id).startsWith('WAQI-'))
-        const nextPulse = pulseRes.status === 'fulfilled'
-          ? (pulseLive.length > 0 ? pulseLive : prev.filter((s) => String(s.id).startsWith('PULSE-')))
+        const incomingEco = hasPulseEco(pulseLive)
+        const keptPulse = incomingEco || !hasPulseEco(prev)
+          ? (pulseLive && pulseLive.length > 0 ? pulseLive : prev.filter((s) => String(s.id).startsWith('PULSE-')))
           : prev.filter((s) => String(s.id).startsWith('PULSE-'))
-        if (waqiRes.status !== 'fulfilled' && pulseRes.status !== 'fulfilled') return prev
+        if (waqiRes.status !== 'fulfilled' && pulseLive == null) return prev
         const seen = new Set()
-        return [...nextCivic, ...nextPulse].filter((s) => {
+        const next = [...nextCivic, ...keptPulse].filter((s) => {
           if (seen.has(s.id)) return false
           seen.add(s.id)
           return true
         })
+        mergedHasEco = hasPulseEco(next)
+        return next
       })
+      sawPulseEco = mergedHasEco || hasPulseEco(pulseLive)
 
-      const anyLive = waqiRes.status === 'fulfilled' || pulseRes.status === 'fulfilled'
-      setAirStatus((prev) => (anyLive ? 'live' : prev === 'live' ? 'live' : 'offline'))
+      const waqiHas = waqiRes.status === 'fulfilled' && referent.length > 0
+      if (mergedHasEco || waqiHas || sawPulseEco) setAirStatus('live')
       } finally {
         loadInFlight = false
+        if (queued && !cancelled) {
+          queued = false
+          load()
+        }
       }
     }
 
@@ -262,11 +226,16 @@ export function AirPage() {
 
     load()
     schedule()
+    // Додека ги нема Pulse Eco, прашувај на секои 3s — независно од бавно прво барање.
+    const ecoTimer = setInterval(() => {
+      if (!cancelled && !sawPulseEco) load()
+    }, 3000)
     document.addEventListener('visibilitychange', onVisibility)
     return () => {
       cancelled = true
       controller.abort()
       if (timer) clearTimeout(timer)
+      clearInterval(ecoTimer)
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [setSensors])
@@ -290,6 +259,10 @@ export function AirPage() {
   )
   const civicCardSensors = useMemo(
     () => pulse.filter((s) => !String(s.id).startsWith('PULSE-')),
+    [pulse],
+  )
+  const pulseEcoCount = useMemo(
+    () => pulse.filter((s) => hasPulseEco([s])).length,
     [pulse],
   )
   const visibleCount = visibleMinistrySensors.length + visiblePulseSensors.length
@@ -342,9 +315,17 @@ export function AirPage() {
               onClick={() => loc.retry()}
               className='ml-auto flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100'
             >
-              <MapPin className='h-3.5 w-3.5' />{t('gps.retry2')}
+              <MapPin className='h-3.5 w-3.5' />{Capacitor.isNativePlatform() ? t('gps.retry2') : t('gps.webRetry')}
             </button>
           </div>
+          {!Capacitor.isNativePlatform() && (
+            <ol className='mt-3 list-decimal space-y-1 pl-4 text-xs leading-relaxed text-slate-600'>
+              <li>{t('gps.webStep1')}</li>
+              <li>{t('gps.webStep2')}</li>
+              <li>{t('gps.webStep3')}</li>
+              <li>{t('gps.webStep4')}</li>
+            </ol>
+          )}
         </div>
       )}
 
@@ -364,11 +345,13 @@ export function AirPage() {
                 <p className='mt-0.5 text-xs font-semibold' style={{ color: c.text }}>AQI &middot; {t(`aqi.${c.key}`)}</p>
               </div>
             </div>
+            <p className='mt-2 text-sm leading-snug text-slate-700'>{t(aqiMeaningKey(c.key))}</p>
             <div className='mt-4 grid grid-cols-2 gap-2'>
-              {[['PM2.5', nearest.pm25, 'µg/m³'], ['PM10', nearest.pm10, 'µg/m³']].map(([label, val, unit]) => (
+              {[['PM2.5', nearest.pm25, 'µg/m³', t('air.pm25Short')], ['PM10', nearest.pm10, 'µg/m³', t('air.pm10Short')]].map(([label, val, unit, hint]) => (
                 <div key={label} className='rounded-xl bg-white/60 px-3 py-2'>
                   <p className='text-xs text-slate-500'>{label}</p>
                   <p className='text-lg font-bold text-slate-800'>{val} <span className='text-xs font-normal text-slate-400'>{unit}</span></p>
+                  <p className='mt-0.5 text-[11px] leading-snug text-slate-500'>{hint}</p>
                 </div>
               ))}
             </div>
@@ -422,7 +405,8 @@ export function AirPage() {
           {t('air.nonreferentInfo1')}{t('air.nonreferentInfo2')}
         </p>
         {pulse.length > 0 ? (
-          civicCardSensors.length > 0 ? (
+          <>
+            {civicCardSensors.length > 0 && (
             <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
               {civicCardSensors.map((s) => (
                 <SensorCard
@@ -434,14 +418,20 @@ export function AirPage() {
                 />
               ))}
             </div>
-          ) : null
-        ) : airStatus === 'loading' ? (
-          <p className='rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700'>
-            {t('air.loadingLive')}
-          </p>
-        ) : (
+            )}
+            {pulseEcoCount > 0 && (
+              <p className='text-xs text-slate-500'>
+                {pulseEcoCount} Pulse Eco · {t('air.sensorsOnMap')}
+              </p>
+            )}
+          </>
+        ) : airStatus === 'offline' ? (
           <p className='rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500'>
             {t('air.offline')}
+          </p>
+        ) : (
+          <p className='rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700'>
+            {t('air.loadingLive')}
           </p>
         )}
       </section>
@@ -469,58 +459,11 @@ export function AirPage() {
             ))}
           </div>
           <div className='app-map-shell'>
-            {/* Почетниот поглед на мапата е Скопје (само поглед, не податок);
-                маркерот „Вашата локација" се црта САМО со реален GPS. */}
-            <MapContainer
-              center={[41.9981, 21.4254]}
-              zoom={13}
-              maxZoom={20}
-              className='h-full w-full'
-              zoomAnimation={false}
-              markerZoomAnimation={false}
-              fadeAnimation={false}
-              inertia={false}
-            >
-              {userLocation && <RecenterMap lat={userLocation.lat} lng={userLocation.lng} />}
-              <MapLayers />
-              {userLocation && (
-                <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
-                  <Popup>{t('air.yourLocation')}</Popup>
-                </Marker>
-              )}
-              {visibleMinistrySensors.map((s) => (
-                <Marker
-                  key={s.id}
-                  position={[Number(Number(s.lat).toFixed(5)), Number(Number(s.lng).toFixed(5))]}
-                  icon={makeAqiIcon(s.aqi)}
-                  zIndexOffset={400}
-                >
-                  <Popup maxWidth={280} minWidth={160} autoPanPadding={[24, 24]} className='sensor-popup'>
-                    <p className='text-[12px] font-bold leading-tight sm:text-sm'>{sensorName(s, t)}</p>
-                    <p className='text-[10px] text-slate-500 sm:text-xs'>{t('air.referentSource')}</p>
-                    <p className='text-[11px] sm:text-xs'>AQI: <b>{s.aqi}</b> · {t(`aqi.${aqiColor(s.aqi).key}`)}</p>
-                    <p className='text-[10px] text-slate-600 sm:text-xs'>PM2.5: {s.pm25 ?? '—'} µg/m³</p>
-                    <p className='text-[10px] text-slate-600 sm:text-xs'>PM10: {s.pm10 ?? '—'} µg/m³</p>
-                  </Popup>
-                </Marker>
-              ))}
-              {visiblePulseSensors.map((s) => (
-                <Marker
-                  key={s.id}
-                  position={[Number(Number(s.lat).toFixed(5)), Number(Number(s.lng).toFixed(5))]}
-                  icon={pulseIcon}
-                >                  <Popup maxWidth={280} minWidth={160} autoPanPadding={[24, 24]} className='sensor-popup'>
-                    <p className='text-[12px] font-bold leading-tight sm:text-sm'>{sensorName(s, t)}</p>
-                    <p className='text-[10px] text-slate-500 sm:text-xs'>{t('air.pulseSensor')}</p>
-                    {s.aqi != null && (
-                      <p className='text-[11px] sm:text-xs'>AQI: <b>{s.aqi}</b> · {t(`aqi.${aqiColor(s.aqi).key}`)}</p>
-                    )}
-                    {s.pm25 != null && <p className='text-[10px] text-slate-600 sm:text-xs'>PM2.5: {s.pm25} µg/m³</p>}
-                    {s.pm10 != null && <p className='text-[10px] text-slate-600 sm:text-xs'>PM10: {s.pm10} µg/m³</p>}
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
+            <AirMap
+              ministrySensors={visibleMinistrySensors}
+              pulseSensors={visiblePulseSensors}
+              userLocation={userLocation}
+            />
           </div>
           <div className='flex flex-wrap items-center gap-3 text-xs text-slate-500'>
             <span className='flex items-center gap-1.5'>
@@ -528,11 +471,75 @@ export function AirPage() {
               <span className='flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-[8px] font-extrabold leading-none text-white shadow ring-1 ring-emerald-200'>{sensors[0]?.aqi ?? ''}</span>
               {t('air.legendReferent')}
             </span>
-            <span className='flex items-center gap-1.5'><span className='h-2.5 w-2.5 rounded-full border-2 border-emerald-400 bg-emerald-200' />{t('air.legendNonreferent')}</span>
+              <span className='flex items-center gap-1.5'>
+                <span className='inline-flex h-5 w-4 items-end justify-center' aria-hidden>
+                  <svg width='12' height='16' viewBox='0 0 32 42'><path d='M16 40.5S28 26.2 28 16.2A12 12 0 1 0 4 16.2C4 26.2 16 40.5 16 40.5z' fill='#22c55e' stroke='#fff' strokeWidth='2'/></svg>
+                </span>
+                {t('air.legendNonreferent')}
+              </span>
             <span className='ml-auto'>{t('air.shownLabel')}: {visibleCount} / {allSensors.length}</span>
           </div>
         </CardContent>
       </Card>
+
+      <section className='rounded-2xl border border-slate-200 bg-white p-4'>
+        <h2 className='text-sm font-bold text-slate-900'>{t('air.learnTitle')}</h2>
+        <p className='mt-1 text-xs leading-relaxed text-slate-600'>{t('air.learnAqi')}</p>
+        <ul className='mt-2 space-y-1 text-xs leading-relaxed'>
+          <li className='text-emerald-800'>{t('air.learnGood')}</li>
+          <li className='text-amber-800'>{t('air.learnModerate')}</li>
+          <li className='text-rose-800'>{t('air.learnUnhealthy')}</li>
+        </ul>
+        <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+          <div className='rounded-xl bg-slate-50 px-3 py-2.5'>
+            <p className='text-xs font-semibold text-slate-800'>PM2.5</p>
+            <p className='mt-1 text-xs leading-relaxed text-slate-600'>{t('air.learnPm25')}</p>
+          </div>
+          <div className='rounded-xl bg-slate-50 px-3 py-2.5'>
+            <p className='text-xs font-semibold text-slate-800'>PM10</p>
+            <p className='mt-1 text-xs leading-relaxed text-slate-600'>{t('air.learnPm10')}</p>
+          </div>
+        </div>
+        <p className='mt-3 text-[11px] leading-relaxed text-slate-500'>{t('air.learnLimits')}</p>
+      </section>
+
+      <section className='space-y-3'>
+        <div className='flex items-center justify-between gap-3'>
+          <h2 className='text-lg font-semibold text-slate-900'>{isSmellAdmin ? t('waste.activeAdmin') : t('waste.activeMine')}</h2>
+          <p className='text-xs text-slate-500'>{mySmellReports.length} {t('common.records')}</p>
+        </div>
+        {mySmellReports.length === 0 ? (
+          <EmptyState
+            title={isSmellAdmin ? t('waste.noActiveAdmin') : t('waste.noActiveMine')}
+            description={isSmellAdmin ? t('waste.noActiveAdminDesc') : t('waste.noActiveMineDesc')}
+          />
+        ) : (
+          <div className='grid gap-3 md:grid-cols-2'>
+            {mySmellReports.map((alert) => (
+              <article key={alert.id} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
+                <div className='flex items-start justify-between gap-2'>
+                  <p className='flex items-center gap-1.5 font-semibold text-slate-900'>
+                    <MapPin className='h-4 w-4 shrink-0 text-rose-500' />{alert.location || t('admin.unknownLocation')}
+                  </p>
+                  <StatusBadge status={alert.status || 'pending'} />
+                </div>
+                {alert.intensity != null && (
+                  <div className='mt-2 flex items-center gap-1'>
+                    {[1, 2, 3, 4, 5].map((n) => <Flame key={n} className='h-4 w-4' style={{ fill: alert.intensity >= n ? '#fb923c' : 'none', color: alert.intensity >= n ? '#ea580c' : '#cbd5e1' }} />)}
+                    <span className='ml-1 text-xs text-slate-500'>{alert.intensity}/5</span>
+                  </div>
+                )}
+                {alert.message && <p className='mt-2 text-sm text-slate-600'>{alert.message}</p>}
+                <p className='mt-2 text-xs text-slate-400'>
+                  {alert.createdAt
+                    ? new Date(alert.createdAt).toLocaleString('mk-MK', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                    : ''}
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Smell report shortcut → Home with smell type pre-selected */}
       <Card className='border-rose-100 bg-gradient-to-br from-white to-rose-50/40'>
@@ -546,33 +553,6 @@ export function AirPage() {
           <ReportShortcutButton reportType='smell' className='w-full' />
         </CardContent>
       </Card>
-
-      {isAdminRole(auth.role) && canAccessReportType(auth.role, 'smell') && smellAlerts.length > 0 && (
-        <section className='space-y-3'>
-          <h2 className='text-lg font-semibold text-slate-900'>{t('air.smellReportsTitle')}</h2>
-          <div className='grid gap-3 md:grid-cols-2'>
-            {smellAlerts.map((alert) => (
-              <article key={alert.id} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'>
-                <div className='flex items-start justify-between gap-2'>
-                  <p className='flex items-center gap-1.5 font-semibold text-slate-900'><MapPin className='h-4 w-4 shrink-0 text-rose-500' />{alert.location}</p>
-                  <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${alert.severity === 'critical' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
-                    {alert.severity === 'critical' ? t('severity.critical') : t('severity.warning')}
-                  </span>
-                </div>
-                {alert.lat != null && <p className='mt-1 text-xs text-slate-400'>GPS: {Number(alert.lat).toFixed(5)}, {Number(alert.lng).toFixed(5)}</p>}
-                {alert.intensity != null && (
-                  <div className='mt-2 flex items-center gap-1'>
-                    {[1,2,3,4,5].map((n) => <Flame key={n} className='h-4 w-4' style={{ fill: alert.intensity >= n ? '#fb923c' : 'none', color: alert.intensity >= n ? '#ea580c' : '#cbd5e1' }} />)}
-                    <span className='ml-1 text-xs text-slate-500'>{alert.intensity}/5</span>
-                  </div>
-                )}
-                <p className='mt-2 text-sm text-slate-600'>{alert.message}</p>
-                <p className='mt-1 text-xs text-slate-400'>{t('air.reportedBy')} {alert.createdBy || t('common.anonymous')}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
 
     </div>
   )

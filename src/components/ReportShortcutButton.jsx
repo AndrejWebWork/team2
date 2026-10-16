@@ -2,6 +2,7 @@ import { Flame, Recycle, Trash2, Wind } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { homeReportPath } from '../lib/reportTypes'
+import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 
 const TYPE_META = {
@@ -23,11 +24,14 @@ export function ReportShortcutButton({ reportType, className, variant = 'default
       type='button'
       variant={variant}
       size={size}
-      className={className}
+      className={cn(
+        'h-auto min-h-12 w-full whitespace-normal px-4 py-3 text-left leading-snug',
+        className,
+      )}
       onClick={() => navigate(homeReportPath(reportType))}
     >
-      <Icon className='h-4 w-4' />
-      {t('reportShortcut.goToHome', { type: t(meta.labelKey) })}
+      <Icon className='h-4 w-4 shrink-0' />
+      <span className='min-w-0 flex-1 text-pretty'>{t('reportShortcut.goToHome', { type: t(meta.labelKey) })}</span>
     </Button>
   )
 }

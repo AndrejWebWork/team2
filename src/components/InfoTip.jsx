@@ -50,7 +50,7 @@ export function InfoTip({ label, children, className = '' }) {
         <span
           id={tipId}
           role='tooltip'
-          className='absolute left-1/2 top-full z-40 mt-2 w-64 -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-3 text-left text-xs leading-relaxed text-slate-600 shadow-lg sm:w-72'
+          className='absolute left-1/2 top-full z-40 mt-2 w-56 -translate-x-1/2 rounded-none border border-slate-200 bg-white p-2.5 text-left text-[11px] leading-snug text-slate-600 shadow-md sm:w-52 sm:p-2'
         >
           {children}
         </span>

@@ -3,13 +3,25 @@
 import { Capacitor } from '@capacitor/core'
 import { hashPasswordForTransit } from './password'
 
-const PRODUCTION_API = 'https://team2-zeta.vercel.app'
+const PRODUCTION_API = 'https://ekoskopje.skopje.gov.mk'
+
+function isLocalhostUrl(url) {
+  return /localhost|127\.0\.0\.1/.test(url)
+}
 
 function resolveApiUrl() {
   const fromEnv = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+  if (Capacitor.isNativePlatform()) {
+    if (fromEnv && !isLocalhostUrl(fromEnv)) return fromEnv
+    return PRODUCTION_API
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === 'ekoskopje.skopje.gov.mk' || host.endsWith('.skopje.gov.mk')) return ''
+    if (fromEnv && isLocalhostUrl(fromEnv) && host !== 'localhost' && host !== '127.0.0.1') return ''
+  }
   if (fromEnv) return fromEnv
   if (import.meta.env.DEV) return 'http://localhost:4000'
-  if (Capacitor.isNativePlatform()) return PRODUCTION_API
   return ''
 }
 
@@ -444,20 +456,54 @@ export async function submitLeaderboardAwardContactApi(id, payload, signal) {
 
 // ---- Воздух: нереферентни (граѓански) сензори од Pulse.eco (преку backend) ----
 
-// Ги враќа граѓанските сензори во живо. Ако backend/Pulse.eco е недостапен → [].
+const PULSE_URL = () => `${API_URL}/api/air/pulse`
+
+function isPulseEcoSensor(s) {
+  const id = String(s?.id || '')
+  return id.startsWith('PULSE-') && !id.startsWith('PULSE-SC-')
+}
+
+function pulseEcoCount(list) {
+  return (list || []).filter(isPulseEcoSensor).length
+}
+
+// Последно целосно тело. 304 при повторно влегување во /air инаку ја брише
+// листата (состојбата на страницата е празна, а ETag вели „нема промена“).
+let lastPulseSensors = []
+
+export function peekPulseSensors() {
+  return lastPulseSensors
+}
+
+function rememberPulse(list) {
+  if (pulseEcoCount(list) > 0) lastPulseSensors = list
+  return pulseEcoCount(lastPulseSensors) > 0 ? lastPulseSensors : list
+}
+
+// Ги враќа граѓанските сензори во живо. Ако backend/Pulse.eco е недостапен → последна добра листа или [].
 // dedupeGet + без AbortSignal: StrictMode/remount не откажуваат успешен snapshot повик.
 export async function fetchPulseSensors(_signal) {
   return dedupeGet('air:pulse', async () => {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 15000)
+    const url = PULSE_URL()
     try {
-      const res = await fetch(`${API_URL}/api/air/pulse`, { cache: 'no-store' })
-      if (res.status === 304) return []
-      if (!res.ok) return []
-      const text = await res.text()
-      if (!text) return []
-      const data = JSON.parse(text)
-      return Array.isArray(data) ? data : []
+      let data = await conditionalGet(url, ctrl.signal, 'pulse')
+      if (data === NOT_MODIFIED) {
+        if (lastPulseSensors.length) return lastPulseSensors
+        clearConditionalEtag(url)
+        data = await conditionalGet(url, ctrl.signal, 'pulse')
+      }
+      const list = Array.isArray(data) ? data : []
+      if (pulseEcoCount(list) > 0) return rememberPulse(list)
+      clearConditionalEtag(url)
+      if (pulseEcoCount(lastPulseSensors) > 0) return lastPulseSensors
+      return list
     } catch {
-      return []
+      clearConditionalEtag(url)
+      return lastPulseSensors
+    } finally {
+      clearTimeout(timer)
     }
   })
 }
@@ -773,6 +819,8 @@ export function serverToSmell(r) {
     institutionId: r.institution_id,
     createdBy: r.reporter_name,
     reportedBy: r.reporter_name,
+    reportedById: r.reporter_id,
+    reportedByDevice: r.reporter_device_id || null,
     createdAt: r.created_at,
     resolvedAt: r.resolved_at || null,
     nearestSensorId: isAirSensor ? r.nearest_point_id : null,
