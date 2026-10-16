@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   build-ipa:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -97,6 +97,9 @@ jobs:
             -e "s/__PROVISIONING_PROFILE_NAME__/${IOS_PROVISIONING_PROFILE_NAME}/g" \
             ios/export/ExportOptions.appstore.plist > build/ExportOptions.plist
 
+      - name: Use Xcode 26
+        run: xcodebuild -version
+
       - name: Archive app
         env:
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
@@ -121,6 +124,23 @@ jobs:
             -archivePath "$PWD/build/App.xcarchive" \
             -exportOptionsPlist "$PWD/build/ExportOptions.plist" \
             -exportPath "$PWD/build/export"
+
+      - name: Upload to App Store Connect
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          IPA=$(echo build/export/*.ipa)
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo -n "$ASC_API_KEY_BASE64" | base64 -D -o "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_API_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_API_KEY_ID}.p8"
+          xcrun altool --upload-app \
+            --file "$IPA" \
+            --type ios \
+            --apiKey "$ASC_API_KEY_ID" \
+            --apiIssuer "$ASC_API_ISSUER_ID"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v5
