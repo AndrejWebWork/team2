@@ -1,0 +1,47 @@
+# Upload the signed App Store IPA to App Store Connect.
+name: iOS Upload
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  upload:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - name: Download signed IPA
+        run: |
+          set -euo pipefail
+          curl -sL \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            -o ipa.zip \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/12045372003/zip"
+          unzip -o ipa.zip
+          test -f App.ipa
+
+      - name: Upload to App Store Connect
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          for var in ASC_API_KEY_BASE64 ASC_API_KEY_ID ASC_API_ISSUER_ID; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::Missing secret: $var"
+              exit 1
+            fi
+          done
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo -n "$ASC_API_KEY_BASE64" | base64 -D -o "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_API_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_API_KEY_ID}.p8"
+          xcrun altool --upload-app \
+            --file App.ipa \
+            --type ios \
+            --apiKey "$ASC_API_KEY_ID" \
+            --apiIssuer "$ASC_API_ISSUER_ID"
