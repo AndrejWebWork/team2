@@ -1,6 +1,8 @@
 import { Bell, Gift, LogIn, LogOut, ScrollText, Settings, UserCircle2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useApp } from '../context/AppContext'
+import { LanguagePicker } from './LanguagePicker'
 import { Button } from './ui/button'
 import { loginNavState } from '../lib/authNav'
 
@@ -12,6 +14,7 @@ function clearTapFocus(e) {
 export function Topbar({ role, unreadCount, logout, email, displayName, isAnonymous, currentUserPoints, t }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const { language, setLanguage } = useApp()
   const [openMenu, setOpenMenu] = useState(false)
   const prevPathRef = useRef('/')
 
@@ -104,6 +107,8 @@ export function Topbar({ role, unreadCount, logout, email, displayName, isAnonym
 
             {/* Вертикален разделник — визуелно ги одвојува наградите од ѕвончето */}
             <span className='hidden h-5 w-px bg-slate-200 lg:block' />
+
+            <LanguagePicker compact value={language} onChange={setLanguage} />
 
             {/* Notifications — само ѕвонче (без рамка/коцка), покрупно на телефон */}
             <button

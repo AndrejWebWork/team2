@@ -14,6 +14,7 @@ import { getDeviceId } from '../lib/device'
 import { findNearestAirSensor, haversineKm } from '../lib/geo'
 import { isMyReport } from '../lib/reportOwnership'
 import { canAccessReportType } from '../lib/roles'
+import { MOEPP_LEVELS, PM_RANGE_LABEL, pollutantLevel } from '../lib/moeppIndex'
 import { fetchSkopjeSensors } from '../lib/waqi'
 
 // Колку често се освежуваат мерењата во живо од WAQI (референтни МЖСПП + граѓански).
@@ -44,6 +45,32 @@ function sensorName(s, t) {
   return s.nameKey ? t(`sensor.st.${s.nameKey}`) : s.name
 }
 
+function PmMeter({ label, value, kind, t }) {
+  const level = pollutantLevel(kind, value)
+  const scale = kind === 'pm10' ? 270 : 140
+  return (
+    <div>
+      <div className='mb-0.5 flex items-center justify-between gap-2 text-[10px]'>
+        <span className='text-slate-500'>{label}</span>
+        <span className='flex items-center gap-1.5'>
+          <span className='font-semibold text-slate-700'>{value ?? '—'}{value != null ? ' µg/m³' : ''}</span>
+          {level && (
+            <span className='rounded px-1.5 py-0.5 font-bold' style={{ background: level.bg, color: level.text }}>
+              {t(`aqi.${level.key}`)}
+            </span>
+          )}
+        </span>
+      </div>
+      <div className='h-1.5 w-full overflow-hidden rounded-full bg-slate-200'>
+        <div
+          className='h-full rounded-full transition-all duration-500'
+          style={{ width: value == null ? '0%' : `${Math.min(Number(value) / scale * 100, 100)}%`, background: level?.bg || '#cbd5e1' }}
+        />
+      </div>
+    </div>
+  )
+}
+
 function SensorCard({ sensor, selected, onClick, t }) {
   const c = aqiColor(sensor.aqi)
   return (
@@ -64,22 +91,8 @@ function SensorCard({ sensor, selected, onClick, t }) {
         </div>
       </div>
       <div className='mt-3 space-y-1.5'>
-        <div>
-          <div className='mb-0.5 flex justify-between text-[10px] text-slate-500'>
-            <span>PM2.5</span><span>{sensor.pm25} µg/m³</span>
-          </div>
-          <div className='h-1.5 w-full overflow-hidden rounded-full bg-slate-200'>
-            <div className='h-full rounded-full transition-all duration-500' style={{ width: `${Math.min(sensor.pm25 / 75 * 100, 100)}%`, background: c.bar }} />
-          </div>
-        </div>
-        <div>
-          <div className='mb-0.5 flex justify-between text-[10px] text-slate-500'>
-            <span>PM10</span><span>{sensor.pm10} µg/m³</span>
-          </div>
-          <div className='h-1.5 w-full overflow-hidden rounded-full bg-slate-200'>
-            <div className='h-full rounded-full transition-all duration-500' style={{ width: `${Math.min(sensor.pm10 / 150 * 100, 100)}%`, background: c.bar }} />
-          </div>
-        </div>
+        <PmMeter label='PM2.5' value={sensor.pm25} kind='pm25' t={t} />
+        <PmMeter label='PM10' value={sensor.pm10} kind='pm10' t={t} />
       </div>
       <div className='mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold' style={{ background: c.border, color: c.text }}>
         <Wind className='h-2.5 w-2.5' />{t(`aqi.${c.key}`)}
@@ -104,21 +117,21 @@ function SensorDetail({ sensor, onClose, t }) {
         </div>
       </div>
       <div className='mt-2.5 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3'>
-        {[['PM2.5', sensor.pm25, 75, t('air.allowedPm25')], ['PM10', sensor.pm10, 150, t('air.allowedPm10')]].map(([label, val, max, hint]) => (
-          <div key={label} className='rounded-lg border bg-white/80 px-2.5 py-2 sm:rounded-xl sm:bg-white sm:p-3' style={{ borderColor: c.border }}>
-            <p className='text-[10px] font-semibold text-slate-500 sm:text-xs'>{label}</p>
-            <p className='text-base font-bold text-slate-900 sm:mt-1 sm:text-2xl'>
-              {val ?? '—'} <span className='text-[10px] font-normal text-slate-400 sm:text-xs'>µg/m³</span>
-            </p>
-            {val != null && (
-              <div className='mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 sm:mt-2 sm:h-2'>
-                <div className='h-full rounded-full' style={{ width: `${Math.min(val / max * 100, 100)}%`, background: c.bar }} />
-              </div>
-            )}
-            <p className='mt-1 text-[10px] leading-snug text-slate-500'>{label === 'PM2.5' ? t('air.pm25Short') : t('air.pm10Short')}</p>
-            <p className='mt-0.5 text-[10px] text-slate-400'>{hint}</p>
-          </div>
-        ))}
+        {[['PM2.5', sensor.pm25, 'pm25', t('air.pm25Short')], ['PM10', sensor.pm10, 'pm10', t('air.pm10Short')]].map(([label, val, kind, hint]) => {
+          const level = pollutantLevel(kind, val)
+          return (
+            <div key={label} className='rounded-lg border bg-white px-2.5 py-2 sm:rounded-xl sm:p-3' style={{ borderColor: level?.bg || c.border }}>
+              <p className='text-[10px] font-semibold text-slate-500 sm:text-xs'>{label}</p>
+              <p className='text-base font-bold text-slate-900 sm:mt-1 sm:text-2xl'>
+                {val ?? '—'} <span className='text-[10px] font-normal text-slate-400 sm:text-xs'>µg/m³</span>
+              </p>
+              {level && (
+                <p className='mt-1 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold' style={{ background: level.bg, color: level.text }}>{t(`aqi.${level.key}`)}</p>
+              )}
+              <p className='mt-1 text-[10px] leading-snug text-slate-500'>{hint}</p>
+            </div>
+          )
+        })}
       </div>
       <button type='button' onClick={onClose} className='mt-2 text-[11px] text-slate-400 hover:text-slate-600 sm:mt-3 sm:text-xs'>{t('common.closeUp')}</button>
     </div>
@@ -347,13 +360,19 @@ export function AirPage() {
             </div>
             <p className='mt-2 text-sm leading-snug text-slate-700'>{t(aqiMeaningKey(c.key))}</p>
             <div className='mt-4 grid grid-cols-2 gap-2'>
-              {[['PM2.5', nearest.pm25, 'µg/m³', t('air.pm25Short')], ['PM10', nearest.pm10, 'µg/m³', t('air.pm10Short')]].map(([label, val, unit, hint]) => (
-                <div key={label} className='rounded-xl bg-white/60 px-3 py-2'>
-                  <p className='text-xs text-slate-500'>{label}</p>
-                  <p className='text-lg font-bold text-slate-800'>{val} <span className='text-xs font-normal text-slate-400'>{unit}</span></p>
-                  <p className='mt-0.5 text-[11px] leading-snug text-slate-500'>{hint}</p>
-                </div>
-              ))}
+              {[['PM2.5', nearest.pm25, 'pm25', t('air.pm25Short')], ['PM10', nearest.pm10, 'pm10', t('air.pm10Short')]].map(([label, val, kind, hint]) => {
+                const level = pollutantLevel(kind, val)
+                return (
+                  <div key={label} className='rounded-xl bg-white/80 px-3 py-2'>
+                    <p className='text-xs text-slate-500'>{label}</p>
+                    <p className='text-lg font-bold text-slate-800'>{val ?? '—'} <span className='text-xs font-normal text-slate-400'>µg/m³</span></p>
+                    {level && (
+                      <p className='mt-1 inline-block rounded px-1.5 py-0.5 text-[11px] font-bold' style={{ background: level.bg, color: level.text }}>{t(`aqi.${level.key}`)}</p>
+                    )}
+                    <p className='mt-0.5 text-[11px] leading-snug text-slate-500'>{hint}</p>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )
@@ -500,6 +519,14 @@ export function AirPage() {
             <p className='mt-1 text-xs leading-relaxed text-slate-600'>{t('air.learnPm10')}</p>
           </div>
         </div>
+        <ul className='mt-3 space-y-1 text-xs leading-relaxed'>
+          {MOEPP_LEVELS.map((level) => (
+            <li key={level.key} className='flex items-center justify-between gap-2 rounded-lg px-2 py-1 font-semibold' style={{ background: level.bg, color: level.text }}>
+              <span>{t(`aqi.${level.key}`)}</span>
+              <span className='text-[10px] font-medium'>{PM_RANGE_LABEL[level.key]}</span>
+            </li>
+          ))}
+        </ul>
         <p className='mt-3 text-[11px] leading-relaxed text-slate-500'>{t('air.learnLimits')}</p>
       </section>
 

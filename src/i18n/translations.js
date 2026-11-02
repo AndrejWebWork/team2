@@ -196,7 +196,7 @@ const dict = {
       learnUnhealthy: 'над 100 · Нездраво — скратете го времето на отворено, особено вежбањето.',
       learnPm25: 'PM2.5 се многу ситни честички, помали од 2,5 микрометри. Стигнуваат длабоко во белите дробови. Бројот е микрограми во еден кубен метар воздух (µg/m³).',
       learnPm10: 'PM10 се покрупни честички прашина, до 10 микрометри. Најчесто го иритираат носот, грлото и дишните патишта.',
-      learnLimits: 'Ориентир според европските гранични вредности: PM2.5 до 25 µg/m³ (годишно) и PM10 до 50 µg/m³ (дневно). Ова е информација за граѓаните, не медицински совет.',
+      learnLimits: 'Боите и зборовите за PM2.5 и PM10 се часовниот индекс на МЖСПП. Ова е информација за граѓаните, не медицински совет.',
       meaningGood: 'Воздухот е прифатлив за вообичаени активности надвор.',
       meaningModerate: 'Чувствителните лица нека го ограничат долгото движење на отворено.',
       meaningUnhealthy: 'Подобро е да се скрати времето надвор, особено физичката активност.',
@@ -204,7 +204,10 @@ const dict = {
       pm10Short: 'покрупна прашина · нос и грло',
       popupEdu: 'Поголем AQI значи позагаден воздух. PM2.5 влегува во белите дробови, PM10 е покрупна прашина.',
     },
-    aqi: { unhealthy: 'Нездраво', moderate: 'Умерено', good: 'Добро' },
+    aqi: {
+      unhealthy: 'Нездраво', moderate: 'Умерено', good: 'Добро',
+      fair: 'Прифатливо', poor: 'Лошо', veryPoor: 'Многу лошо', extreme: 'Екстремно лошо',
+    },
     sensor: {
       referentTag: 'Референтен · МЖСПП',
       st: {
@@ -669,7 +672,7 @@ const dict = {
       learnUnhealthy: 'Above 100 · Unhealthy — shorten time outdoors, especially exercise.',
       learnPm25: 'PM2.5 are very fine particles, smaller than 2.5 micrometres. They reach deep into the lungs. The number is micrograms in one cubic metre of air (µg/m³).',
       learnPm10: 'PM10 are coarser dust particles, up to 10 micrometres. They mostly irritate the nose, throat and airways.',
-      learnLimits: 'A guide using European limit values: PM2.5 up to 25 µg/m³ (annual) and PM10 up to 50 µg/m³ (daily). This is public information, not medical advice.',
+      learnLimits: 'The colours and words for PM2.5 and PM10 follow the MoEPP hourly index. This is public information, not medical advice.',
       meaningGood: 'The air is acceptable for usual outdoor activity.',
       meaningModerate: 'Sensitive people should limit long time outdoors.',
       meaningUnhealthy: 'It is better to shorten time outdoors, especially physical activity.',
@@ -677,7 +680,10 @@ const dict = {
       pm10Short: 'coarser dust · nose and throat',
       popupEdu: 'A higher AQI means more polluted air. PM2.5 reaches the lungs; PM10 is coarser dust.',
     },
-    aqi: { unhealthy: 'Unhealthy', moderate: 'Moderate', good: 'Good' },
+    aqi: {
+      unhealthy: 'Unhealthy', moderate: 'Moderate', good: 'Good',
+      fair: 'Fair', poor: 'Poor', veryPoor: 'Very poor', extreme: 'Extremely poor',
+    },
     sensor: {
       referentTag: 'Reference · MoEPP',
       st: {
@@ -1142,7 +1148,7 @@ const dict = {
       learnUnhealthy: 'mbi 100 · E pashëndetshme — shkurtoni kohën jashtë, sidomos ushtrimet.',
       learnPm25: 'PM2.5 janë grimca shumë të imëta, më të vogla se 2,5 mikrometra. Arrijnë thellë në mushkëri. Numri është mikrogramë në një metër kub ajër (µg/m³).',
       learnPm10: 'PM10 janë grimca më të trasha pluhuri, deri në 10 mikrometra. Zakonisht irritojnë hundën, fytin dhe rrugët e frymëmarrjes.',
-      learnLimits: 'Orientim sipas vlerave kufitare evropiane: PM2.5 deri në 25 µg/m³ (vjetore) dhe PM10 deri në 50 µg/m³ (ditore). Ky është informacion për qytetarët, jo këshillë mjekësore.',
+      learnLimits: 'Ngjyrat dhe fjalët për PM2.5 dhe PM10 janë indeksi orar i MMJPH. Ky është informacion për qytetarët, jo këshillë mjekësore.',
       meaningGood: 'Ajri është i pranueshëm për aktivitet të zakonshëm jashtë.',
       meaningModerate: 'Personat e ndjeshëm le ta kufizojnë qëndrimin e gjatë jashtë.',
       meaningUnhealthy: 'Është më mirë të shkurtohet koha jashtë, sidomos aktiviteti fizik.',
@@ -1150,7 +1156,10 @@ const dict = {
       pm10Short: 'pluhur më i trashë · hundë dhe fyt',
       popupEdu: 'AQI më i lartë do të thotë ajër më i ndotur. PM2.5 hyn në mushkëri, PM10 është pluhur më i trashë.',
     },
-    aqi: { unhealthy: 'E pashëndetshme', moderate: 'Mesatare', good: 'Mirë' },
+    aqi: {
+      unhealthy: 'E pashëndetshme', moderate: 'Mesatare', good: 'Mirë',
+      fair: 'E pranueshme', poor: 'Keq', veryPoor: 'Shumë keq', extreme: 'Jashtëzakonisht keq',
+    },
     sensor: {
       referentTag: 'Referent · MMJPH',
       st: {

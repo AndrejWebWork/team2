@@ -3,6 +3,7 @@ import { Map as MapLibreMap, Marker, NavigationControl, Popup, ScaleControl, set
 import maplibreWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useApp } from '../context/AppContext'
+import { pollutantLevel } from '../lib/moeppIndex'
 
 setWorkerUrl(maplibreWorker)
 
@@ -163,8 +164,14 @@ function popupHtml(s, t, kind) {
   const aqiLine = s.aqi != null
     ? `<p>AQI: <b>${escapeHtml(s.aqi)}</b> · ${escapeHtml(t(`aqi.${aqiKey(s.aqi)}`))}</p>`
     : ''
-  const pm25 = s.pm25 != null ? `<p>PM2.5: ${escapeHtml(s.pm25)} µg/m³</p>` : (kind === 'ministry' ? `<p>PM2.5: ${s.pm25 ?? '—'} µg/m³</p>` : '')
-  const pm10 = s.pm10 != null ? `<p>PM10: ${escapeHtml(s.pm10)} µg/m³</p>` : (kind === 'ministry' ? `<p>PM10: ${s.pm10 ?? '—'} µg/m³</p>` : '')
+  const pmLine = (label, value, pollutant) => {
+    if (value == null && kind !== 'ministry') return ''
+    const level = pollutantLevel(pollutant, value)
+    const word = level ? ` <b style="background:${level.bg};color:${level.text};padding:0 4px;border-radius:4px">${escapeHtml(t(`aqi.${level.key}`))}</b>` : ''
+    return `<p>${label}: ${escapeHtml(value ?? '—')} µg/m³${word}</p>`
+  }
+  const pm25 = pmLine('PM2.5', s.pm25, 'pm25')
+  const pm10 = pmLine('PM10', s.pm10, 'pm10')
   const edu = `<p class="air-map-popup-edu">${escapeHtml(t('air.popupEdu'))}</p>`
   return `<div class="air-map-popup"><p class="air-map-popup-title">${name}</p><p class="air-map-popup-src">${source}</p>${aqiLine}${pm25}${pm10}${edu}</div>`
 }

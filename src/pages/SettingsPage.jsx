@@ -1,5 +1,5 @@
-import { Bell, Check, ChevronDown, ChevronRight, Database, FileText, LogIn, LogOut, Languages, Mail, Scale, ScrollText, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Bell, ChevronRight, Database, FileText, LogIn, LogOut, Mail, Scale, ScrollText, Shield, ShieldCheck, Trash2, User } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Toast } from '../components/Toast'
 import { Button } from '../components/ui/button'
@@ -8,73 +8,10 @@ import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
 import { IMPRESSUM_TECH_CREDIT } from '../i18n/impressum'
 import { LEGAL_CONTACT } from '../i18n/legal'
-import { LANGUAGES, translate } from '../i18n/translations'
+import { translate } from '../i18n/translations'
 import { deleteAccountApi, fetchUser, updateUserSettingsApi } from '../lib/api'
 import { loginNavState } from '../lib/authNav'
 import { isAdminRole } from '../lib/roles'
-
-const LANG_CODE = { mk: 'МК', en: 'EN', sq: 'SQ' }
-
-function LanguagePicker({ value, onChange }) {
-  const [open, setOpen] = useState(false)
-  const wrapRef = useRef(null)
-  const current = LANGUAGES.find((l) => l.id === value) || LANGUAGES[0]
-
-  useEffect(() => {
-    function onDoc(e) {
-      if (!wrapRef.current?.contains(e.target)) setOpen(false)
-    }
-    function onKey(e) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('pointerdown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('pointerdown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [])
-
-  return (
-    <div className={`lang-picker ${open ? 'is-open' : ''}`} ref={wrapRef}>
-      <button
-        type='button'
-        className='lang-picker-trigger'
-        aria-expanded={open}
-        aria-haspopup='listbox'
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className='lang-picker-code'>{LANG_CODE[current.id] || current.id.toUpperCase()}</span>
-        <span className='lang-picker-copy'>
-          <span className='lang-picker-name'>{current.label}</span>
-        </span>
-        <ChevronDown className='lang-picker-chevron' aria-hidden />
-      </button>
-      <div className='lang-picker-menu' role='listbox' aria-label={current.label}>
-        {LANGUAGES.map((l) => {
-          const active = l.id === value
-          return (
-            <button
-              key={l.id}
-              type='button'
-              role='option'
-              aria-selected={active}
-              className={`lang-picker-option${active ? ' is-active' : ''}`}
-              onClick={() => {
-                onChange(l.id)
-                setOpen(false)
-              }}
-            >
-              <span className='lang-picker-code'>{LANG_CODE[l.id] || l.id.toUpperCase()}</span>
-              <span className='lang-picker-name'>{l.label}</span>
-              <Check className='lang-picker-check' aria-hidden />
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 const ROLE_COLORS = {
   user: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -87,7 +24,7 @@ const ROLE_COLORS = {
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { auth, setAuth, logout, t, language, setLanguage, notifAir, setNotifAir } = useApp()
+  const { auth, setAuth, logout, t, language, notifAir, setNotifAir } = useApp()
   const roleLabel = (r) => {
     if (r === 'organization') return t('role.organization')
     if (r === 'admin') return t('role.admin')
@@ -278,28 +215,6 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Language */}
-      <Card className='settings-card'>
-        <CardHeader className='pb-3'>
-          <CardTitle className='flex items-center gap-2 text-base'>
-            <Languages className='h-4 w-4 text-emerald-600' />
-            {t('settings.language')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div>
-            <p className='mb-2 text-sm font-medium text-slate-700'>{t('settings.languageLabel')}</p>
-            <LanguagePicker
-              value={language}
-              onChange={(next) => {
-                setLanguage(next)
-                setToast(translate(next, 'settings.langSaved'))
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Legal / Privacy — линкови до правната страница (преведена на 3 јазици) */}
       <Card className='settings-card'>
         <CardHeader className='pb-3'>
@@ -350,7 +265,7 @@ export function SettingsPage() {
         <CardContent className='space-y-3'>
           <div className='rounded-xl border border-slate-100 bg-slate-50 px-4 py-3'>
             <p className='text-sm font-medium text-slate-700'>{t('settings.appVersion')}</p>
-            <p className='text-xs text-slate-500 mt-0.5'>Еко Скопје v1.0.2</p>
+            <p className='text-xs text-slate-500 mt-0.5'>Еко Скопје v1.0.3</p>
             <p className='text-xs text-slate-400 mt-1'>{t('common.credit')}</p>
             <p className='mt-2 text-[11px] leading-relaxed text-slate-400'>{IMPRESSUM_TECH_CREDIT[language] || IMPRESSUM_TECH_CREDIT.mk}</p>
           </div>
